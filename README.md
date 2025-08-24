@@ -1,4 +1,4 @@
-Mycelium is a high-performance messaging and transport framework for distributed, actor-based microservices. It delivers predictable, microsecond-level latency and efficient inter-process communication, enabling real-time, low-latency applications like high-frequency trading, real-time multiplayer gaming and streaming analytics.
+Mycelium is a high-performance messaging and transport framework for distributed, actor-based microservices with a configurable topology and message types. It delivers predictable, microsecond-level latency and efficient inter-process communication, enabling real-time, low-latency applications like high-frequency trading, real-time multiplayer gaming and streaming analytics.
 
 Key features:
   Lock-free, zero-copy message queues
