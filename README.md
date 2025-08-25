@@ -1,9 +1,5 @@
-Mycelium is a high-performance messaging and transport framework for distributed, actor-based microservices with a configurable topology and message types. It delivers predictable, microsecond-level latency and efficient inter-process communication, enabling real-time, low-latency applications like high-frequency trading, real-time multiplayer gaming and streaming analytics.
-
-Key features:
-  Lock-free, zero-copy message queues
-  Multi-transport support (TCP, UDP, shared memory, RDMA)
-  Actor-friendly message routing and delivery guarantees
-  Backpressure and flow control for high-throughput systems
-  Efficient bijective IDs for deterministic message routing and fast lookups
-  Designed for modular microservices architecture with minimal overhead
+Mycelium is an actor runtime for Rust that provides a consistent message-passing API across different deployment topologies. Actors always communicate using messages, but the underlying transport adapts depending on where those actors run: 
+        - In a single process, messages are passed as Arc<T> references with no serialization.
+        - Across processes on the same machine, messages are serialized once and sent over Unix domain sockets.
+        - Across machines, messages are serialized and transmitted over TCP.
+This approach allows the same actor code to run efficiently as either a monolith or as part of a distributed system, without requiring changes in application logic.
