@@ -1,6 +1,6 @@
 ## Mycelium
 
-Mycelium is an actor runtime for Rust that provides a consistent message-passing API across different deployment topologies.  
+Mycelium is a low latency actor runtime implemented in Rust that provides a consistent message-passing API across different deployment topologies.  
 Actors always communicate using messages, but the underlying transport adapts depending on where those actors run:
 
 - **Single process**: messages are passed as `Arc<T>` references with no serialization.  
