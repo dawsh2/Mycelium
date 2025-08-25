@@ -24,7 +24,6 @@ Actix is a Rust actor framework focused on concurrency within a single process. 
 **Erlang/OTP**  
 Erlang/OTP pioneered the actor model for distributed systems. Mycelium has a similar programming model, but is implemented in Rust and designed for low-latency applications with more control over serialization formats and transports.  
 
-## Example Configuration
 ## Example Actor Configuration (TOML)
 
 ```toml
