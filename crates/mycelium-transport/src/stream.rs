@@ -3,6 +3,7 @@ use crate::error::Result;
 use dashmap::DashMap;
 use mycelium_protocol::{Envelope, Message};
 use std::any::Any;
+use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -20,11 +21,12 @@ pub struct RawFrame {
 
 /// Generic handler for stream-based connections (Unix/TCP)
 ///
-/// Reads TLV frames from the stream and broadcasts them to all registered channels.
-/// Each subscriber will filter messages by type_id and deserialize independently.
+/// Reads TLV frames from the stream and broadcasts them to the appropriate channel
+/// based on type_id → topic mapping. This avoids broadcasting to all channels.
 pub async fn handle_stream_connection<S>(
     mut stream: S,
     channels: Arc<DashMap<String, broadcast::Sender<Envelope>>>,
+    type_to_topic: Arc<DashMap<u16, String>>,
 ) -> Result<()>
 where
     S: AsyncReadExt + AsyncWriteExt + Unpin + Send,
@@ -45,17 +47,24 @@ where
             bytes: Arc::new(bytes),
         };
 
-        // Broadcast to all channels - subscribers will filter by type_id
-        for entry in channels.iter() {
-            // Create envelope with RawFrame payload
-            // Subscribers will downcast and deserialize on demand
-            let envelope = Envelope::from_raw(
-                frame.type_id,
-                entry.key().clone(),
-                Arc::new(frame.clone()) as Arc<dyn Any + Send + Sync>,
-            );
+        // Look up topic for this type_id
+        if let Some(topic_entry) = type_to_topic.get(&type_id) {
+            let topic = topic_entry.value().clone();
+            drop(topic_entry); // Release the read lock
 
-            let _ = entry.value().send(envelope);
+            // Send only to the matching channel (not all channels!)
+            if let Some(channel) = channels.get(&topic) {
+                let envelope = Envelope::from_raw(
+                    frame.type_id,
+                    topic,
+                    Arc::new(frame) as Arc<dyn Any + Send + Sync>,
+                );
+
+                let _ = channel.value().send(envelope);
+            }
+        } else {
+            // Unknown type_id - no subscriber registered for this message type
+            tracing::warn!("Received message with unknown type_id: {}", type_id);
         }
     }
 }
@@ -214,14 +223,17 @@ mod tests {
 
         let listener = UnixListener::bind(&socket_path).unwrap();
         let channels: Arc<DashMap<String, broadcast::Sender<Envelope>>> = Arc::new(DashMap::new());
+        let type_to_topic: Arc<DashMap<u16, String>> = Arc::new(DashMap::new());
         let (tx, mut rx) = broadcast::channel(10);
         channels.insert("test-stream".to_string(), tx);
+        type_to_topic.insert(123, "test-stream".to_string());
 
         // Spawn server
         let server_channels = Arc::clone(&channels);
+        let server_type_to_topic = Arc::clone(&type_to_topic);
         let server_handle = tokio::spawn(async move {
             let (stream, _) = listener.accept().await.unwrap();
-            handle_stream_connection(stream, server_channels).await
+            handle_stream_connection(stream, server_channels, server_type_to_topic).await
         });
 
         // Give server time to start

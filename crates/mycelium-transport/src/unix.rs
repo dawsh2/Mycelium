@@ -21,8 +21,10 @@ pub struct UnixTransport {
     listener: Option<Arc<UnixListener>>,
     /// Client-side persistent connection (for publishers)
     connection: Option<Arc<Mutex<UnixStream>>>,
-    // Topic -> broadcast channel
+    /// Topic → broadcast channel mapping
     channels: Arc<DashMap<String, broadcast::Sender<Envelope>>>,
+    /// Type ID → Topic mapping (for efficient routing)
+    type_to_topic: Arc<DashMap<u16, String>>,
     channel_capacity: usize,
 }
 
@@ -49,6 +51,7 @@ impl UnixTransport {
             listener: Some(Arc::new(listener)),
             connection: None,
             channels: Arc::new(DashMap::new()),
+            type_to_topic: Arc::new(DashMap::new()),
             channel_capacity: 1000,
         };
 
@@ -79,6 +82,7 @@ impl UnixTransport {
             listener: None,
             connection: Some(Arc::new(Mutex::new(stream))),
             channels: Arc::new(DashMap::new()),
+            type_to_topic: Arc::new(DashMap::new()),
             channel_capacity: 1000,
         })
     }
@@ -90,6 +94,7 @@ impl UnixTransport {
         };
 
         let channels = Arc::clone(&self.channels);
+        let type_to_topic = Arc::clone(&self.type_to_topic);
 
         tokio::spawn(async move {
             loop {
@@ -97,8 +102,9 @@ impl UnixTransport {
                     Ok((stream, _addr)) => {
                         tracing::debug!("Accepted Unix socket connection");
                         let channels = Arc::clone(&channels);
+                        let type_to_topic = Arc::clone(&type_to_topic);
                         tokio::spawn(async move {
-                            if let Err(e) = handle_stream_connection(stream, channels).await {
+                            if let Err(e) = handle_stream_connection(stream, channels, type_to_topic).await {
                                 tracing::error!("Connection error: {}", e);
                             }
                         });
@@ -131,7 +137,12 @@ impl UnixTransport {
     }
 
     /// Create a subscriber for a message type
+    ///
+    /// Registers the type_id → topic mapping for efficient routing.
     pub fn subscriber<M: Message>(&self) -> UnixSubscriber<M> {
+        // Register type_id → topic mapping
+        self.type_to_topic.insert(M::TYPE_ID, M::TOPIC.to_string());
+
         let tx = self.get_or_create_channel(M::TOPIC);
         let rx = tx.subscribe();
         UnixSubscriber::new(rx)
