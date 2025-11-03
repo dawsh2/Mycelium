@@ -126,8 +126,8 @@ impl<M: Message> StreamSubscriber<M> {
 mod tests {
     use super::*;
     use mycelium_protocol::impl_message;
+  use tokio::net::{UnixListener, UnixStream};
     use zerocopy::{AsBytes, FromBytes, FromZeroes};
-    use tokio::net::{UnixListener, UnixStream};
 
     #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
     #[repr(C)]
@@ -142,7 +142,7 @@ mod tests {
         let (tx, rx) = broadcast::channel(10);
         let mut sub: StreamSubscriber<TestMsg> = StreamSubscriber::new(rx);
 
-        // Create a raw frame
+      // Create a raw frame
         let msg = TestMsg { value: 42 };
         let bytes = msg.as_bytes();
         let frame = RawFrame {
@@ -159,8 +159,8 @@ mod tests {
         tx.send(envelope).unwrap();
 
         // Receive and verify
-        let msg = sub.recv().await.unwrap();
-        assert_eq!(msg.value, 42);
+        let received_msg = sub.recv().await.unwrap();
+        assert_eq!(received_msg.value, 42);
     }
 
     #[tokio::test]
@@ -182,7 +182,7 @@ mod tests {
         );
         tx.send(wrong_envelope).unwrap();
 
-        // Send correct type_id
+    // Send correct type_id
         let msg = TestMsg { value: 42 };
         let correct_frame = RawFrame {
             type_id: 123,
@@ -197,8 +197,8 @@ mod tests {
         tx.send(correct_envelope).unwrap();
 
         // Should receive only the correct message
-        let msg = sub.recv().await.unwrap();
-        assert_eq!(msg.value, 42);
+        let received_msg = sub.recv().await.unwrap();
+        assert_eq!(received_msg.value, 42);
     }
 
     #[tokio::test]

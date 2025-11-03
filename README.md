@@ -18,14 +18,14 @@ Mycelium is a type-safe pub/sub messaging system implemented in Rust that provid
 
 ```rust
 use mycelium_protocol::impl_message;
-use rkyv::{Archive, Serialize, Deserialize};
+use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
-#[derive(Debug, Clone, Archive, Serialize, Deserialize)]
-#[archive(check_bytes)]
+#[derive(Debug, Clone, Copy, AsBytes, FromBytes, FromZeroes)]
+#[repr(C)]
 pub struct SwapEvent {
-    pub pool: Address,
-    pub amount_in: U256,
-    pub amount_out: U256,
+    pub pool_id: u64,
+    pub amount_in: u64,
+    pub amount_out: u64,
 }
 
 // TYPE_ID: 100, TOPIC: "market-data"
@@ -41,10 +41,10 @@ let bus = MessageBus::new();
 
 // Publisher
 let pub_ = bus.publisher::<SwapEvent>();
-pub_.publish(SwapEvent { 
-    pool: addr,
-    amount_in: 1000.into(),
-    amount_out: 2000.into(),
+pub_.publish(SwapEvent {
+    pool_id: 123,
+    amount_in: 1000,
+    amount_out: 2000,
 }).await?;
 
 // Subscriber
@@ -128,7 +128,7 @@ Remote transports (Unix/TCP) use a simple **Type-Length-Value (TLV)** protocol:
 └──────────┴──────────┴─────────────────┘
 ```
 
-Payloads are serialized with [rkyv](https://github.com/rkyv/rkyv) for **zero-copy deserialization** (2-4x faster than bincode).
+Payloads use [zerocopy](https://github.com/google/zerocopy) for **true zero-copy serialization** - direct memory casting with no allocation or copying overhead.
 
 ---
 

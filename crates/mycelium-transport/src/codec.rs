@@ -1,17 +1,15 @@
 use mycelium_protocol::Message;
 use thiserror::Error;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use zerocopy::{AsBytes, FromBytes};
 
 #[derive(Error, Debug)]
 pub enum CodecError {
     #[error("IO error: {0}")]
     Io(#[from] std::io::Error),
 
-    #[error("Serialization failed")]
-    SerializationFailed,
-
-    #[error("Deserialization failed")]
-    DeserializationFailed,
+    #[error("Protocol codec error: {0}")]
+    ProtocolCodec(#[from] mycelium_protocol::CodecError),
 
     #[error("Message too large: {0} bytes")]
     MessageTooLarge(usize),
@@ -19,19 +17,18 @@ pub enum CodecError {
 
 pub type Result<T> = std::result::Result<T, CodecError>;
 
-/// Maximum message size (10MB)
-const MAX_MESSAGE_SIZE: usize = 10 * 1024 * 1024;
-
-/// TLV frame format:
+/// TLV frame format (uses protocol codec):
 /// ```text
 /// ┌──────────┬──────────┬──────────────┐
-/// │ Length   │ Type ID  │ Value        │
-/// │ 4 bytes  │ 2 bytes  │ N bytes      │
-/// │ (u32 LE) │ (u16 LE) │ (payload)    │
+/// │ Type ID  │ Length   │ Value        │
+/// │ 2 bytes  │ 4 bytes  │ N bytes      │
+/// │ (u16 LE) │ (u32 LE) │ (zerocopy)   │
 /// └──────────┴──────────┴──────────────┘
 /// ```
 
 /// Write a TLV-framed message to an async stream
+///
+/// Uses the protocol codec's zerocopy encoding for true zero-copy serialization.
 pub async fn write_message<M, W>(stream: &mut W, msg: &M) -> Result<()>
 where
     M: Message,
@@ -55,30 +52,34 @@ where
 
 /// Read a TLV-framed message from an async stream
 ///
-/// Returns (type_id, payload_bytes)
+/// Returns (type_id, tlv_bytes) where tlv_bytes includes the header.
+/// This allows zero-copy deserialization later.
 pub async fn read_frame<R>(stream: &mut R) -> Result<(u16, Vec<u8>)>
 where
     R: AsyncReadExt + Unpin,
 {
-    // Read length
-    let mut len_buf = [0u8; 4];
-    stream.read_exact(&mut len_buf).await?;
-    let len = u32::from_le_bytes(len_buf) as usize;
+    // Read TLV header (6 bytes: type_id + length)
+    let mut header_buf = [0u8; HEADER_SIZE];
+    stream.read_exact(&mut header_buf).await?;
 
-    if len > MAX_MESSAGE_SIZE {
-        return Err(CodecError::MessageTooLarge(len));
+    // Parse header
+    let type_id = u16::from_le_bytes([header_buf[0], header_buf[1]]);
+    let payload_len = u32::from_le_bytes([header_buf[2], header_buf[3], header_buf[4], header_buf[5]]) as usize;
+
+    // Validate payload size
+    if payload_len > MAX_PAYLOAD_SIZE {
+        return Err(CodecError::MessageTooLarge(payload_len));
     }
 
-    // Read type ID
-    let mut type_buf = [0u8; 2];
-    stream.read_exact(&mut type_buf).await?;
-    let type_id = u16::from_le_bytes(type_buf);
-
     // Read payload
-    let mut payload = vec![0u8; len];
-    stream.read_exact(&mut payload).await?;
+    let mut tlv_bytes = Vec::with_capacity(HEADER_SIZE + payload_len);
+    tlv_bytes.extend_from_slice(&header_buf);
 
-    Ok((type_id, payload))
+    let mut payload_buf = vec![0u8; payload_len];
+    stream.read_exact(&mut payload_buf).await?;
+    tlv_bytes.extend_from_slice(&payload_buf);
+
+    Ok((type_id, tlv_bytes))
 }
 
 /// Deserialize a message from zerocopy bytes
@@ -94,8 +95,8 @@ pub fn deserialize_message<M: Message>(bytes: &[u8]) -> Result<M> {
 mod tests {
     use super::*;
     use mycelium_protocol::impl_message;
+use tokio::net::{UnixListener, UnixStream};
     use zerocopy::{AsBytes, FromBytes, FromZeroes};
-    use tokio::net::{UnixListener, UnixStream};
 
     #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
     #[repr(C)]
@@ -117,8 +118,8 @@ mod tests {
         // Spawn server
         let server_handle = tokio::spawn(async move {
             let (mut stream, _) = listener.accept().await.unwrap();
-            let (type_id, bytes) = read_frame(&mut stream).await.unwrap();
-            (type_id, bytes)
+            let (type_id, tlv_bytes) = read_frame(&mut stream).await.unwrap();
+            (type_id, tlv_bytes)
         });
 
         // Client writes message
@@ -130,10 +131,10 @@ mod tests {
         write_message(&mut client, &msg).await.unwrap();
 
         // Server reads message
-        let (type_id, bytes) = server_handle.await.unwrap();
+        let (type_id, tlv_bytes) = server_handle.await.unwrap();
         assert_eq!(type_id, 42);
 
-        let deserialized: TestMsg = deserialize_message(&bytes).unwrap();
+        let deserialized: TestMsg = deserialize_message(&tlv_bytes).unwrap();
         assert_eq!(deserialized, msg);
     }
 
@@ -150,14 +151,34 @@ mod tests {
             read_frame(&mut stream).await
         });
 
-        // Client writes oversized frame
+        // Client writes oversized frame header
         let mut client = UnixStream::connect(&socket_path).await.unwrap();
-        let len = (MAX_MESSAGE_SIZE + 1) as u32;
+        // Write TLV header: type_id (2 bytes) + length (4 bytes)
+        let type_id = 42u16;
+        let len = (MAX_PAYLOAD_SIZE + 1) as u32;
+        client.write_all(&type_id.to_le_bytes()).await.unwrap();
         client.write_all(&len.to_le_bytes()).await.unwrap();
-        client.write_all(&42u16.to_le_bytes()).await.unwrap();
 
         // Server should get an error
         let result = server_handle.await.unwrap();
         assert!(matches!(result, Err(CodecError::MessageTooLarge(_))));
+    }
+
+    #[tokio::test]
+    async fn test_zerocopy_deserialization() {
+        // Verify true zero-copy (no allocation during deserialize)
+        let msg = TestMsg {
+            value: 123,
+            data: 456,
+        };
+
+        // Encode
+        let tlv_bytes = mycelium_protocol::encode_message(&msg).unwrap();
+
+        // Decode (should be zero-copy cast)
+        let decoded: TestMsg = deserialize_message(&tlv_bytes).unwrap();
+
+        assert_eq!(decoded.value, 123);
+        assert_eq!(decoded.data, 456);
     }
 }

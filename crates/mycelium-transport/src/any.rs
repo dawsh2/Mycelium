@@ -99,10 +99,10 @@ mod tests {
     use super::*;
     use crate::LocalTransport;
     use mycelium_protocol::impl_message;
-    use rkyv::{Archive, Deserialize, Serialize};
+    use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
-    #[derive(Debug, Clone, PartialEq, Archive, Serialize, Deserialize)]
-    #[archive(check_bytes)]
+    #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+    #[repr(C)]
     struct TestMsg {
         value: u64,
     }
