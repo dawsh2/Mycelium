@@ -11,6 +11,12 @@ pub enum TransportError {
     #[error("Channel receive failed")]
     RecvFailed,
 
+    #[error("Channel is full (backpressure applied)")]
+    ChannelFull,
+
+    #[error("Channel is closed (receiver dropped)")]
+    ChannelClosed,
+
     #[error("Service not found: {0}")]
     ServiceNotFound(String),
 

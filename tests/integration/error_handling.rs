@@ -3,7 +3,7 @@
 //! Tests for various error conditions and recovery scenarios.
 
 use crate::integration::{MessageBus, SwapEvent};
-use mycelium_config::{Bundle, Deployment, DeploymentMode, Topology};
+use mycelium_config::{Node, Topology};
 use mycelium_transport::{TransportError, UnixTransport};
 
 #[tokio::test]
@@ -21,19 +21,16 @@ async fn test_service_not_found_error() {
 #[tokio::test]
 async fn test_topology_service_not_found() {
     let topology = Topology {
-        deployment: Deployment {
-            mode: DeploymentMode::Bundled,
-        },
-        bundles: vec![Bundle {
-            name: "test-bundle".to_string(),
+        nodes: vec![Node {
+            name: "test-node".to_string(),
             services: vec!["existing-service".to_string()],
             host: None,
             port: None,
         }],
-        inter_bundle: None,
+        socket_dir: std::path::PathBuf::from("/tmp/mycelium"),
     };
 
-    let bus = MessageBus::from_topology(topology, "test-bundle");
+    let bus = MessageBus::from_topology(topology, "test-node");
 
     // Try to connect to non-existent service
     let result = bus.publisher_to::<SwapEvent>("nonexistent-service").await;
@@ -111,20 +108,17 @@ async fn test_channel_capacity_limits() {
 }
 
 #[tokio::test]
-async fn test_bundle_name_not_configured() {
-    // Create topology but don't set bundle name
+async fn test_node_name_not_configured() {
+    // Create topology but don't set node name
     let topology = Topology {
-        deployment: Deployment {
-            mode: DeploymentMode::Bundled,
-        },
-        bundles: vec![],
-        inter_bundle: None,
+        nodes: vec![],
+        socket_dir: std::path::PathBuf::from("/tmp/mycelium"),
     };
 
-    let bus = MessageBus::from_topology(topology, "test-bundle");
+    let bus = MessageBus::from_topology(topology, "test-node");
 
-    // This should work since bundle name is set
-    assert_eq!(bus.bundle_name(), Some("test-bundle"));
+    // This should work since node name is set
+    assert_eq!(bus.bundle_name(), Some("test-node"));
 }
 
 #[tokio::test]
@@ -184,23 +178,20 @@ async fn test_transport_creation_failure_cleanup() {
 
 fn create_topology() -> Topology {
     Topology {
-        deployment: Deployment {
-            mode: DeploymentMode::Bundled,
-        },
-        bundles: vec![
-            Bundle {
+        nodes: vec![
+            Node {
                 name: "adapters".to_string(),
                 services: vec!["polygon-adapter".to_string()],
                 host: None,
                 port: None,
             },
-            Bundle {
+            Node {
                 name: "strategies".to_string(),
                 services: vec!["flash-arbitrage".to_string()],
                 host: None,
                 port: None,
             },
         ],
-        inter_bundle: None,
+        socket_dir: std::path::PathBuf::from("/tmp/mycelium"),
     }
 }

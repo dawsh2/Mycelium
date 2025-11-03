@@ -8,6 +8,7 @@ zerocopy = { version = "0.7", features = ["derive"] }
 rkyv = { workspace = true }
 thiserror = { workspace = true }
 primitive-types = { version = "0.12", default-features = false }  # For U256 support, disable zerocopy to avoid version conflict
+rand = "0.8"  # For ActorId and CorrelationId generation
 
 [dev-dependencies]
 tokio = { workspace = true }

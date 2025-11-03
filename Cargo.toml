@@ -40,6 +40,7 @@ license = "MIT OR Apache-2.0"
 [workspace.dependencies]
 # Async runtime
 tokio = { version = "1.48", features = ["full"] }
+async-trait = "0.1"
 
 # Serialization
 rkyv = { version = "0.7", features = ["validation"] }

@@ -2,6 +2,7 @@ pub mod codec;
 pub mod envelope;
 pub mod fixed_vec;
 pub mod message;
+pub mod routing;
 // pub mod messages; // Manual implementation (for comparison) - disabled during zerocopy migration
 
 // Generated message types from contracts.yaml
@@ -14,6 +15,7 @@ pub use codec::{
 pub use envelope::{Envelope, EnvelopeError};
 pub use fixed_vec::{FixedStr, FixedVec, FixedVecError};
 pub use message::Message;
+pub use routing::{ActorId, CorrelationId, Destination};
 
 // Export generated types as the primary API
 pub use generated::{ArbitrageSignal, InstrumentMeta, PoolStateUpdate, ValidationError, U256};

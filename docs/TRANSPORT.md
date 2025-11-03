@@ -78,57 +78,53 @@ TLV (Type-Length-Value) format:
 
 ## Deployment Topologies
 
-### Monolith (Development)
+### Single Node (Development)
 
 All services in one process:
 
 ```toml
-[deployment]
-mode = "monolith"
-
-[[bundles]]
+[[nodes]]
 name = "main"
 services = ["adapter", "strategy", "executor"]
 ```
 
 **Transport**: Local (Arc) only
 
-### Bundled (Staging)
+### Multiple Nodes, Same Host (Staging)
 
-Services grouped into bundles:
+Services grouped into nodes on one machine:
 
 ```toml
-[deployment]
-mode = "bundled"
+socket_dir = "/tmp/mycelium"
 
-[[bundles]]
+[[nodes]]
 name = "adapters"
 services = ["polygon-adapter"]
 
-[[bundles]]
+[[nodes]]
 name = "strategies"
 services = ["flash-arbitrage"]
 ```
 
-**Transport**: Arc within bundles, Unix between
+**Transport**: Arc within nodes, Unix between nodes
 
 ### Distributed (Production)
 
-Services on different machines:
+Nodes on different machines:
 
 ```toml
-[[bundles]]
+[[nodes]]
 name = "adapters"
 host = "10.0.1.10"
 port = 9000
 
-[[bundles]]
+[[nodes]]
 name = "strategies"
 host = "10.0.2.20"
 port = 9001
 ```
 
-**Transport**: Arc within bundles, TCP between
+**Transport**: Arc within nodes, TCP between nodes
 
 ---
 
@@ -137,10 +133,10 @@ port = 9001
 ```rust
 use mycelium_config::Topology;
 
-let topology = Topology::from_file("config/bundled.toml")?;
+let topology = Topology::load("config/multi-node.toml")?;
 let bus = MessageBus::from_topology(topology, "strategies");
 
-// Automatic transport selection
+// Transport automatically inferred from topology
 let pub_ = bus.publisher_to::<SwapEvent>("polygon-adapter").await?;
 ```
 
@@ -195,7 +191,7 @@ cargo run --example simple_pubsub
 ```
 crates/
 ├── mycelium-protocol/     # Message trait, impl_message! macro
-├── mycelium-config/       # Topology, DeploymentMode
+├── mycelium-config/       # Topology, Node
 └── mycelium-transport/    # Local, Unix, TCP, MessageBus
 ```
 

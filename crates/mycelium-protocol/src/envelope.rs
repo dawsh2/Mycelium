@@ -1,4 +1,5 @@
 use crate::message::Message;
+use crate::routing::{CorrelationId, Destination};
 use std::any::Any;
 use std::sync::Arc;
 use thiserror::Error;
@@ -17,12 +18,40 @@ pub enum EnvelopeError {
 ///
 /// Envelopes allow type-erased message passing while preserving
 /// type safety through downcasting.
+///
+/// ## Phase 1: Actor-Ready Foundation
+///
+/// Optional metadata fields support future actor system features:
+/// - `sequence`: Message ordering (for OrderedSubscriber and actor mailboxes)
+/// - `destination`: Routing hint (Broadcast, Unicast to actor, Partition)
+/// - `correlation_id`: Request/reply correlation
+///
+/// These fields are `Option<T>` for zero cost when unused.
 pub struct Envelope {
     /// Message type ID
     pub type_id: u16,
 
     /// Topic this message belongs to
     pub topic: String,
+
+    /// Optional sequence number for ordered delivery
+    ///
+    /// When `Some(n)`, subscribers can use this to ensure FIFO ordering.
+    /// When `None`, messages are delivered as-received (default).
+    pub sequence: Option<u64>,
+
+    /// Optional routing hint (Phase 1: Actor-ready)
+    ///
+    /// - `None` or `Some(Destination::Broadcast)`: Standard pub/sub (all subscribers)
+    /// - `Some(Destination::Unicast(actor_id))`: Actor mailbox routing
+    /// - `Some(Destination::Partition(hash))`: Partition-based routing
+    pub destination: Option<Destination>,
+
+    /// Optional correlation ID for request/reply (Phase 1: Actor-ready)
+    ///
+    /// Used to match responses to requests in async request/reply patterns.
+    /// When `None`, this is a one-way message.
+    pub correlation_id: Option<CorrelationId>,
 
     /// Type-erased payload (Arc for zero-copy sharing)
     payload: Arc<dyn Any + Send + Sync>,
@@ -33,17 +62,33 @@ impl std::fmt::Debug for Envelope {
         f.debug_struct("Envelope")
             .field("type_id", &self.type_id)
             .field("topic", &self.topic)
+            .field("sequence", &self.sequence)
             .field("payload", &"<opaque>")
             .finish()
     }
 }
 
 impl Envelope {
-    /// Create a new envelope from a message
+    /// Create a new envelope from a message (no sequence number)
     pub fn new<M: Message>(msg: M) -> Self {
         Self {
             type_id: M::TYPE_ID,
             topic: M::TOPIC.to_string(),
+            sequence: None,
+            destination: None,
+            correlation_id: None,
+            payload: Arc::new(msg) as Arc<dyn Any + Send + Sync>,
+        }
+    }
+
+    /// Create a new envelope with a sequence number (for ordered delivery)
+    pub fn with_sequence<M: Message>(msg: M, sequence: u64) -> Self {
+        Self {
+            type_id: M::TYPE_ID,
+            topic: M::TOPIC.to_string(),
+            sequence: Some(sequence),
+            destination: None,
+            correlation_id: None,
             payload: Arc::new(msg) as Arc<dyn Any + Send + Sync>,
         }
     }
@@ -57,6 +102,27 @@ impl Envelope {
         Self {
             type_id,
             topic,
+            sequence: None,
+            destination: None,
+            correlation_id: None,
+            payload,
+        }
+    }
+
+    /// Create an envelope from raw components with sequence number
+    #[doc(hidden)]
+    pub fn from_raw_with_sequence(
+        type_id: u16,
+        topic: String,
+        sequence: Option<u64>,
+        payload: Arc<dyn Any + Send + Sync>,
+    ) -> Self {
+        Self {
+            type_id,
+            topic,
+            sequence,
+            destination: None,
+            correlation_id: None,
             payload,
         }
     }
@@ -95,6 +161,9 @@ impl Clone for Envelope {
         Self {
             type_id: self.type_id,
             topic: self.topic.clone(),
+            sequence: self.sequence,
+            destination: self.destination,
+            correlation_id: self.correlation_id,
             payload: Arc::clone(&self.payload),
         }
     }

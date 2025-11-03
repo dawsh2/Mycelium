@@ -1,10 +1,11 @@
 use crate::any::{AnyPublisher, AnySubscriber};
+use crate::bounded::{BoundedPublisher, BoundedSubscriber};
 use crate::config::TransportConfig;
 use crate::local::LocalTransport;
 use crate::tcp::{TcpPublisher, TcpSubscriber, TcpTransport};
 use crate::unix::{UnixPublisher, UnixSubscriber, UnixTransport};
 use crate::{Publisher, Result, Subscriber, TransportError};
-use mycelium_config::{DeploymentMode, Topology, TransportType};
+use mycelium_config::{Topology, TransportType};
 use mycelium_protocol::Message;
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -14,13 +15,13 @@ use tokio::sync::RwLock;
 /// Message bus coordinator
 ///
 /// Provides a unified interface for pub/sub messaging with support for:
-/// - Local transport (Arc<T>) for in-process/same-bundle communication
-/// - Unix socket transport for inter-bundle communication (same machine)
+/// - Local transport (Arc<T>) for in-process/same-node communication
+/// - Unix socket transport for inter-node communication (same machine)
 /// - TCP transport for distributed communication (cross-machine)
 /// - Topology-aware transport selection
 /// - Configurable performance parameters
 pub struct MessageBus {
-    /// Local transport for in-bundle communication
+    /// Local transport for in-node communication
     local: LocalTransport,
 
     /// Transport configuration
@@ -29,13 +30,13 @@ pub struct MessageBus {
     /// Optional topology configuration
     topology: Option<Arc<Topology>>,
 
-    /// Name of the bundle this bus belongs to
-    bundle_name: Option<String>,
+    /// Name of the node this bus belongs to
+    node_name: Option<String>,
 
-    /// Unix transports to other bundles (lazy-initialized)
+    /// Unix transports to other nodes (lazy-initialized)
     unix_transports: Arc<RwLock<HashMap<String, Arc<UnixTransport>>>>,
 
-    /// TCP transports to remote bundles (lazy-initialized)
+    /// TCP transports to remote nodes (lazy-initialized)
     tcp_transports: Arc<RwLock<HashMap<String, Arc<TcpTransport>>>>,
 }
 
@@ -53,7 +54,7 @@ impl MessageBus {
             local: LocalTransport::with_config(config.clone()),
             config,
             topology: None,
-            bundle_name: None,
+            node_name: None,
             unix_transports: Arc::new(RwLock::new(HashMap::new())),
             tcp_transports: Arc::new(RwLock::new(HashMap::new())),
         }
@@ -71,18 +72,18 @@ impl MessageBus {
 
     /// Create a message bus from topology configuration
     ///
-    /// This enables hybrid transport: Arc<T> within bundle, Unix/TCP between bundles.
-    pub fn from_topology(topology: Topology, bundle_name: impl Into<String>) -> Self {
-        Self::from_topology_with_config(topology, bundle_name, TransportConfig::default())
+    /// This enables hybrid transport: Arc<T> within node, Unix/TCP between nodes.
+    pub fn from_topology(topology: Topology, node_name: impl Into<String>) -> Self {
+        Self::from_topology_with_config(topology, node_name, TransportConfig::default())
     }
 
     /// Create a message bus from topology configuration with custom transport config
-    pub fn from_topology_with_config(topology: Topology, bundle_name: impl Into<String>, config: TransportConfig) -> Self {
+    pub fn from_topology_with_config(topology: Topology, node_name: impl Into<String>, config: TransportConfig) -> Self {
         Self {
             local: LocalTransport::with_config(config.clone()),
             config,
             topology: Some(Arc::new(topology)),
-            bundle_name: Some(bundle_name.into()),
+            node_name: Some(node_name.into()),
             unix_transports: Arc::new(RwLock::new(HashMap::new())),
             tcp_transports: Arc::new(RwLock::new(HashMap::new())),
         }
@@ -138,18 +139,18 @@ impl MessageBus {
         self.local.subscriber()
     }
 
-    /// Get a Unix publisher to a specific bundle
+    /// Get a Unix publisher to a specific node
     ///
-    /// Returns None if no topology is configured or bundle not found.
+    /// Returns None if no topology is configured or node not found.
     pub async fn unix_publisher<M: Message>(
         &self,
-        target_bundle: &str,
+        target_node: &str,
     ) -> Option<UnixPublisher<M>> {
         let topology = self.topology.as_ref()?;
-        let socket_path = topology.socket_path(target_bundle);
+        let socket_path = topology.socket_path(target_node);
 
         let transport =
-            Self::get_or_create_transport(&self.unix_transports, target_bundle, || async move {
+            Self::get_or_create_transport(&self.unix_transports, target_node, || async move {
                 UnixTransport::connect(&socket_path).await.ok()
             })
             .await?;
@@ -157,18 +158,18 @@ impl MessageBus {
         transport.publisher()
     }
 
-    /// Get a Unix subscriber from a specific bundle
+    /// Get a Unix subscriber from a specific node
     ///
-    /// Returns None if no topology is configured or bundle not found.
+    /// Returns None if no topology is configured or node not found.
     pub async fn unix_subscriber<M: Message>(
         &self,
-        source_bundle: &str,
+        source_node: &str,
     ) -> Option<UnixSubscriber<M>> {
         let topology = self.topology.as_ref()?;
-        let socket_path = topology.socket_path(source_bundle);
+        let socket_path = topology.socket_path(source_node);
 
         let transport =
-            Self::get_or_create_transport(&self.unix_transports, source_bundle, || async move {
+            Self::get_or_create_transport(&self.unix_transports, source_node, || async move {
                 UnixTransport::connect(&socket_path).await.ok()
             })
             .await?;
@@ -176,20 +177,20 @@ impl MessageBus {
         Some(transport.subscriber())
     }
 
-    /// Get a TCP publisher to a specific remote bundle
+    /// Get a TCP publisher to a specific remote node
     ///
-    /// Returns None if no topology is configured or bundle address not found.
-    pub async fn tcp_publisher<M: Message>(&self, target_bundle: &str) -> Option<TcpPublisher<M>> {
+    /// Returns None if no topology is configured or node address not found.
+    pub async fn tcp_publisher<M: Message>(&self, target_node: &str) -> Option<TcpPublisher<M>> {
         let topology = self.topology.as_ref()?;
 
-        // Find bundle by name and build socket address
-        let bundle = topology.bundles.iter().find(|b| b.name == target_bundle)?;
-        let host = bundle.host.as_ref()?;
-        let port = bundle.port?;
+        // Find node by name and build socket address
+        let node = topology.nodes.iter().find(|n| n.name == target_node)?;
+        let host = node.host.as_ref()?;
+        let port = node.port?;
         let addr: SocketAddr = format!("{}:{}", host, port).parse().ok()?;
 
         let transport =
-            Self::get_or_create_transport(&self.tcp_transports, target_bundle, || async move {
+            Self::get_or_create_transport(&self.tcp_transports, target_node, || async move {
                 TcpTransport::connect(addr).await.ok()
             })
             .await?;
@@ -197,23 +198,23 @@ impl MessageBus {
         transport.publisher()
     }
 
-    /// Get a TCP subscriber from a specific remote bundle
+    /// Get a TCP subscriber from a specific remote node
     ///
-    /// Returns None if no topology is configured or bundle address not found.
+    /// Returns None if no topology is configured or node address not found.
     pub async fn tcp_subscriber<M: Message>(
         &self,
-        source_bundle: &str,
+        source_node: &str,
     ) -> Option<TcpSubscriber<M>> {
         let topology = self.topology.as_ref()?;
 
-        // Find bundle by name and build socket address
-        let bundle = topology.bundles.iter().find(|b| b.name == source_bundle)?;
-        let host = bundle.host.as_ref()?;
-        let port = bundle.port?;
+        // Find node by name and build socket address
+        let node = topology.nodes.iter().find(|n| n.name == source_node)?;
+        let host = node.host.as_ref()?;
+        let port = node.port?;
         let addr: SocketAddr = format!("{}:{}", host, port).parse().ok()?;
 
         let transport =
-            Self::get_or_create_transport(&self.tcp_transports, source_bundle, || async move {
+            Self::get_or_create_transport(&self.tcp_transports, source_node, || async move {
                 TcpTransport::connect(addr).await.ok()
             })
             .await?;
@@ -223,10 +224,10 @@ impl MessageBus {
 
     /// Get a publisher to a specific service with automatic transport selection
     ///
-    /// This is the recommended way to get publishers in bundled/distributed deployments.
+    /// This is the recommended way to get publishers in node-based deployments.
     /// The transport is automatically selected based on topology configuration:
-    /// - Same bundle → Local (Arc<T>)
-    /// - Different bundle, same machine → Unix socket
+    /// - Same node → Local (Arc<T>)
+    /// - Different node, same machine → Unix socket
     /// - Different machine → TCP
     ///
     /// Returns an error if:
@@ -243,64 +244,49 @@ impl MessageBus {
             )
         })?;
 
-        let my_bundle = self.bundle_name.as_ref().ok_or_else(|| {
-            TransportError::ServiceNotFound("No bundle name configured".to_string())
+        let my_node = self.node_name.as_ref().ok_or_else(|| {
+            TransportError::ServiceNotFound("No node name configured".to_string())
         })?;
 
-        // Find target bundle
-        let target_bundle = topology.find_bundle(target_service).ok_or_else(|| {
+        // Find target node
+        let target_node = topology.find_node(target_service).ok_or_else(|| {
             TransportError::ServiceNotFound(format!(
                 "Service '{}' not found in topology",
                 target_service
             ))
         })?;
 
-        // Determine transport type based on bundle comparison
-        // (We have bundle names, not service names, so we compare bundles directly)
-        let transport = if my_bundle == &target_bundle.name {
-            // Same bundle - use local Arc<T>
+        // Determine transport type using topology's method
+        let transport = if topology.same_node(my_node, &target_node.name) {
             TransportType::Local
         } else {
-            // Different bundles - check deployment mode
-            match topology.deployment.mode {
-                DeploymentMode::Monolith => TransportType::Local,
-                DeploymentMode::Bundled | DeploymentMode::Isolated => {
-                    // Use inter_bundle config (defaults to Unix)
-                    topology
-                        .inter_bundle
-                        .as_ref()
-                        .map(|ib| ib.transport)
-                        .unwrap_or(TransportType::Unix)
-                }
-                DeploymentMode::Distributed => {
-                    // Find my bundle to compare hosts
-                    let my_bundle_obj = topology.bundles.iter().find(|b| &b.name == my_bundle);
+            // Get first service from each node for transport determination
+            let my_service = topology.nodes
+                .iter()
+                .find(|n| &n.name == my_node)
+                .and_then(|n| n.services.first())
+                .ok_or_else(|| TransportError::ServiceNotFound("No services in my node".to_string()))?;
 
-                    match (my_bundle_obj, &target_bundle.host) {
-                        (Some(mb), Some(target_host)) if mb.host.as_ref() == Some(target_host) => {
-                            // Same host - use Unix
-                            TransportType::Unix
-                        }
-                        _ => TransportType::Tcp,
-                    }
-                }
-            }
+            let target_service_name = target_node.services.first()
+                .ok_or_else(|| TransportError::ServiceNotFound("No services in target node".to_string()))?;
+
+            topology.transport_between(my_service, target_service_name)
         };
 
         match transport {
             TransportType::Local => {
-                // Same bundle - use Arc<T>
+                // Same node - use Arc<T>
                 Ok(AnyPublisher::Local(self.local.publisher()))
             }
             TransportType::Unix => {
-                // Different bundle, same machine
+                // Different node, same machine
                 let pub_ = self
-                    .unix_publisher(&target_bundle.name)
+                    .unix_publisher(&target_node.name)
                     .await
                     .ok_or_else(|| {
                         TransportError::ServiceNotFound(format!(
                             "Failed to create Unix publisher to '{}'",
-                            target_bundle.name
+                            target_node.name
                         ))
                     })?;
                 Ok(AnyPublisher::Unix(pub_))
@@ -308,12 +294,12 @@ impl MessageBus {
             TransportType::Tcp => {
                 // Different machine
                 let pub_ = self
-                    .tcp_publisher(&target_bundle.name)
+                    .tcp_publisher(&target_node.name)
                     .await
                     .ok_or_else(|| {
                         TransportError::ServiceNotFound(format!(
                             "Failed to create TCP publisher to '{}'",
-                            target_bundle.name
+                            target_node.name
                         ))
                     })?;
                 Ok(AnyPublisher::Tcp(pub_))
@@ -323,10 +309,10 @@ impl MessageBus {
 
     /// Get a subscriber from a specific service with automatic transport selection
     ///
-    /// This is the recommended way to get subscribers in bundled/distributed deployments.
+    /// This is the recommended way to get subscribers in node-based deployments.
     /// The transport is automatically selected based on topology configuration:
-    /// - Same bundle → Local (Arc<T>)
-    /// - Different bundle, same machine → Unix socket
+    /// - Same node → Local (Arc<T>)
+    /// - Different node, same machine → Unix socket
     /// - Different machine → TCP
     ///
     /// Returns an error if:
@@ -343,64 +329,49 @@ M: Message + Clone,
             )
         })?;
 
-        let my_bundle = self.bundle_name.as_ref().ok_or_else(|| {
-            TransportError::ServiceNotFound("No bundle name configured".to_string())
+        let my_node = self.node_name.as_ref().ok_or_else(|| {
+            TransportError::ServiceNotFound("No node name configured".to_string())
         })?;
 
-        // Find source bundle
-        let source_bundle = topology.find_bundle(source_service).ok_or_else(|| {
+        // Find source node
+        let source_node = topology.find_node(source_service).ok_or_else(|| {
             TransportError::ServiceNotFound(format!(
                 "Service '{}' not found in topology",
                 source_service
             ))
         })?;
 
-        // Determine transport type based on bundle comparison
-        // (We have bundle names, not service names, so we compare bundles directly)
-        let transport = if my_bundle == &source_bundle.name {
-            // Same bundle - use local Arc<T>
+        // Determine transport type using topology's method
+        let transport = if topology.same_node(my_node, &source_node.name) {
             TransportType::Local
         } else {
-            // Different bundles - check deployment mode
-            match topology.deployment.mode {
-                DeploymentMode::Monolith => TransportType::Local,
-                DeploymentMode::Bundled | DeploymentMode::Isolated => {
-                    // Use inter_bundle config (defaults to Unix)
-                    topology
-                        .inter_bundle
-                        .as_ref()
-                        .map(|ib| ib.transport)
-                        .unwrap_or(TransportType::Unix)
-                }
-                DeploymentMode::Distributed => {
-                    // Find my bundle to compare hosts
-                    let my_bundle_obj = topology.bundles.iter().find(|b| &b.name == my_bundle);
+            // Get first service from each node for transport determination
+            let my_service = topology.nodes
+                .iter()
+                .find(|n| &n.name == my_node)
+                .and_then(|n| n.services.first())
+                .ok_or_else(|| TransportError::ServiceNotFound("No services in my node".to_string()))?;
 
-                    match (my_bundle_obj, &source_bundle.host) {
-                        (Some(mb), Some(source_host)) if mb.host.as_ref() == Some(source_host) => {
-                            // Same host - use Unix
-                            TransportType::Unix
-                        }
-                        _ => TransportType::Tcp,
-                    }
-                }
-            }
+            let source_service_name = source_node.services.first()
+                .ok_or_else(|| TransportError::ServiceNotFound("No services in source node".to_string()))?;
+
+            topology.transport_between(my_service, source_service_name)
         };
 
         match transport {
             TransportType::Local => {
-                // Same bundle - use Arc<T>
+                // Same node - use Arc<T>
                 Ok(AnySubscriber::Local(self.local.subscriber()))
             }
             TransportType::Unix => {
-                // Different bundle, same machine
+                // Different node, same machine
                 let sub = self
-                    .unix_subscriber(&source_bundle.name)
+                    .unix_subscriber(&source_node.name)
                     .await
                     .ok_or_else(|| {
                         TransportError::ServiceNotFound(format!(
                             "Failed to create Unix subscriber from '{}'",
-                            source_bundle.name
+                            source_node.name
                         ))
                     })?;
                 Ok(AnySubscriber::Unix(sub))
@@ -408,12 +379,12 @@ M: Message + Clone,
             TransportType::Tcp => {
                 // Different machine
                 let sub = self
-                    .tcp_subscriber(&source_bundle.name)
+                    .tcp_subscriber(&source_node.name)
                     .await
                     .ok_or_else(|| {
                         TransportError::ServiceNotFound(format!(
                             "Failed to create TCP subscriber from '{}'",
-                            source_bundle.name
+                            source_node.name
                         ))
                     })?;
                 Ok(AnySubscriber::Tcp(sub))
@@ -426,14 +397,46 @@ M: Message + Clone,
         self.local.subscriber_count::<M>()
     }
 
-    /// Get the bundle name this bus belongs to
-    pub fn bundle_name(&self) -> Option<&str> {
-        self.bundle_name.as_deref()
+    /// Get the node name this bus belongs to
+    pub fn node_name(&self) -> Option<&str> {
+        self.node_name.as_deref()
     }
 
     /// Get the topology configuration
     pub fn topology(&self) -> Option<&Topology> {
         self.topology.as_deref()
+    }
+
+    /// Create a bounded publisher-subscriber pair (with backpressure)
+    ///
+    /// Unlike the broadcast-based `publisher`/`subscriber`, this creates a
+    /// point-to-point channel with bounded capacity. When the channel is full,
+    /// publishers block until the subscriber consumes messages.
+    ///
+    /// **Use cases**:
+    /// - Actor mailboxes (future actor system)
+    /// - Flow control to prevent memory exhaustion
+    /// - Rate-limiting message streams
+    ///
+    /// **Tradeoff**: Only supports single subscriber (vs broadcast's fan-out)
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # use mycelium_transport::MessageBus;
+    /// # use mycelium_protocol::PoolStateUpdate;
+    /// # async fn example() {
+    /// let bus = MessageBus::new();
+    ///
+    /// // Create bounded channel with capacity 100
+    /// let (pub_, mut sub) = bus.bounded_pair::<PoolStateUpdate>(100);
+    ///
+    /// pub_.publish(PoolStateUpdate::default()).await.unwrap();
+    /// let msg = sub.recv().await.unwrap();
+    /// # }
+    /// ```
+    pub fn bounded_pair<M: Message>(&self, capacity: usize) -> (BoundedPublisher<M>, BoundedSubscriber<M>) {
+        BoundedPublisher::new(capacity)
     }
 }
 
@@ -536,37 +539,29 @@ mod tests {
 
     #[tokio::test]
     async fn test_bundled_deployment() {
-        use mycelium_config::{
-            Bundle, Deployment, DeploymentMode, InterBundleConfig, Topology, TransportType,
-        };
+        use mycelium_config::{Node, Topology};
 
-        // Create topology with 2 bundles
+        // Create topology with 2 nodes
         let dir = tempfile::tempdir().unwrap();
         let topology = Topology {
-            deployment: Deployment {
-                mode: DeploymentMode::Bundled,
-            },
-            bundles: vec![
-                Bundle {
+            nodes: vec![
+                Node {
                     name: "adapters".to_string(),
                     services: vec!["polygon-adapter".to_string()],
                     host: None,
                     port: None,
                 },
-                Bundle {
+                Node {
                     name: "strategies".to_string(),
                     services: vec!["flash-arbitrage".to_string()],
                     host: None,
                     port: None,
                 },
             ],
-            inter_bundle: Some(InterBundleConfig {
-                transport: TransportType::Unix,
-                socket_dir: dir.path().to_path_buf(),
-            }),
+            socket_dir: dir.path().to_path_buf(),
         };
 
-        // Bundle 1: adapters (server side - binds socket)
+        // Node 1: adapters (server side - binds socket)
         let socket_path = topology.socket_path("adapters");
         let _adapter_transport = crate::unix::UnixTransport::bind(&socket_path)
             .await
@@ -575,10 +570,10 @@ mod tests {
         // Give server time to start
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-        // Bundle 1: Create message bus for adapters
+        // Node 1: Create message bus for adapters
         let adapters_bus = MessageBus::from_topology(topology.clone(), "adapters");
 
-        // Bundle 1: Publish locally and listen for external subscriptions
+        // Node 1: Publish locally and listen for external subscriptions
         let adapter_pub = adapters_bus.publisher::<SwapEvent>();
         adapter_pub
             .publish(SwapEvent {
@@ -588,16 +583,16 @@ mod tests {
             .await
             .unwrap();
 
-        // Bundle 2: Create message bus for strategies
+        // Node 2: Create message bus for strategies
         let strategies_bus = MessageBus::from_topology(topology, "strategies");
 
-        // Bundle 2: Get Unix publisher to send to adapters bundle
+        // Node 2: Get Unix publisher to send to adapters node
         let unix_pub = strategies_bus
             .unix_publisher::<SwapEvent>("adapters")
             .await
             .expect("Failed to create Unix publisher");
 
-        // Bundle 2: Publish message to adapters bundle
+        // Node 2: Publish message to adapters node
         unix_pub
             .publish(SwapEvent {
                 pool: 200,
@@ -607,71 +602,67 @@ mod tests {
             .unwrap();
 
         // Verify metadata
-        assert_eq!(adapters_bus.bundle_name(), Some("adapters"));
-        assert_eq!(strategies_bus.bundle_name(), Some("strategies"));
+        assert_eq!(adapters_bus.node_name(), Some("adapters"));
+        assert_eq!(strategies_bus.node_name(), Some("strategies"));
         assert!(adapters_bus.topology().is_some());
     }
 
     #[tokio::test]
     async fn test_from_topology() {
-        use mycelium_config::{Deployment, DeploymentMode, Topology};
+        use mycelium_config::{Topology};
 
+        let dir = tempfile::tempdir().unwrap();
         let topology = Topology {
-            deployment: Deployment {
-                mode: DeploymentMode::Monolith,
-            },
-            bundles: vec![],
-            inter_bundle: None,
+            nodes: vec![],
+            socket_dir: dir.path().to_path_buf(),
         };
 
-        let bus = MessageBus::from_topology(topology, "test-bundle");
+        let bus = MessageBus::from_topology(topology, "test-node");
 
-        assert_eq!(bus.bundle_name(), Some("test-bundle"));
+        assert_eq!(bus.node_name(), Some("test-node"));
         assert!(bus.topology().is_some());
     }
 
     #[tokio::test]
     async fn test_distributed_deployment() {
-        use mycelium_config::{Bundle, Deployment, DeploymentMode, Topology};
+        use mycelium_config::{Node, Topology};
 
-        // Create topology with 2 bundles on different hosts
+        // Create topology with 2 nodes on different hosts
+        let dir = tempfile::tempdir().unwrap();
         let topology = Topology {
-            deployment: Deployment {
-                mode: DeploymentMode::Distributed,
-            },
-            bundles: vec![
-                Bundle {
+            nodes: vec![
+                Node {
                     name: "adapters".to_string(),
                     services: vec!["polygon-adapter".to_string()],
                     host: Some("127.0.0.1".to_string()),
                     port: Some(0), // Will be replaced with actual port
                 },
-                Bundle {
+                Node {
                     name: "strategies".to_string(),
                     services: vec!["flash-arbitrage".to_string()],
                     host: Some("127.0.0.1".to_string()),
                     port: Some(0),
                 },
             ],
-            inter_bundle: None,
+            socket_dir: dir.path().to_path_buf(),
         };
 
-        // Bundle 1: adapters (server side - binds socket)
+        // Node 1: adapters (server side - binds socket)
         let adapter_addr = "127.0.0.1:0".parse().unwrap();
         let adapter_transport = crate::tcp::TcpTransport::bind(adapter_addr).await.unwrap();
         let adapter_bind_addr = adapter_transport.local_addr();
 
         // Update topology with actual port
         let mut updated_topology = topology.clone();
-        updated_topology.bundles[0].port = Some(adapter_bind_addr.port());
+        updated_topology.nodes[0].port = Some(adapter_bind_addr.port());
 
         // Give server time to start
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-        // Bundle 1: Create message bus for adapters
+        // Node 1: Create message bus for adapters
         let adapters_bus = MessageBus::from_topology(updated_topology.clone(), "adapters");
 
-        // Bundle 1: Publish locally
+        // Node 1: Publish locally
         let adapter_pub = adapters_bus.publisher::<SwapEvent>();
         adapter_pub
             .publish(SwapEvent {
@@ -681,16 +672,16 @@ mod tests {
             .await
             .unwrap();
 
-        // Bundle 2: Create message bus for strategies
+        // Node 2: Create message bus for strategies
         let strategies_bus = MessageBus::from_topology(updated_topology, "strategies");
 
-        // Bundle 2: Get TCP publisher to send to adapters bundle
+        // Node 2: Get TCP publisher to send to adapters node
         let tcp_pub = strategies_bus
             .tcp_publisher::<SwapEvent>("adapters")
             .await
             .expect("Failed to create TCP publisher");
 
-        // Bundle 2: Publish message to adapters bundle
+        // Node 2: Publish message to adapters node
         tcp_pub
             .publish(SwapEvent {
                 pool: 200,
@@ -700,32 +691,30 @@ mod tests {
             .unwrap();
 
         // Verify metadata
-        assert_eq!(adapters_bus.bundle_name(), Some("adapters"));
-        assert_eq!(strategies_bus.bundle_name(), Some("strategies"));
+        assert_eq!(adapters_bus.node_name(), Some("adapters"));
+        assert_eq!(strategies_bus.node_name(), Some("strategies"));
         assert!(adapters_bus.topology().is_some());
     }
 
     #[tokio::test]
-    async fn test_publisher_to_same_bundle() {
-        use mycelium_config::{Bundle, Deployment, DeploymentMode, Topology};
+    async fn test_publisher_to_same_node() {
+        use mycelium_config::{Node, Topology};
 
-        // Create topology with services in same bundle
+        // Create topology with services in same node
+        let dir = tempfile::tempdir().unwrap();
         let topology = Topology {
-            deployment: Deployment {
-                mode: DeploymentMode::Bundled,
-            },
-            bundles: vec![Bundle {
+            nodes: vec![Node {
                 name: "trading".to_string(),
                 services: vec!["portfolio-state".to_string(), "order-executor".to_string()],
                 host: None,
                 port: None,
             }],
-            inter_bundle: None,
+            socket_dir: dir.path().to_path_buf(),
         };
 
         let bus = MessageBus::from_topology(topology, "trading");
 
-        // Get publisher to service in same bundle
+        // Get publisher to service in same node
         let pub_ = bus
             .publisher_to::<SwapEvent>("order-executor")
             .await
@@ -748,37 +737,29 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_publisher_to_different_bundle_unix() {
-        use mycelium_config::{
-            Bundle, Deployment, DeploymentMode, InterBundleConfig, Topology, TransportType,
-        };
+    async fn test_publisher_to_different_node_unix() {
+        use mycelium_config::{Node, Topology};
 
         let dir = tempfile::tempdir().unwrap();
         let topology = Topology {
-            deployment: Deployment {
-                mode: DeploymentMode::Bundled,
-            },
-            bundles: vec![
-                Bundle {
+            nodes: vec![
+                Node {
                     name: "portfolio".to_string(),
                     services: vec!["portfolio-state".to_string()],
                     host: None,
                     port: None,
                 },
-                Bundle {
+                Node {
                     name: "executor".to_string(),
                     services: vec!["order-executor".to_string()],
                     host: None,
                     port: None,
                 },
             ],
-            inter_bundle: Some(InterBundleConfig {
-                transport: TransportType::Unix,
-                socket_dir: dir.path().to_path_buf(),
-            }),
+            socket_dir: dir.path().to_path_buf(),
         };
 
-        // Bind server for executor bundle
+        // Bind server for executor node
         let executor_socket = topology.socket_path("executor");
         let _executor_server = crate::unix::UnixTransport::bind(&executor_socket)
             .await
@@ -788,7 +769,7 @@ mod tests {
 
         let portfolio_bus = MessageBus::from_topology(topology, "portfolio");
 
-        // Get publisher to different bundle
+        // Get publisher to different node
         let pub_ = portfolio_bus
             .publisher_to::<SwapEvent>("order-executor")
             .await
@@ -800,33 +781,31 @@ mod tests {
 
     #[tokio::test]
     async fn test_publisher_to_distributed_tcp() {
-        use mycelium_config::{Bundle, Deployment, DeploymentMode, Topology};
+        use mycelium_config::{Node, Topology};
 
-        // Bind a real TCP server for executor bundle
+        // Bind a real TCP server for executor node
         let executor_server = crate::tcp::TcpTransport::bind("127.0.0.1:0".parse().unwrap())
             .await
             .unwrap();
         let executor_addr = executor_server.local_addr();
 
+        let dir = tempfile::tempdir().unwrap();
         let topology = Topology {
-            deployment: Deployment {
-                mode: DeploymentMode::Distributed,
-            },
-            bundles: vec![
-                Bundle {
+            nodes: vec![
+                Node {
                     name: "portfolio".to_string(),
                     services: vec!["portfolio-state".to_string()],
                     host: Some("192.168.1.10".to_string()),  // Different host
                     port: Some(9001),
                 },
-                Bundle {
+                Node {
                     name: "executor".to_string(),
                     services: vec!["order-executor".to_string()],
                     host: Some(executor_addr.ip().to_string()),  // 127.0.0.1
                     port: Some(executor_addr.port()),
                 },
             ],
-            inter_bundle: None,
+            socket_dir: dir.path().to_path_buf(),
         };
 
         let portfolio_bus = MessageBus::from_topology(topology, "portfolio");
@@ -842,25 +821,23 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_subscriber_from_same_bundle() {
-        use mycelium_config::{Bundle, Deployment, DeploymentMode, Topology};
+    async fn test_subscriber_from_same_node() {
+        use mycelium_config::{Node, Topology};
 
+        let dir = tempfile::tempdir().unwrap();
         let topology = Topology {
-            deployment: Deployment {
-                mode: DeploymentMode::Bundled,
-            },
-            bundles: vec![Bundle {
+            nodes: vec![Node {
                 name: "trading".to_string(),
                 services: vec!["portfolio-state".to_string(), "order-executor".to_string()],
                 host: None,
                 port: None,
             }],
-            inter_bundle: None,
+            socket_dir: dir.path().to_path_buf(),
         };
 
         let bus = MessageBus::from_topology(topology, "trading");
 
-        // Get subscriber from service in same bundle
+        // Get subscriber from service in same node
         let mut sub = bus
             .subscriber_from::<SwapEvent>("order-executor")
             .await
@@ -893,19 +870,17 @@ mod tests {
 
     #[tokio::test]
     async fn test_smart_routing_error_service_not_found() {
-        use mycelium_config::{Bundle, Deployment, DeploymentMode, Topology};
+        use mycelium_config::{Node, Topology};
 
+        let dir = tempfile::tempdir().unwrap();
         let topology = Topology {
-            deployment: Deployment {
-                mode: DeploymentMode::Bundled,
-            },
-            bundles: vec![Bundle {
+            nodes: vec![Node {
                 name: "trading".to_string(),
                 services: vec!["portfolio-state".to_string()],
                 host: None,
                 port: None,
             }],
-            inter_bundle: None,
+            socket_dir: dir.path().to_path_buf(),
         };
 
         let bus = MessageBus::from_topology(topology, "trading");

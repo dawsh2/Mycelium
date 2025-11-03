@@ -2,7 +2,7 @@
 //!
 //! Tests for different deployment scenarios:
 //! - Monolith deployment (single process)
-//! - Bundled deployment (multiple bundles)
+//! - Bundled deployment (multiple nodes)
 //! - Distributed deployment (multiple hosts)
 //! - Mixed scenarios
 

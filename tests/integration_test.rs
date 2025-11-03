@@ -1,4 +1,4 @@
-use mycelium_config::{Bundle, Deployment, DeploymentMode, InterBundleConfig, Topology, TransportType};
+use mycelium_config::{Node, Topology};
 use mycelium_protocol::impl_message;
 use mycelium_transport::{MessageBus, TcpTransport, UnixTransport};
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
@@ -80,30 +80,24 @@ async fn test_bundled_deployment_simple() {
     // Simplified test: demonstrate bundled topology configuration
     let dir = tempfile::tempdir().unwrap();
     let topology = Topology {
-        deployment: Deployment {
-            mode: DeploymentMode::Bundled,
-        },
-        bundles: vec![
-            Bundle {
+        nodes: vec![
+            Node {
                 name: "adapters".to_string(),
                 services: vec!["polygon-adapter".to_string()],
                 host: None,
                 port: None,
             },
-            Bundle {
+            Node {
                 name: "strategies".to_string(),
                 services: vec!["flash-arbitrage".to_string()],
                 host: None,
                 port: None,
             },
         ],
-        inter_bundle: Some(InterBundleConfig {
-            transport: TransportType::Unix,
-            socket_dir: dir.path().to_path_buf(),
-        }),
+        socket_dir: dir.path().to_path_buf(),
     };
 
-    // Bind server socket for strategies bundle
+    // Bind server socket for strategies node
     let strategy_socket = topology.socket_path("strategies");
     let _strategy_server = UnixTransport::bind(&strategy_socket).await.unwrap();
     let mut strategy_sub = _strategy_server.subscriber::<SwapEvent>();
@@ -150,27 +144,24 @@ async fn test_bundled_deployment_simple() {
 async fn test_distributed_deployment_simple() {
     // Simplified test: demonstrate TCP transport for distributed deployment
     let topology = Topology {
-        deployment: Deployment {
-            mode: DeploymentMode::Distributed,
-        },
-        bundles: vec![
-            Bundle {
+        nodes: vec![
+            Node {
                 name: "adapters".to_string(),
                 services: vec!["polygon-adapter".to_string()],
                 host: Some("127.0.0.1".to_string()),
                 port: Some(0),
             },
-            Bundle {
+            Node {
                 name: "strategies".to_string(),
                 services: vec!["flash-arbitrage".to_string()],
                 host: Some("127.0.0.1".to_string()),
                 port: Some(0),
             },
         ],
-        inter_bundle: None,
+        socket_dir: std::path::PathBuf::from("/tmp/mycelium"),
     };
 
-    // Bind server for strategies bundle
+    // Bind server for strategies node
     let strategy_addr = "127.0.0.1:0".parse().unwrap();
     let strategy_server = TcpTransport::bind(strategy_addr).await.unwrap();
     let strategy_bind_addr = strategy_server.local_addr();
@@ -178,7 +169,7 @@ async fn test_distributed_deployment_simple() {
 
     // Update topology with actual port
     let mut updated_topology = topology;
-    updated_topology.bundles[1].port = Some(strategy_bind_addr.port());
+    updated_topology.nodes[1].port = Some(strategy_bind_addr.port());
 
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
@@ -223,27 +214,21 @@ async fn test_mixed_transport_deployment() {
     // Test hybrid: Local + Unix + TCP all working together
     let dir = tempfile::tempdir().unwrap();
     let topology = Topology {
-        deployment: Deployment {
-            mode: DeploymentMode::Bundled,
-        },
-        bundles: vec![
-            Bundle {
+        nodes: vec![
+            Node {
                 name: "local-services".to_string(),
                 services: vec!["service-a".to_string(), "service-b".to_string()],
                 host: None,
                 port: None,
             },
-            Bundle {
+            Node {
                 name: "remote-services".to_string(),
                 services: vec!["service-c".to_string()],
                 host: Some("127.0.0.1".to_string()),
                 port: Some(0),
             },
         ],
-        inter_bundle: Some(InterBundleConfig {
-            transport: TransportType::Unix,
-            socket_dir: dir.path().to_path_buf(),
-        }),
+        socket_dir: dir.path().to_path_buf(),
     };
 
     // Bind transports
@@ -260,7 +245,7 @@ async fn test_mixed_transport_deployment() {
     let local_pub = local_bus.publisher::<SwapEvent>();
     let mut local_sub = local_bus.subscriber::<SwapEvent>();
 
-    // Cross-bundle pub/sub (Unix)
+    // Cross-node pub/sub (Unix)
     let unix_pub = local_bus
         .unix_publisher::<SwapEvent>("remote-services")
         .await
@@ -282,7 +267,7 @@ async fn test_mixed_transport_deployment() {
     let local_event = local_sub.recv().await.unwrap();
     assert_eq!(local_event.pool_id, 1);
 
-    // Test cross-bundle communication
+    // Test cross-node communication
     unix_pub
         .publish(SwapEvent {
             pool_id: 2,

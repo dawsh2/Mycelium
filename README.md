@@ -1,12 +1,14 @@
-# Mycelium
+<h1>
+  <img src="docs/assets/cultures.svg" alt="Mycelium Logo" width="40" style="vertical-align: middle; margin-right: 10px;">Mycelium
+</h1>
 
 **Pub/Sub Transport Layer with Adaptive Routing**
 
 Mycelium is a type-safe pub/sub messaging system implemented in Rust that provides **adaptive transport** based on deployment topology. Write your pub/sub code once, configure your topology, and the transport is selected automatically:
 
-- **Same bundle (process)**: `Arc<T>` zero-copy sharing (~200ns latency)
-- **Different bundles, same machine**: Unix domain sockets (~50μs latency)
-- **Different machines**: TCP with zero-copy deserialization (~500μs + network)
+- **Same node (process)**: `Arc<T>` zero-copy sharing (~200ns latency)
+- **Different nodes, same host**: Unix domain sockets (~50μs latency)
+- **Different nodes, different hosts**: TCP with zero-copy deserialization (~500μs + network)
 
 **Applications**: High-frequency trading, multiplayer game servers, real-time analytics pipelines, IoT/sensor networks.
 
@@ -54,56 +56,47 @@ while let Some(update) = sub.recv().await {
 
 ### 3. Configure Deployment Topology
 
-**Monolith** (single process):
+**Single node** (one process):
 ```toml
 # config/dev.toml
-[deployment]
-mode = "monolith"
-
-[[bundles]]
+[[nodes]]
 name = "main"
 services = ["polygon-adapter", "flash-arbitrage", "order-executor"]
 ```
 
-**Bundled** (multiple processes, one machine):
+**Multiple nodes, same host** (multiple processes, one machine):
 ```toml
 # config/staging.toml
-[deployment]
-mode = "bundled"
-
-[inter_bundle]
-transport = "unix"
 socket_dir = "/tmp/mycelium"
 
-[[bundles]]
+[[nodes]]
 name = "adapters"
 services = ["polygon-adapter"]
 
-[[bundles]]
+[[nodes]]
 name = "strategies"
 services = ["flash-arbitrage"]
+# No host specified → uses Unix sockets via socket_dir
 ```
 
-**Distributed** (multiple machines):
+**Multiple nodes, different hosts** (distributed):
 ```toml
 # config/prod.toml
-[deployment]
-mode = "distributed"
-
-[[bundles]]
+[[nodes]]
 name = "adapters"
 services = ["polygon-adapter"]
 host = "10.0.1.10"
 port = 9000
 
-[[bundles]]
+[[nodes]]
 name = "strategies"
 services = ["flash-arbitrage"]
 host = "10.0.2.20"
 port = 9001
+# Different hosts → uses TCP
 ```
 
-**Same code, different configs.** The `MessageBus` reads your topology configuration and selects the appropriate transport.
+**Same code, different configs.** The `MessageBus` reads your topology and infers transport: same node → Arc, same host → Unix, different hosts → TCP.
 
 ---
 

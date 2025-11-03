@@ -2,7 +2,7 @@
 //!
 //! Tests cover all transport types and deployment scenarios:
 //! - Monolith: All services in one process (Arc<T> only)
-//! - Bundled: Services grouped in bundles (Arc + Unix/TCP)
+//! - Bundled: Services grouped in nodes (Arc + Unix/TCP)
 //! - Distributed: Services across machines (TCP only)
 
 pub mod monolith;

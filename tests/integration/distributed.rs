@@ -3,9 +3,10 @@
 //! Services across different machines using TCP transport.
 
 use crate::integration::{ArbitrageSignal, MessageBus, SwapEvent};
-use mycelium_config::{Bundle, Deployment, DeploymentMode, Topology};
+use mycelium_config::{Node, Topology};
 use mycelium_transport::TcpTransport;
 use std::net::SocketAddr;
+use tokio::time::sleep;
 
 #[tokio::test]
 async fn test_tcp_transport_between_hosts() {
@@ -18,7 +19,7 @@ async fn test_tcp_transport_between_hosts() {
 
     // Update topology with actual port
     let mut updated_topology = topology.clone();
-    updated_topology.bundles[1].port = Some(remote_bind_addr.port());
+    updated_topology.nodes[1].port = Some(remote_bind_addr.port());
 
     sleep(tokio::time::Duration::from_millis(100)).await;
 
@@ -122,23 +123,20 @@ async fn test_high_latency_tcp_messages() {
 
 fn create_distributed_topology() -> Topology {
     Topology {
-        deployment: Deployment {
-            mode: DeploymentMode::Distributed,
-        },
-        bundles: vec![
-            Bundle {
+        nodes: vec![
+            Node {
                 name: "adapters".to_string(),
                 services: vec!["polygon-adapter".to_string()],
                 host: Some("127.0.0.1".to_string()),
                 port: Some(9001),
             },
-            Bundle {
+            Node {
                 name: "strategies".to_string(),
                 services: vec!["flash-arbitrage".to_string()],
                 host: Some("192.168.1.100".to_string()), // Different host
                 port: Some(0), // Will be replaced with actual port
             },
         ],
-        inter_bundle: None,
+        socket_dir: std::path::PathBuf::from("/tmp/mycelium"),
     }
 }

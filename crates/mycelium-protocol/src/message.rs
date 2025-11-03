@@ -1,15 +1,17 @@
+//! Core trait for all messages in the Mycelium system.
+//!
+//! Messages must be:
+//! - Zero-copy serializable (zerocopy) for performance
+//! - Send + Sync (can be shared across threads)
+//! - Have a unique type ID and topic
+//! - Clone (for sharing across subscribers)
+//!
+//! Note: Messages CAN be Copy (and currently are, using FixedVec), but the trait
+//! doesn't require it to allow for future messages with non-Copy data if needed.
 use std::fmt::Debug;
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
-/// Core trait for all messages in the Mycelium system.
-///
-/// Messages must be:
-/// - Zero-copy serializable (zerocopy) for performance
-/// - Send + Sync (can be shared across threads)
-/// - Have a unique type ID and topic
-/// - Copy + Clone (for zero-copy sharing)
-pub trait Message: AsBytes + FromBytes + FromZeroes + Send + Sync + Debug + Copy + Clone + 'static
-{
+pub trait Message: AsBytes + FromBytes + FromZeroes + Send + Sync + Debug + Clone + 'static {
     /// Unique message type ID (for TLV encoding)
     const TYPE_ID: u16;
 

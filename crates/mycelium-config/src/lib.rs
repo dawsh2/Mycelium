@@ -1,6 +1,3 @@
 pub mod topology;
 
-pub use topology::{
-    Bundle, ConfigError, Deployment, DeploymentMode, InterBundleConfig, Result, Topology,
-    TransportType,
-};
+pub use topology::{ConfigError, Node, Result, Topology, TransportType};

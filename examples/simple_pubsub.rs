@@ -3,7 +3,6 @@
 /// Run with: cargo run --example simple_pubsub
 use mycelium_protocol::{impl_message, Message};
 use mycelium_transport::MessageBus;
-use rkyv::Archive;
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 // Define a message type (C layout for zerocopy)

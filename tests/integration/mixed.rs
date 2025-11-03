@@ -3,7 +3,7 @@
 //! Tests combining different transport types and deployment modes.
 
 use crate::integration::{ArbitrageSignal, MessageBus, OrderExecution, SwapEvent};
-use mycelium_config::{Bundle, Deployment, DeploymentMode, InterBundleConfig, Topology, TransportType};
+use mycelium_config::{Node, Topology};
 use mycelium_transport::{TcpTransport, UnixTransport};
 use tempfile::TempDir;
 
@@ -25,11 +25,11 @@ async fn test_mixed_transport_types() {
 
     // Update topology with actual port
     let mut updated_topology = topology.clone();
-    updated_topology.bundles[2].port = Some(remote_bind_addr.port());
+    updated_topology.nodes[2].port = Some(remote_bind_addr.port());
 
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-    // Create message buses for each bundle
+    // Create message buses for each node
     let adapters_bus = MessageBus::from_topology(updated_topology.clone(), "adapters");
     let strategies_bus = MessageBus::from_topology(updated_topology.clone(), "strategies");
     let execution_bus = MessageBus::from_topology(updated_topology, "execution");
@@ -115,20 +115,20 @@ async fn test_smart_routing_mixed_transports() {
 
     // Update topology with actual port
     let mut updated_topology = topology;
-    updated_topology.bundles[2].port = Some(remote_bind_addr.port());
+    updated_topology.nodes[2].port = Some(remote_bind_addr.port());
 
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
     let adapters_bus = MessageBus::from_topology(updated_topology, "adapters");
 
-    // Test routing to same bundle (Local)
-    let same_bundle_pub = adapters_bus
+    // Test routing to same node (Local)
+    let same_node_pub = adapters_bus
         .publisher_to::<SwapEvent>("ethereum-adapter")
         .await
         .expect("Failed to create publisher");
-    assert_eq!(same_bundle_pub.transport_type(), "local");
+    assert_eq!(same_node_pub.transport_type(), "local");
 
-    // Test routing to different bundle, same host (Unix)
+    // Test routing to different node, same host (Unix)
     let unix_pub = adapters_bus
         .publisher_to::<SwapEvent>("flash-arbitrage")
         .await
@@ -149,27 +149,21 @@ async fn test_transport_fallback_behavior() {
     let socket_dir = temp_dir.path();
 
     let topology = Topology {
-        deployment: Deployment {
-            mode: DeploymentMode::Bundled,
-        },
-        bundles: vec![
-            Bundle {
+        nodes: vec![
+            Node {
                 name: "adapters".to_string(),
                 services: vec!["polygon-adapter".to_string()],
                 host: None,
                 port: None,
             },
-            Bundle {
+            Node {
                 name: "strategies".to_string(),
                 services: vec!["flash-arbitrage".to_string()],
                 host: None,
                 port: None,
             },
         ],
-        inter_bundle: Some(InterBundleConfig {
-            transport: TransportType::Unix,
-            socket_dir: socket_dir.to_path_buf(),
-        }),
+        socket_dir: socket_dir.to_path_buf(),
     };
 
     let adapters_bus = MessageBus::from_topology(topology, "adapters");
@@ -206,7 +200,7 @@ async fn test_concurrent_messaging_across_transports() {
 
     // Update topology with actual port
     let mut updated_topology = topology;
-    updated_topology.bundles[2].port = Some(remote_bind_addr.port());
+    updated_topology.nodes[2].port = Some(remote_bind_addr.port());
 
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
@@ -296,29 +290,26 @@ async fn test_concurrent_messaging_across_transports() {
 
 fn create_mixed_topology(socket_dir: &std::path::Path) -> Topology {
     Topology {
-        deployment: Deployment {
-            mode: DeploymentMode::Distributed,
-        },
-        bundles: vec![
-            Bundle {
+        nodes: vec![
+            Node {
                 name: "adapters".to_string(),
                 services: vec!["polygon-adapter".to_string(), "ethereum-adapter".to_string()],
                 host: Some("127.0.0.1".to_string()), // Local host
                 port: Some(9001),
             },
-            Bundle {
+            Node {
                 name: "strategies".to_string(),
                 services: vec!["flash-arbitrage".to_string()],
                 host: Some("127.0.0.1".to_string()), // Same host - should use Unix
                 port: Some(0), // Will be set dynamically
             },
-            Bundle {
+            Node {
                 name: "execution".to_string(),
                 services: vec!["order-manager".to_string()],
                 host: Some("192.168.1.100".to_string()), // Different host - should use TCP
                 port: Some(0), // Will be set dynamically
             },
         ],
-        inter_bundle: None, // Will be determined automatically
+        socket_dir: socket_dir.to_path_buf(),
     }
 }
