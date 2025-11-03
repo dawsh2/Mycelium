@@ -175,7 +175,7 @@ async fn test_local_memory_efficiency() {
     let bus = MessageBus::new();
 
     // Create large message to test memory sharing
-    #[derive(Debug, Clone, Copy, PartialEq, Archive, AsBytes, FromBytes, FromZeroes)]
+    #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
     #[repr(C)]
     struct LargeMessage {
         data: [u64; 1000], // ~8KB per message

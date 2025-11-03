@@ -85,7 +85,7 @@ async fn test_multiple_message_types() {
 
     order_pub.publish(OrderExecution {
         order_id: 999,
-        success: true,
+        success: 1,  // 1 = true
         timestamp: 3000,
     }).await.unwrap();
 

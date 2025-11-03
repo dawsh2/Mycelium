@@ -2,7 +2,6 @@
 
 use mycelium_protocol::impl_message;
 use mycelium_transport::MessageBus;
-use rkyv::Archive;
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
 use std::time::Duration;
 use tokio::time::sleep;
@@ -33,7 +32,7 @@ impl_message!(ArbitrageSignal, 2, "arbitrage");
 #[repr(C)]
 pub struct OrderExecution {
     pub order_id: u64,
-    pub success: bool,
+    pub success: u8,  // 1 = true, 0 = false (bool not safe for zerocopy)
     pub timestamp: u64,
 }
 
@@ -71,7 +70,7 @@ pub fn create_test_arbitrage_signal(opportunity_id: u64) -> ArbitrageSignal {
 pub fn create_test_order_execution(order_id: u64, success: bool) -> OrderExecution {
     OrderExecution {
         order_id,
-        success,
+        success: if success { 1 } else { 0 },
         timestamp: 111111111 + order_id,
     }
 }

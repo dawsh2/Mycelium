@@ -82,7 +82,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_local_transport_pubsub() {
-        let transport = LocalTransport::new(10);
+        let transport = LocalTransport::new();
 
         let pub_ = transport.publisher::<TestMsg>();
         let mut sub = transport.subscriber::<TestMsg>();
@@ -97,7 +97,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_multiple_subscribers() {
-        let transport = LocalTransport::new(10);
+        let transport = LocalTransport::new();
 
         let pub_ = transport.publisher::<TestMsg>();
         let mut sub1 = transport.subscriber::<TestMsg>();
@@ -116,12 +116,12 @@ mod tests {
 
     #[tokio::test]
     async fn test_subscriber_count() {
-        let transport = LocalTransport::new(10);
+        let transport = LocalTransport::new();
 
         let _sub1 = transport.subscriber::<TestMsg>();
         let _sub2 = transport.subscriber::<TestMsg>();
 
-        assert_eq!(transport.subscriber_count("test-topic"), Some(2));
+        assert_eq!(transport.subscriber_count::<TestMsg>(), 2);
     }
 
     #[tokio::test]
@@ -141,7 +141,7 @@ mod tests {
         impl_message!(Msg1, 10, "topic1");
         impl_message!(Msg2, 11, "topic2");
 
-        let transport = LocalTransport::new(10);
+        let transport = LocalTransport::new();
 
         let pub1 = transport.publisher::<Msg1>();
         let pub2 = transport.publisher::<Msg2>();
@@ -182,7 +182,7 @@ mod tests {
         impl_message!(Msg1, 20, "topic-a");
         impl_message!(Msg2, 21, "topic-b");
 
-        let transport = LocalTransport::new(10);
+        let transport = LocalTransport::new();
 
         let _pub1 = transport.publisher::<Msg1>();
         let _pub2 = transport.publisher::<Msg2>();

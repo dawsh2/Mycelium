@@ -1,7 +1,6 @@
-use mycelium_protocol::Message;
+use mycelium_protocol::{codec::{HEADER_SIZE, MAX_PAYLOAD_SIZE}, Message};
 use thiserror::Error;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use zerocopy::{AsBytes, FromBytes};
 
 #[derive(Error, Debug)]
 pub enum CodecError {
@@ -13,6 +12,9 @@ pub enum CodecError {
 
     #[error("Message too large: {0} bytes")]
     MessageTooLarge(usize),
+
+    #[error("Deserialization failed")]
+    DeserializationFailed,
 }
 
 pub type Result<T> = std::result::Result<T, CodecError>;
@@ -38,7 +40,7 @@ where
     let bytes = msg.as_bytes();
 
     let len = bytes.len();
-    if len > MAX_MESSAGE_SIZE {
+    if len > MAX_PAYLOAD_SIZE {
         return Err(CodecError::MessageTooLarge(len));
     }
 

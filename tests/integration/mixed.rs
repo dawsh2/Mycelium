@@ -73,7 +73,7 @@ async fn test_mixed_transport_types() {
 
     let order_exec = OrderExecution {
         order_id: 300,
-        success: true,
+        success: 1,  // 1 = true
         timestamp: 33333,
     };
 

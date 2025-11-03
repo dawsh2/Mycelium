@@ -6,8 +6,10 @@
 //! - Distributed deployment (multiple hosts)
 //! - Mixed scenarios
 
-pub mod monolith_deployment;
-pub mod bundled_deployment;
-pub mod distributed_deployment;
-pub mod mixed_deployment;
-pub mod topology_validation;
+// TODO: Re-enable these tests after migration
+// These tests exist in tests/integration/ instead
+// pub mod monolith_deployment;
+// pub mod bundled_deployment;
+// pub mod distributed_deployment;
+// pub mod mixed_deployment;
+// pub mod topology_validation;

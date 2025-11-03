@@ -11,7 +11,8 @@ pub mod common;
 pub mod transport_tests;
 pub mod deployment_tests;
 pub mod performance_tests;
-pub mod error_handling_tests;
+// TODO: Re-enable after migration - error handling tests exist in integration/error_handling.rs
+// pub mod error_handling_tests;
 
 // Re-export common utilities for easier access
 pub use common::*;
