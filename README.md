@@ -1,6 +1,7 @@
-<h1>
-  <img src="docs/assets/cultures.svg" alt="Mycelium Logo" width="40" style="vertical-align: middle; margin-right: 10px;">Mycelium
-</h1>
+<div style="display: flex; align-items: center;">
+  <img src="docs/assets/cultures.svg" alt="Mycelium Logo" width="40" style="margin-right: 15px;">
+  <h1>Mycelium</h1>
+</div>
 
 **Pub/Sub Transport Layer with Adaptive Routing**
 

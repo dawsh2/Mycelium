@@ -1,5 +1,5 @@
 use crate::{config::TransportConfig, Publisher, Subscriber, ChannelManager};
-use mycelium_protocol::{Envelope, Message};
+use mycelium_protocol::Message;
 
 /// Local transport using Arc<T> for zero-copy message passing
 ///
@@ -45,6 +45,25 @@ impl LocalTransport {
     /// Create a subscriber for a message type
     pub fn subscriber<M: Message>(&self) -> Subscriber<M> {
         let tx = self.channel_manager.get_or_create_channel::<M>();
+        let rx = tx.subscribe();
+        Subscriber::new(rx)
+    }
+
+    /// Create a publisher for an explicit topic (Phase 1: Actor-ready)
+    ///
+    /// This enables dynamic topic creation for actor mailboxes and partitioned topics.
+    /// Example: `publisher_for_topic::<MyMessage>("actor.123abc")`
+    pub fn publisher_for_topic<M: Message>(&self, topic: &str) -> Publisher<M> {
+        let tx = self.channel_manager.get_or_create_channel_for_topic(topic);
+        Publisher::new(tx)
+    }
+
+    /// Create a subscriber for an explicit topic (Phase 1: Actor-ready)
+    ///
+    /// This enables dynamic topic subscription for actor mailboxes and partitioned topics.
+    /// Example: `subscriber_for_topic::<MyMessage>("actor.123abc")`
+    pub fn subscriber_for_topic<M: Message>(&self, topic: &str) -> Subscriber<M> {
+        let tx = self.channel_manager.get_or_create_channel_for_topic(topic);
         let rx = tx.subscribe();
         Subscriber::new(rx)
     }

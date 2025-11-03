@@ -3,7 +3,6 @@ use crate::error::Result;
 use dashmap::DashMap;
 use mycelium_protocol::{Envelope, Message};
 use std::any::Any;
-use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};

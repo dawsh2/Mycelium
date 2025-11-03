@@ -10,6 +10,7 @@ pub mod publisher;
 pub mod service;
 pub mod shared;
 pub mod stream;
+pub mod topics;
 pub mod subscriber;
 pub mod tcp;
 pub mod unix;
@@ -33,5 +34,6 @@ pub use service::{
 pub use shared::{BufferSizes, ChannelManager, ConnectionInfo, TransportType};
 pub use stream::{StreamSubscriber, handle_stream_connection};
 pub use subscriber::Subscriber;
+pub use topics::TopicBuilder;
 pub use tcp::{TcpPublisher, TcpSubscriber, TcpTransport};
 pub use unix::{UnixPublisher, UnixSubscriber, UnixTransport};

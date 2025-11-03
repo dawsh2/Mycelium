@@ -46,7 +46,7 @@ async fn test_tcp_transport_between_hosts() {
     tcp_publisher.publish(event).await.unwrap();
 
     let received = remote_subscriber.recv().await.unwrap();
-    assert_eq!(received, event);
+    assert_eq!(*received, event);
 }
 
 #[tokio::test]

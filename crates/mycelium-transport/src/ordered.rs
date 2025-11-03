@@ -15,7 +15,7 @@
 /// - Trading systems where order matters (cancel after fill)
 /// - Game state updates that must be applied sequentially
 /// - Any scenario requiring causal ordering
-use crate::{Result, Subscriber, TransportError};
+use crate::Subscriber;
 use mycelium_protocol::Message;
 use std::collections::BTreeMap;
 use std::marker::PhantomData;
@@ -129,7 +129,8 @@ struct SequenceTracker<M: Message> {
     /// Buffer of out-of-order messages (sequence -> message)
     buffer: BTreeMap<u64, Arc<M>>,
 
-    /// Maximum buffer size before warning
+    /// Maximum buffer size before warning (reserved for future use)
+    #[allow(dead_code)]
     max_buffer_size: usize,
 
     /// Statistics
@@ -156,19 +157,31 @@ impl<M: Message> SequenceTracker<M> {
     fn add_message(&mut self, msg: Arc<M>) -> Option<Arc<M>> {
         self.stats.total_received += 1;
 
-        // Messages without sequence numbers are delivered immediately
-        // This maintains backward compatibility with unsequenced messages
-        let sequence = match msg.as_ref() as &dyn std::any::Any {
-            // In a real implementation, we'd check the envelope's sequence field
-            // For now, we'll assume all messages have sequences
-            _ => {
-                // TODO: Access sequence from envelope
-                // For now, assume in-order
-                self.stats.in_order_delivered += 1;
-                self.next_expected += 1;
-                return Some(msg);
-            }
-        };
+        // TODO: Extract sequence number from envelope metadata
+        // Currently, envelopes have an optional `sequence` field, but we need
+        // a way to access it from the Arc<M>. This requires either:
+        // 1. Passing envelopes instead of downcasted messages, OR
+        // 2. Adding a Message::sequence() method
+        //
+        // For now, deliver all messages immediately (no reordering)
+        // This makes OrderedSubscriber a pass-through until sequence extraction is implemented
+
+        self.stats.in_order_delivered += 1;
+        self.next_expected += 1;
+        Some(msg)
+
+        // Future implementation will be:
+        // match envelope.sequence {
+        //     Some(seq) if seq == self.next_expected => {
+        //         self.next_expected += 1;
+        //         Some(msg)
+        //     }
+        //     Some(seq) => {
+        //         self.buffer.insert(seq, msg);
+        //         None
+        //     }
+        //     None => Some(msg), // No sequence = deliver immediately
+        // }
     }
 
     /// Try to deliver a buffered message if the next expected one is ready

@@ -24,7 +24,7 @@ async fn test_basic_pubsub() {
     publisher.publish(event).await.unwrap();
     let received = subscriber.recv().await.unwrap();
 
-    assert_eq!(received, event);
+    assert_eq!(*received, event);
 }
 
 #[tokio::test]
@@ -52,9 +52,9 @@ async fn test_multiple_subscribers() {
     let received2 = sub2.recv().await.unwrap();
     let received3 = sub3.recv().await.unwrap();
 
-    assert_eq!(received1, event);
-    assert_eq!(received2, event);
-    assert_eq!(received3, event);
+    assert_eq!(*received1, event);
+    assert_eq!(*received2, event);
+    assert_eq!(*received3, event);
 }
 
 #[tokio::test]

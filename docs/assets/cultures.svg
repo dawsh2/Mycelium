@@ -130,7 +130,7 @@ M 922.00 523.00
 C 922.54 517.40 922.55 510.67 922.00 505.00
 C 922.00 511.00 922.00 517.00 922.00 523.00 Z"/>
 </g>
-<g fill="#FFFFFB" fill-opacity="1.00" stroke="None">
+<g fill="#FFFFFB" fill-opacity="0.0" stroke="None">
 <path d="
 M 0.00 1024.00 
 L 1024.00 1024.00

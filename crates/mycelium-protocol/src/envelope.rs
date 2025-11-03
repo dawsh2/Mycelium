@@ -93,6 +93,47 @@ impl Envelope {
         }
     }
 
+    /// Create envelope with destination (for actor routing - Phase 1)
+    pub fn with_destination<M: Message>(msg: M, destination: Destination) -> Self {
+        Self {
+            type_id: M::TYPE_ID,
+            topic: M::TOPIC.to_string(),
+            sequence: None,
+            destination: Some(destination),
+            correlation_id: None,
+            payload: Arc::new(msg) as Arc<dyn Any + Send + Sync>,
+        }
+    }
+
+    /// Create envelope with correlation ID (for request/reply - Phase 1)
+    pub fn with_correlation<M: Message>(msg: M, correlation_id: CorrelationId) -> Self {
+        Self {
+            type_id: M::TYPE_ID,
+            topic: M::TOPIC.to_string(),
+            sequence: None,
+            destination: None,
+            correlation_id: Some(correlation_id),
+            payload: Arc::new(msg) as Arc<dyn Any + Send + Sync>,
+        }
+    }
+
+    /// Create envelope with all metadata (full control - Phase 1)
+    pub fn with_metadata<M: Message>(
+        msg: M,
+        sequence: Option<u64>,
+        destination: Option<Destination>,
+        correlation_id: Option<CorrelationId>,
+    ) -> Self {
+        Self {
+            type_id: M::TYPE_ID,
+            topic: M::TOPIC.to_string(),
+            sequence,
+            destination,
+            correlation_id,
+            payload: Arc::new(msg) as Arc<dyn Any + Send + Sync>,
+        }
+    }
+
     /// Create an envelope from raw components (for internal transport layer use)
     ///
     /// **Note**: This is a low-level API used by transport implementations.
@@ -109,20 +150,22 @@ impl Envelope {
         }
     }
 
-    /// Create an envelope from raw components with sequence number
+    /// Create an envelope from raw components with all metadata
     #[doc(hidden)]
-    pub fn from_raw_with_sequence(
+    pub fn from_raw_with_metadata(
         type_id: u16,
         topic: String,
         sequence: Option<u64>,
+        destination: Option<Destination>,
+        correlation_id: Option<CorrelationId>,
         payload: Arc<dyn Any + Send + Sync>,
     ) -> Self {
         Self {
             type_id,
             topic,
             sequence,
-            destination: None,
-            correlation_id: None,
+            destination,
+            correlation_id,
             payload,
         }
     }

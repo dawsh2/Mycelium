@@ -23,6 +23,7 @@ mycelium-config = { path = "crates/mycelium-config" }
 tokio = { version = "1", features = ["full"] }
 rkyv = { version = "0.7", features = ["validation"] }
 zerocopy = { workspace = true }
+async-trait = { workspace = true }
 
 [dev-dependencies]
 tempfile = "3.8"
@@ -30,6 +31,10 @@ tempfile = "3.8"
 [[example]]
 name = "simple_pubsub"
 path = "examples/simple_pubsub.rs"
+
+[[example]]
+name = "managed_service_demo"
+path = "examples/managed_service_demo.rs"
 
 [workspace.package]
 version = "0.1.0"

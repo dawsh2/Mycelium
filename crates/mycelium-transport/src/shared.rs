@@ -26,9 +26,16 @@ impl ChannelManager {
         }
     }
 
-    /// Get or create a broadcast channel for a topic
+    /// Get or create a broadcast channel for a topic (from Message trait)
     pub fn get_or_create_channel<M: Message>(&self) -> broadcast::Sender<Envelope> {
         let topic = M::TOPIC;
+        self.get_or_create_channel_for_topic(topic)
+    }
+
+    /// Get or create a broadcast channel for an explicit topic string (Phase 1: Actor-ready)
+    ///
+    /// This enables dynamic topic creation for actor mailboxes and partitioned topics.
+    pub fn get_or_create_channel_for_topic(&self, topic: &str) -> broadcast::Sender<Envelope> {
         self.channels
             .entry(topic.to_string())
             .or_insert_with(|| broadcast::channel(self.config.channel_capacity).0)

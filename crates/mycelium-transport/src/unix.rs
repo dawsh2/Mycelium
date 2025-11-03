@@ -17,6 +17,8 @@ use tokio::sync::{broadcast, Mutex};
 ///
 /// Performance: ~2-5μs per message (serialization + socket overhead)
 pub struct UnixTransport {
+    /// Socket path (kept for debugging/inspection purposes)
+    #[allow(dead_code)]
     socket_path: PathBuf,
     listener: Option<Arc<UnixListener>>,
     /// Client-side persistent connection (for publishers)

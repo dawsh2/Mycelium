@@ -5,6 +5,7 @@
 use crate::common::*;
 use mycelium_transport::{MessageBus, TransportConfig};
 use tokio::time::{sleep, Duration};
+use std::sync::Arc;
 
 #[tokio::test]
 async fn test_local_basic_pubsub() {
@@ -17,7 +18,7 @@ async fn test_local_basic_pubsub() {
     publisher.publish(event).await.unwrap();
 
     let received = subscriber.recv().await.unwrap();
-    assert_eq!(received, event);
+    assert_eq!(*received, event);
 }
 
 #[tokio::test]
@@ -39,7 +40,7 @@ async fn test_local_multiple_subscribers() {
     // All subscribers should receive the message
     for (i, mut sub) in subs.into_iter().enumerate() {
         let received = sub.recv().await.unwrap();
-        assert_eq!(received, create_test_swap_event(456));
+        assert_eq!(*received, create_test_swap_event(456));
         println!("Subscriber {} received message", i);
     }
 }
@@ -97,7 +98,7 @@ async fn test_local_high_frequency_zero_copy() {
     // Receive all messages
     for i in 0..message_count {
         let received = subscriber.recv().await.unwrap();
-        assert_eq!(received, create_test_swap_event(i));
+        assert_eq!(*received, create_test_swap_event(i));
     }
 
     let metrics = PerformanceMetrics::new(message_count, start_time.elapsed());
@@ -167,11 +168,14 @@ async fn test_local_subscriber_lifecycle() {
     publisher.publish(create_test_swap_event(3)).await.unwrap();
 
     let received = new_sub.recv().await.unwrap();
-    assert_eq!(received, create_test_swap_event(3));
+    assert_eq!(*received, create_test_swap_event(3));
 }
 
 #[tokio::test]
 async fn test_local_memory_efficiency() {
+    use mycelium_protocol::impl_message;
+    use zerocopy::{AsBytes, FromBytes, FromZeroes};
+
     let bus = MessageBus::new();
 
     // Create large message to test memory sharing

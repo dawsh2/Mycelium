@@ -24,7 +24,8 @@ pub struct MessageBus {
     /// Local transport for in-node communication
     local: LocalTransport,
 
-    /// Transport configuration
+    /// Transport configuration (reserved for future transport-level config)
+    #[allow(dead_code)]
     config: TransportConfig,
 
     /// Optional topology configuration
@@ -137,6 +138,42 @@ impl MessageBus {
     /// Subscribers are independent - each gets a copy (via Arc).
     pub fn subscriber<M: Message>(&self) -> Subscriber<M> {
         self.local.subscriber()
+    }
+
+    /// Get a publisher for an explicit topic (Phase 1: Actor-ready)
+    ///
+    /// This enables dynamic topic creation for actor mailboxes and partitioned topics.
+    ///
+    /// # Example
+    /// ```
+    /// use mycelium_transport::MessageBus;
+    /// use mycelium_protocol::routing::ActorId;
+    ///
+    /// let bus = MessageBus::new();
+    /// let actor_id = ActorId::from_u64(123);
+    /// let topic = format!("actor.{:016x}", actor_id.as_u64());
+    /// // let publisher = bus.publisher_for_topic::<MyMessage>(&topic);
+    /// ```
+    pub fn publisher_for_topic<M: Message>(&self, topic: &str) -> Publisher<M> {
+        self.local.publisher_for_topic(topic)
+    }
+
+    /// Get a subscriber for an explicit topic (Phase 1: Actor-ready)
+    ///
+    /// This enables dynamic topic subscription for actor mailboxes and partitioned topics.
+    ///
+    /// # Example
+    /// ```
+    /// use mycelium_transport::MessageBus;
+    /// use mycelium_protocol::routing::ActorId;
+    ///
+    /// let bus = MessageBus::new();
+    /// let actor_id = ActorId::from_u64(123);
+    /// let topic = format!("actor.{:016x}", actor_id.as_u64());
+    /// // let subscriber = bus.subscriber_for_topic::<MyMessage>(&topic);
+    /// ```
+    pub fn subscriber_for_topic<M: Message>(&self, topic: &str) -> Subscriber<M> {
+        self.local.subscriber_for_topic(topic)
     }
 
     /// Get a Unix publisher to a specific node

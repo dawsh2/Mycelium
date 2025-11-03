@@ -8,7 +8,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::io::AsyncWriteExt;
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::{broadcast, Mutex, oneshot};
+use tokio::sync::{broadcast, Mutex};
 
 /// TCP socket transport for distributed inter-process communication
 ///

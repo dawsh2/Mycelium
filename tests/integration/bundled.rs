@@ -89,7 +89,7 @@ async fn test_local_transport_within_node() {
     publisher.publish(event).await.unwrap();
     let received = subscriber.recv().await.unwrap();
 
-    assert_eq!(received, event);
+    assert_eq!(*received, event);
 }
 
 #[tokio::test]
@@ -119,7 +119,7 @@ async fn test_smart_routing_within_node() {
     publisher.publish(event).await.unwrap();
     let received = subscriber.recv().await.unwrap();
 
-    assert_eq!(received, event);
+    assert_eq!(*received, event);
 }
 
 #[tokio::test]
@@ -157,7 +157,7 @@ async fn test_smart_routing_between_nodes() {
     publisher.publish(event).await.unwrap();
 
     let received = subscriber.recv().await.unwrap();
-    assert_eq!(received, event);
+    assert_eq!(*received, event);
 }
 
 #[tokio::test]
