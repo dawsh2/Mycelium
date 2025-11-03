@@ -5,11 +5,13 @@
 
 **Pub/Sub Transport Layer with Adaptive Routing**
 
-Mycelium is a type-safe pub/sub messaging system implemented in Rust that provides **adaptive transport** based on deployment topology. Write your pub/sub code once, configure your topology, and the transport is selected automatically:
+Mycelium is a type-safe pub/sub messaging system implemented in Rust that provides **topology-based transport selection**. Write your pub/sub code once, configure your topology, and the transport is inferred from node placement:
 
-- **Same node (process)**: `Arc<T>` zero-copy sharing (~200ns latency)
-- **Different nodes, same host**: Unix domain sockets (~50μs latency)
-- **Different nodes, different hosts**: TCP with zero-copy deserialization (~500μs + network)
+- **Same node (process)**: `Arc<T>` zero-copy sharing (~200ns latency) - no serialization
+- **Different nodes, same host**: Unix domain sockets (~50μs latency) - TLV wire protocol
+- **Different nodes, different hosts**: TCP with zero-copy deserialization (~500μs + network) - TLV wire protocol
+
+**Actor system** (Phase 1 foundation available, Phase 2 deferred): Routing types and envelope metadata in place for future actor-based supervision and fault isolation. See [docs/ACTORS.md](docs/ACTORS.md) for evolution path.
 
 **Applications**: High-frequency trading, multiplayer game servers, real-time analytics pipelines, IoT/sensor networks.
 
@@ -111,7 +113,9 @@ port = 9001
 
 ### Wire Protocol
 
-Remote transports (Unix/TCP) use a simple **Type-Length-Value (TLV)** protocol:
+**Local transport** (same node): No serialization - messages shared via `Arc<T>` clones.
+
+**Remote transports** (Unix/TCP): Type-Length-Value (TLV) protocol with **bijective serialization**:
 
 ```
 ┌──────────┬──────────┬─────────────────┐
@@ -120,13 +124,16 @@ Remote transports (Unix/TCP) use a simple **Type-Length-Value (TLV)** protocol:
 └──────────┴──────────┴─────────────────┘
 ```
 
-Payloads use [zerocopy](https://github.com/google/zerocopy) for **true zero-copy serialization** - direct memory casting with no allocation or copying overhead.
+Messages use [zerocopy](https://github.com/google/zerocopy) for **true zero-copy deserialization** - direct memory casting with no allocation or copying overhead.
+
+**Bijective requirement**: Messages must perfectly round-trip (serialize → deserialize = identical). This is enforced by `#[repr(C)]` and zerocopy's `AsBytes`/`FromBytes` traits, enabling zero-copy across process boundaries.
 
 ---
 
 ## Documentation
 
-See **[docs/TRANSPORT.md](docs/TRANSPORT.md)** for complete architecture details and API reference.
+- **[docs/TRANSPORT.md](docs/TRANSPORT.md)** - Complete transport architecture, wire protocol, deployment topologies
+- **[docs/ACTORS.md](docs/ACTORS.md)** - Actor system evolution path (Phase 1 foundation → Phase 2 full actors)
 
 ---
 
