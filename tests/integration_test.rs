@@ -1,11 +1,11 @@
 use mycelium_config::{Bundle, Deployment, DeploymentMode, InterBundleConfig, Topology, TransportType};
 use mycelium_protocol::impl_message;
 use mycelium_transport::{MessageBus, TcpTransport, UnixTransport};
-use rkyv::{Archive, Deserialize, Serialize};
+use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 // Simulated market data message
-#[derive(Debug, Clone, PartialEq, Archive, Serialize, Deserialize)]
-#[archive(check_bytes)]
+#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+#[repr(C)]
 struct SwapEvent {
     pool_id: u64,
     token_in: u64,
@@ -18,8 +18,8 @@ struct SwapEvent {
 impl_message!(SwapEvent, 1, "market-data");
 
 // Simulated arbitrage opportunity message
-#[derive(Debug, Clone, PartialEq, Archive, Serialize, Deserialize)]
-#[archive(check_bytes)]
+#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+#[repr(C)]
 struct ArbitrageOpportunity {
     pool_a: u64,
     pool_b: u64,
@@ -30,12 +30,12 @@ struct ArbitrageOpportunity {
 impl_message!(ArbitrageOpportunity, 2, "arbitrage");
 
 // Simulated order message
-#[derive(Debug, Clone, PartialEq, Archive, Serialize, Deserialize)]
-#[archive(check_bytes)]
+#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+#[repr(C)]
 struct OrderExecution {
     opportunity_id: u64,
     amount: u128,
-    success: bool,
+    success: u8, // bool is not safe for zerocopy, use u8
 }
 
 impl_message!(OrderExecution, 3, "orders");
