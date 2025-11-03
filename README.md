@@ -2,7 +2,7 @@
 
 **Pub/Sub Transport Layer with Adaptive Routing**
 
-Mycelium is a type-safe pub/sub messaging system implemented in Rust that provides **adaptive transport** based on deployment topology. Write your pub/sub code once, and the runtime automatically selects the optimal transport:
+Mycelium is a type-safe pub/sub messaging system implemented in Rust that provides **adaptive transport** based on deployment topology. Write your pub/sub code once, configure your topology, and the transport is selected automatically:
 
 - **Same bundle (process)**: `Arc<T>` zero-copy sharing (~200ns latency)
 - **Different bundles, same machine**: Unix domain sockets (~50μs latency)  
@@ -14,47 +14,45 @@ Mycelium is a type-safe pub/sub messaging system implemented in Rust that provid
 
 ## Quick Start
 
-### Define a Message
+### 1. Define Messages in contracts.yaml
 
-```rust
-use mycelium_protocol::impl_message;
-use zerocopy::{AsBytes, FromBytes, FromZeroes};
-
-#[derive(Debug, Clone, Copy, AsBytes, FromBytes, FromZeroes)]
-#[repr(C)]
-pub struct SwapEvent {
-    pub pool_id: u64,
-    pub amount_in: u64,
-    pub amount_out: u64,
-}
-
-// TYPE_ID: 100, TOPIC: "market-data"
-impl_message!(SwapEvent, 100, "market-data");
+```yaml
+# crates/mycelium-protocol/contracts.yaml
+messages:
+  PoolStateUpdate:
+    tlv_type: 11
+    domain: MarketData
+    description: "DEX pool state update"
+    fields:
+      pool_address: { type: "[u8; 20]" }
+      reserve0: { type: "U256" }
+      reserve1: { type: "U256" }
+      block_number: { type: "u64" }
 ```
 
-### Publish and Subscribe
+Run `cargo build` - messages are **generated automatically** at build time.
+
+### 2. Publish and Subscribe
 
 ```rust
+use mycelium_protocol::PoolStateUpdate;
 use mycelium_transport::MessageBus;
 
+// Create bus (uses Local transport by default)
 let bus = MessageBus::new();
 
 // Publisher
-let pub_ = bus.publisher::<SwapEvent>();
-pub_.publish(SwapEvent {
-    pool_id: 123,
-    amount_in: 1000,
-    amount_out: 2000,
-}).await?;
+let pub_ = bus.publisher::<PoolStateUpdate>();
+pub_.publish(PoolStateUpdate { /* ... */ }).await?;
 
 // Subscriber
-let mut sub = bus.subscriber::<SwapEvent>();
-while let Some(event) = sub.recv().await {
-    println!("Swap: {} → {}", event.amount_in, event.amount_out);
+let mut sub = bus.subscriber::<PoolStateUpdate>();
+while let Some(update) = sub.recv().await {
+    println!("Pool update: {:?}", update);
 }
 ```
 
-### Configure Deployment Topology
+### 3. Configure Deployment Topology
 
 **Monolith** (single process):
 ```toml
@@ -105,7 +103,52 @@ host = "10.0.2.20"
 port = 9001
 ```
 
-**Same code, different configs.** The `MessageBus` automatically selects the right transport based on topology.
+**Same code, different configs.** The `MessageBus` reads your topology configuration and selects the appropriate transport.
+
+---
+
+## Applications
+
+Mycelium is designed for systems that need **low latency** and **flexible deployment** - start simple, scale when needed.
+
+### Low-Latency Trading
+
+**Use case**: High-frequency trading, arbitrage detection, market making
+
+- **Development**: Monolith (all strategies in one process) → ~200ns message passing
+- **Staging**: Bundled (market data adapters isolated from strategies) → ~50μs via Unix sockets
+- **Production**: Distributed (co-located near exchanges, geographic distribution) → TCP with zerocopy
+
+**Benefit**: Same trading logic, zero code changes from laptop to production datacenter.
+
+### Multiplayer Game Servers
+
+**Use case**: Real-time game state synchronization, player events, matchmaking
+
+- **Development**: Monolith (game server + matchmaker + analytics) → fast iteration
+- **Staging**: Bundled (separate processes for fault isolation)
+- **Production**: Distributed (game servers scaled horizontally, shared matchmaker service)
+
+**Benefit**: Pub/sub naturally fits event-driven game architecture. Scale individual services independently.
+
+### Real-Time Analytics Pipelines
+
+**Use case**: Log aggregation, metrics processing, alert generation
+
+- **Development**: Monolith (ingest + process + store) → simple debugging
+- **Production**: Distributed (ingest on edge nodes, processing in datacenter, storage cluster)
+
+**Benefit**: Same pipeline code handles both laptop dev and multi-region production.
+
+### IoT/Sensor Networks
+
+**Use case**: Device telemetry, edge processing, cloud aggregation
+
+- **Edge devices**: Monolith (sensors + local processing in one binary)
+- **Edge gateway**: Bundled (multiple device adapters + aggregation service)
+- **Cloud**: Distributed (global sensor network with regional hubs)
+
+**Benefit**: Flexible topology matches physical deployment - same code at every layer.
 
 ---
 
@@ -132,163 +175,12 @@ Payloads use [zerocopy](https://github.com/google/zerocopy) for **true zero-copy
 
 ---
 
-## Performance
-
-### Latency (p50)
-
-| Transport | Latency | Use Case |
-|-----------|---------|----------|
-| Local (Arc) | ~200ns | Same process |
-| Unix Socket | ~50μs | Same machine, different processes |
-| TCP (localhost) | ~100μs | Testing |
-| TCP (LAN) | ~500μs | Same datacenter |
-
-### Throughput
-
-- **Local**: ~5M msg/sec (single pub → single sub)
-- **Unix**: ~200K msg/sec  
-- **TCP**: ~100K msg/sec (network-bound)
-
-### Memory
-
-- `Publisher<M>`: 8 bytes
-- `Subscriber<M>`: 16 bytes
-- Message overhead: 0 bytes (Arc) or 6 bytes (TLV header)
-
----
-
-## Testing
-
-```bash
-# Run all tests
-cargo test
-
-# Run transport tests only
-cargo test -p mycelium-transport
-
-# Check coverage
-cargo tarpaulin --out Html
-```
-
-**Current status**: 52 tests, 90%+ coverage
-
----
-
-## Comparison with Related Tools
-
-### vs. ZeroMQ
-
-ZeroMQ is a message queue and transport library. It provides sockets and patterns for message passing, but **always requires serialization**. 
-
-Mycelium differs in that same-process pub/sub uses `Arc<T>` sharing with **zero serialization overhead**.
-
-### vs. Actix
-
-Actix is a Rust actor framework focused on concurrency within a single process. 
-
-Mycelium provides **pub/sub** (not point-to-point actors) and adds **adaptive transport** so the same code can run across processes or machines without changes.
-
-### vs. Erlang/OTP
-
-Erlang/OTP pioneered the actor model for distributed systems with supervision trees. 
-
-Mycelium is **simpler** (pub/sub only, no supervision) and designed for **low-latency HFT applications** with more control over serialization and transports. We rely on systemd/Kubernetes for process management instead of custom supervision.
-
----
-
-## Project Status
-
-**v0.1.0** - Foundation Complete ✅
-
-- [x] Core message protocol
-- [x] Local transport (Arc)
-- [x] Unix socket transport
-- [x] TCP transport
-- [x] TLV wire protocol
-- [x] MessageBus with automatic transport selection
-- [x] Topology configuration
-- [x] Comprehensive test suite
-
-**v0.2.0** - First Service (In Progress 🚧)
-
-- [ ] Polygon market data adapter
-- [ ] Health checks and metrics
-- [ ] Observability (tracing, Prometheus)
-
-**v0.3.0** - Production Ready (Planned 📋)
-
-- [ ] Flash arbitrage strategy
-- [ ] Order executor
-- [ ] Load testing (1M msg/sec sustained)
-- [ ] Kubernetes deployment
-
----
-
 ## Documentation
 
-- **[TRANSPORT.md](TRANSPORT.md)** - Complete architecture guide and API reference
-- **[REWRITE.md](REWRITE.md)** - Development process, timeline, and quality standards
-- **[REFACTORING_SUMMARY.md](REFACTORING_SUMMARY.md)** - Code quality improvements
-
-### Research
-
-See `docs/research/` for:
-- Actor framework evaluation (Actix, Kameo, Ractor, Bastion)
-- Decision rationale for building custom transport layer
-- Alternative approaches considered
-
----
-
-## Design Principles
-
-1. **Simplicity** - Pub/sub only. No actors, no supervision, no request/reply patterns.
-2. **Linear data flow** - Events stream one way through the pipeline.
-3. **Crash and restart** - Use systemd/Kubernetes for process management.
-4. **Configuration over code** - Deployment topology is a config file, not code.
-5. **Type safety** - Compile-time guarantees for message types.
-6. **Zero-copy** - Minimize allocations and serialization in hot paths.
-
----
-
-## Contributing
-
-We use **git worktrees** for parallel development:
-
-```bash
-# Create feature worktree
-git worktree add ~/mycelium/feature-name -b feature/feature-name
-
-# Work in isolation
-cd ~/mycelium/feature-name
-cargo test
-git commit -m "Add feature"
-
-# Merge when ready
-cd ~/mycelium
-git merge feature/feature-name
-```
-
-### Quality Standards
-
-All PRs must include:
-- [ ] Tests (90%+ unit coverage, 100% contract coverage)
-- [ ] Documentation for public APIs
-- [ ] `cargo fmt` and `cargo clippy` passing
-- [ ] Updated `system.yaml` if architecture changes
+See **[docs/TRANSPORT.md](docs/TRANSPORT.md)** for complete architecture details and API reference.
 
 ---
 
 ## License
 
-MIT OR Apache-2.0 (choose whichever you prefer)
-
----
-
-## What Mycelium Is Not
-
-- ❌ **Not an actor framework** - We have pub/sub, not point-to-point mailboxes
-- ❌ **Not a supervision tree** - Use systemd/k8s for process restarts
-- ❌ **Not a distributed consensus system** - Use external coordination if needed
-- ❌ **Not a web framework** - Use axum/actix-web if you need HTTP
-
-**Mycelium is**: A simple, fast, type-safe pub/sub transport layer. Nothing more, nothing less. 🦀
+MIT OR Apache-2.0
