@@ -4,6 +4,9 @@ members = [
     "crates/mycelium-transport",
     "crates/mycelium-config",
 ]
+exclude = [
+    "scripts",
+]
 
 resolver = "2"
 

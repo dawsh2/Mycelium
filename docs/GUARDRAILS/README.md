@@ -362,6 +362,81 @@ Mycelium enforces these invariants:
 
 ---
 
+## Implemented Guardrails (Phase 1)
+
+### 1. Code Duplication Detection ✅ ACTIVE
+
+**Purpose**: Prevent LLM-assisted development from introducing duplicate code patterns
+
+**Location**: `scripts/detect_duplication/`
+
+**How it works**:
+- AST-based analysis using `syn` crate
+- Compares all functions pairwise for similarity
+- Semantic matching (not just textual)
+- Threshold: 70% similarity = CI failure
+
+**Usage**:
+```bash
+# Run locally
+cd scripts/detect_duplication
+cargo build --release
+./target/release/detect_duplication --path ../../crates
+
+# Runs automatically in CI on every PR
+```
+
+**What it catches**:
+- Copy-pasted functions with minimal changes
+- Similar logic that should be extracted to shared function
+- Repeated patterns that need trait abstraction
+
+**CI Integration**: `.github/workflows/ci.yml` - `duplication` job
+
+### 2. Comprehensive Test Suite ✅ ACTIVE
+
+**Coverage requirements**:
+- Unit tests: 70% coverage minimum
+- Contract tests: 100% for all message types
+- Doc tests: All examples must compile
+
+**CI Integration**: `.github/workflows/ci.yml` - `test` job
+
+### 3. Clippy Lints ✅ ACTIVE
+
+**Standards enforced**:
+- `RUSTFLAGS="-D warnings"` - All warnings are errors
+- Clippy with standard lints
+- Format checking with `cargo fmt`
+
+**CI Integration**: `.github/workflows/ci.yml` - `clippy` and `fmt` jobs
+
+### 4. Documentation Tests ✅ ACTIVE
+
+**Requirements**:
+- All public APIs documented
+- Code examples in docs must compile
+- `cargo test --doc` passes
+
+**CI Integration**: Part of `test` job
+
+---
+
+## Planned Guardrails (Future)
+
+### system.yaml Validation (Deferred)
+
+**Status**: Intentionally deferred - waiting for 3+ services before adding
+
+**Rationale**: With only transport layer + protocol, system.yaml would be over-engineering. Will add when:
+- We have 3+ services with dependencies
+- Service boundaries become unclear
+- New contributors get confused about architecture
+
+**When to implement**: After Polygon adapter + flash arbitrage strategy
+
+---
+
 ## Success Metrics
 
 We'll know the guardrails are working when:
