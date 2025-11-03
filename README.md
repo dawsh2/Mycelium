@@ -5,10 +5,10 @@
 Mycelium is a type-safe pub/sub messaging system implemented in Rust that provides **adaptive transport** based on deployment topology. Write your pub/sub code once, configure your topology, and the transport is selected automatically:
 
 - **Same bundle (process)**: `Arc<T>` zero-copy sharing (~200ns latency)
-- **Different bundles, same machine**: Unix domain sockets (~50μs latency)  
+- **Different bundles, same machine**: Unix domain sockets (~50μs latency)
 - **Different machines**: TCP with zero-copy deserialization (~500μs + network)
 
-**Philosophy**: Same code, different deployment configurations. No code changes needed to go from monolith → multi-process → distributed.
+**Applications**: High-frequency trading, multiplayer game servers, real-time analytics pipelines, IoT/sensor networks.
 
 ---
 
@@ -104,51 +104,6 @@ port = 9001
 ```
 
 **Same code, different configs.** The `MessageBus` reads your topology configuration and selects the appropriate transport.
-
----
-
-## Applications
-
-Mycelium is designed for systems that need **low latency** and **flexible deployment** - start simple, scale when needed.
-
-### Low-Latency Trading
-
-**Use case**: High-frequency trading, arbitrage detection, market making
-
-- **Development**: Monolith (all strategies in one process) → ~200ns message passing
-- **Staging**: Bundled (market data adapters isolated from strategies) → ~50μs via Unix sockets
-- **Production**: Distributed (co-located near exchanges, geographic distribution) → TCP with zerocopy
-
-**Benefit**: Same trading logic, zero code changes from laptop to production datacenter.
-
-### Multiplayer Game Servers
-
-**Use case**: Real-time game state synchronization, player events, matchmaking
-
-- **Development**: Monolith (game server + matchmaker + analytics) → fast iteration
-- **Staging**: Bundled (separate processes for fault isolation)
-- **Production**: Distributed (game servers scaled horizontally, shared matchmaker service)
-
-**Benefit**: Pub/sub naturally fits event-driven game architecture. Scale individual services independently.
-
-### Real-Time Analytics Pipelines
-
-**Use case**: Log aggregation, metrics processing, alert generation
-
-- **Development**: Monolith (ingest + process + store) → simple debugging
-- **Production**: Distributed (ingest on edge nodes, processing in datacenter, storage cluster)
-
-**Benefit**: Same pipeline code handles both laptop dev and multi-region production.
-
-### IoT/Sensor Networks
-
-**Use case**: Device telemetry, edge processing, cloud aggregation
-
-- **Edge devices**: Monolith (sensors + local processing in one binary)
-- **Edge gateway**: Bundled (multiple device adapters + aggregation service)
-- **Cloud**: Distributed (global sensor network with regional hubs)
-
-**Benefit**: Flexible topology matches physical deployment - same code at every layer.
 
 ---
 
