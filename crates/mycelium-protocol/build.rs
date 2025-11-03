@@ -176,7 +176,7 @@ fn generate_message_struct(name: &str, contract: &MessageContract) -> String {
     code
 }
 
-fn generate_message_impl(name: &str, contract: &MessageContract) -> String {
+fn generate_message_impl(name: &str, _contract: &MessageContract) -> String {
     let mut code = String::new();
 
     code.push_str(&format!("impl {} {{\n", name));
