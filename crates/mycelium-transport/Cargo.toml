@@ -1,0 +1,17 @@
+[package]
+name = "mycelium-transport"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+mycelium-protocol = { path = "../mycelium-protocol" }
+mycelium-config = { path = "../mycelium-config" }
+tokio = { version = "1", features = ["full"] }
+dashmap = "5.5"
+thiserror = "1.0"
+tracing = "0.1"
+rkyv = { version = "0.7", features = ["validation"] }
+
+[dev-dependencies]
+tokio-test = "0.4"
+tempfile = "3.8"

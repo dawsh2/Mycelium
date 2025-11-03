@@ -1,0 +1,52 @@
+[workspace]
+members = [
+    "crates/mycelium-protocol",
+    "crates/mycelium-transport",
+    "crates/mycelium-config",
+]
+
+resolver = "2"
+
+# Examples (so cargo run --example works)
+[package]
+name = "mycelium"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+mycelium-protocol = { path = "crates/mycelium-protocol" }
+mycelium-transport = { path = "crates/mycelium-transport" }
+mycelium-config = { path = "crates/mycelium-config" }
+tokio = { version = "1", features = ["full"] }
+rkyv = { version = "0.7", features = ["validation"] }
+
+[dev-dependencies]
+tempfile = "3.8"
+
+[[example]]
+name = "simple_pubsub"
+path = "examples/simple_pubsub.rs"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+# Async runtime
+tokio = { version = "1", features = ["full"] }
+
+# Serialization
+rkyv = { version = "0.7", features = ["validation"] }
+
+# Concurrency
+dashmap = "5.5"
+
+# Error handling
+thiserror = "1.0"
+anyhow = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = "0.3"
