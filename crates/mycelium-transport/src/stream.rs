@@ -79,11 +79,7 @@ impl<M> StreamSubscriber<M> {
     }
 }
 
-impl<M: Message> StreamSubscriber<M>
-where
-    M::Archived: for<'a> rkyv::CheckBytes<rkyv::validation::validators::DefaultValidator<'a>>
-        + rkyv::Deserialize<M, rkyv::Infallible>,
-{
+impl<M: Message> StreamSubscriber<M> {
     /// Receive the next message
     ///
     /// Filters envelopes by type ID and deserializes matching messages.
@@ -130,11 +126,11 @@ where
 mod tests {
     use super::*;
     use mycelium_protocol::impl_message;
-    use rkyv::{Archive, Deserialize, Serialize};
+    use zerocopy::{AsBytes, FromBytes, FromZeroes};
     use tokio::net::{UnixListener, UnixStream};
 
-    #[derive(Debug, Clone, PartialEq, Archive, Serialize, Deserialize)]
-    #[archive(check_bytes)]
+    #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+    #[repr(C)]
     struct TestMsg {
         value: u64,
     }
@@ -147,7 +143,8 @@ mod tests {
         let mut sub: StreamSubscriber<TestMsg> = StreamSubscriber::new(rx);
 
         // Create a raw frame
-        let bytes = rkyv::to_bytes::<_, 1024>(&TestMsg { value: 42 }).unwrap();
+        let msg = TestMsg { value: 42 };
+        let bytes = msg.as_bytes();
         let frame = RawFrame {
             type_id: 123,
             bytes: Arc::new(bytes.to_vec()),
@@ -186,10 +183,10 @@ mod tests {
         tx.send(wrong_envelope).unwrap();
 
         // Send correct type_id
-        let bytes = rkyv::to_bytes::<_, 1024>(&TestMsg { value: 42 }).unwrap();
+        let msg = TestMsg { value: 42 };
         let correct_frame = RawFrame {
             type_id: 123,
-            bytes: Arc::new(bytes.to_vec()),
+            bytes: Arc::new(msg.as_bytes().to_vec()),
         };
 
         let correct_envelope = Envelope::from_raw(

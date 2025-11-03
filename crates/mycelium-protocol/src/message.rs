@@ -1,13 +1,15 @@
 use std::fmt::Debug;
-use zerocopy::{AsBytes, FromBytes};
+use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 /// Core trait for all messages in the Mycelium system.
 ///
 /// Messages must be:
-/// - Zero-copy serializable (zerocopy)
+/// - Zero-copy serializable (zerocopy) for performance
 /// - Send + Sync (can be shared across threads)
 /// - Have a unique type ID and topic
-pub trait Message: AsBytes + FromBytes + Send + Sync + Debug + Copy + 'static {
+/// - Copy + Clone (for zero-copy sharing)
+pub trait Message: AsBytes + FromBytes + FromZeroes + Send + Sync + Debug + Copy + Clone + 'static
+{
     /// Unique message type ID (for TLV encoding)
     const TYPE_ID: u16;
 
@@ -53,10 +55,10 @@ mod tests {
             value: 100,
         };
 
-        // Serialize with zerocopy
+        // Serialize with zerocopy (zero-copy)
         let bytes = original.as_bytes();
 
-        // Deserialize (zero-copy)
+        // Deserialize (zero-copy - no allocation)
         let deserialized = TestMessage::read_from(bytes).unwrap();
 
         assert_eq!(original, deserialized);

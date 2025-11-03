@@ -1,4 +1,5 @@
-use crate::codec::write_message;
+use crate::codec::{deserialize_message, read_frame, write_message};
+use crate::config::TransportConfig;
 use crate::error::Result;
 use crate::stream::{handle_stream_connection, StreamSubscriber};
 use dashmap::DashMap;
@@ -21,7 +22,7 @@ pub struct TcpTransport {
     listener: Option<Arc<TcpListener>>,
     // Topic -> broadcast channel
     channels: Arc<DashMap<String, broadcast::Sender<Envelope>>>,
-    channel_capacity: usize,
+    config: TransportConfig,
 }
 
 impl TcpTransport {
@@ -29,6 +30,11 @@ impl TcpTransport {
     ///
     /// Binds to the address and starts accepting connections
     pub async fn bind(addr: SocketAddr) -> Result<Self> {
+        Self::with_config(addr, TransportConfig::default()).await
+    }
+
+    /// Create a new TCP transport with custom configuration
+    pub async fn with_config(addr: SocketAddr, config: TransportConfig) -> Result<Self> {
         let listener = TcpListener::bind(addr).await?;
         let bind_addr = listener.local_addr()?;
 
@@ -36,7 +42,7 @@ impl TcpTransport {
             bind_addr,
             listener: Some(Arc::new(listener)),
             channels: Arc::new(DashMap::new()),
-            channel_capacity: 1000,
+            config,
         };
 
         // Spawn accept loop
@@ -46,13 +52,21 @@ impl TcpTransport {
     }
 
     /// Connect to a TCP transport (client side)
-    pub fn connect(addr: SocketAddr) -> Self {
-        Self {
+    pub async fn connect(addr: SocketAddr) -> Result<Self> {
+        Self::connect_with_config(addr, TransportConfig::default()).await
+    }
+
+    /// Connect to a TCP transport with custom configuration
+    pub async fn connect_with_config(addr: SocketAddr, config: TransportConfig) -> Result<Self> {
+        // Verify connection works
+        let _test_conn = TcpStream::connect(addr).await?;
+
+        Ok(Self {
             bind_addr: addr,
             listener: None,
             channels: Arc::new(DashMap::new()),
-            channel_capacity: 1000,
-        }
+            config,
+        })
     }
 
     /// Spawn the accept loop for incoming connections
@@ -87,7 +101,7 @@ impl TcpTransport {
     fn get_or_create_channel(&self, topic: &str) -> broadcast::Sender<Envelope> {
         self.channels
             .entry(topic.to_string())
-            .or_insert_with(|| broadcast::channel(self.channel_capacity).0)
+            .or_insert_with(|| broadcast::channel(self.config.channel_capacity).0)
             .clone()
     }
 
@@ -118,10 +132,7 @@ pub struct TcpPublisher<M> {
     _phantom: PhantomData<M>,
 }
 
-impl<M: Message> TcpPublisher<M>
-where
-    M: rkyv::Serialize<rkyv::ser::serializers::AllocSerializer<1024>>,
-{
+impl<M: Message> TcpPublisher<M> {
     /// Publish a message over TCP socket
     pub async fn publish(&self, msg: M) -> Result<()> {
         // Connect to server
@@ -175,7 +186,7 @@ mod tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
         // Client publishes
-        let client = TcpTransport::connect(server_addr);
+        let client = TcpTransport::connect(server_addr).await.unwrap();
         let pub_ = client.publisher::<TestMsg>();
 
         let msg = TestMsg { value: 42 };
@@ -200,7 +211,7 @@ mod tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
         // Client publishes multiple messages
-        let client = TcpTransport::connect(server_addr);
+        let client = TcpTransport::connect(server_addr).await.unwrap();
         let pub_ = client.publisher::<TestMsg>();
 
         for i in 0..3 {

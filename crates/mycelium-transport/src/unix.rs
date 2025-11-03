@@ -1,4 +1,5 @@
-use crate::codec::write_message;
+use crate::codec::{deserialize_message, read_frame, write_message};
+use crate::config::TransportConfig;
 use crate::error::{Result, TransportError};
 use crate::stream::{handle_stream_connection, StreamSubscriber};
 use dashmap::DashMap;
@@ -21,7 +22,7 @@ pub struct UnixTransport {
     listener: Option<Arc<UnixListener>>,
     // Topic -> broadcast channel
     channels: Arc<DashMap<String, broadcast::Sender<Envelope>>>,
-    channel_capacity: usize,
+    config: TransportConfig,
 }
 
 impl UnixTransport {
@@ -29,6 +30,11 @@ impl UnixTransport {
     ///
     /// Binds to the socket path and starts accepting connections
     pub async fn bind<P: AsRef<Path>>(socket_path: P) -> Result<Self> {
+        Self::with_config(socket_path, TransportConfig::default()).await
+    }
+
+    /// Create a new Unix socket transport with custom configuration
+    pub async fn with_config<P: AsRef<Path>>(socket_path: P, config: TransportConfig) -> Result<Self> {
         let socket_path = socket_path.as_ref().to_path_buf();
 
         // Create parent directory if needed
@@ -46,7 +52,7 @@ impl UnixTransport {
             socket_path,
             listener: Some(Arc::new(listener)),
             channels: Arc::new(DashMap::new()),
-            channel_capacity: 1000,
+            config,
         };
 
         // Spawn accept loop
@@ -57,6 +63,11 @@ impl UnixTransport {
 
     /// Connect to a Unix socket transport (client side)
     pub async fn connect<P: AsRef<Path>>(socket_path: P) -> Result<Self> {
+        Self::connect_with_config(socket_path, TransportConfig::default()).await
+    }
+
+    /// Connect to a Unix socket transport with custom configuration
+    pub async fn connect_with_config<P: AsRef<Path>>(socket_path: P, config: TransportConfig) -> Result<Self> {
         let socket_path = socket_path.as_ref().to_path_buf();
 
         // Verify socket exists
@@ -70,7 +81,7 @@ impl UnixTransport {
             socket_path,
             listener: None,
             channels: Arc::new(DashMap::new()),
-            channel_capacity: 1000,
+            config,
         })
     }
 
@@ -106,7 +117,7 @@ impl UnixTransport {
     fn get_or_create_channel(&self, topic: &str) -> broadcast::Sender<Envelope> {
         self.channels
             .entry(topic.to_string())
-            .or_insert_with(|| broadcast::channel(self.channel_capacity).0)
+            .or_insert_with(|| broadcast::channel(self.config.channel_capacity).0)
             .clone()
     }
 
@@ -132,10 +143,7 @@ pub struct UnixPublisher<M> {
     _phantom: PhantomData<M>,
 }
 
-impl<M: Message> UnixPublisher<M>
-where
-    M: rkyv::Serialize<rkyv::ser::serializers::AllocSerializer<1024>>,
-{
+impl<M: Message> UnixPublisher<M> {
     /// Publish a message over Unix socket
     pub async fn publish(&self, msg: M) -> Result<()> {
         // Connect to server

@@ -1,4 +1,5 @@
 use crate::any::{AnyPublisher, AnySubscriber};
+use crate::config::TransportConfig;
 use crate::local::LocalTransport;
 use crate::tcp::{TcpPublisher, TcpSubscriber, TcpTransport};
 use crate::unix::{UnixPublisher, UnixSubscriber, UnixTransport};
@@ -17,9 +18,13 @@ use tokio::sync::RwLock;
 /// - Unix socket transport for inter-bundle communication (same machine)
 /// - TCP transport for distributed communication (cross-machine)
 /// - Topology-aware transport selection
+/// - Configurable performance parameters
 pub struct MessageBus {
     /// Local transport for in-bundle communication
     local: LocalTransport,
+
+    /// Transport configuration
+    config: TransportConfig,
 
     /// Optional topology configuration
     topology: Option<Arc<Topology>>,
@@ -35,12 +40,18 @@ pub struct MessageBus {
 }
 
 impl MessageBus {
-    /// Create a new message bus with local transport only (monolith mode)
+    /// Create a new message bus with default configuration
     ///
     /// All messages are passed via Arc<T> for zero-copy performance.
     pub fn new() -> Self {
+        Self::with_config(TransportConfig::default())
+    }
+
+    /// Create a message bus with custom configuration
+    pub fn with_config(config: TransportConfig) -> Self {
         Self {
-            local: LocalTransport::default(),
+            local: LocalTransport::with_config(config.clone()),
+            config,
             topology: None,
             bundle_name: None,
             unix_transports: Arc::new(RwLock::new(HashMap::new())),
@@ -48,23 +59,28 @@ impl MessageBus {
         }
     }
 
-    /// Create a message bus with custom channel capacity
+    /// Create a message bus with custom channel capacity (deprecated)
+    ///
+    /// Use with_config(TransportConfig) instead for more configuration options.
+    #[deprecated(since = "0.2.0", note = "Use with_config(TransportConfig) instead")]
     pub fn with_capacity(capacity: usize) -> Self {
-        Self {
-            local: LocalTransport::new(capacity),
-            topology: None,
-            bundle_name: None,
-            unix_transports: Arc::new(RwLock::new(HashMap::new())),
-            tcp_transports: Arc::new(RwLock::new(HashMap::new())),
-        }
+        let mut config = TransportConfig::default();
+        config.channel_capacity = capacity;
+        Self::with_config(config)
     }
 
     /// Create a message bus from topology configuration
     ///
     /// This enables hybrid transport: Arc<T> within bundle, Unix/TCP between bundles.
     pub fn from_topology(topology: Topology, bundle_name: impl Into<String>) -> Self {
+        Self::from_topology_with_config(topology, bundle_name, TransportConfig::default())
+    }
+
+    /// Create a message bus from topology configuration with custom transport config
+    pub fn from_topology_with_config(topology: Topology, bundle_name: impl Into<String>, config: TransportConfig) -> Self {
         Self {
-            local: LocalTransport::default(),
+            local: LocalTransport::with_config(config.clone()),
+            config,
             topology: Some(Arc::new(topology)),
             bundle_name: Some(bundle_name.into()),
             unix_transports: Arc::new(RwLock::new(HashMap::new())),
@@ -174,7 +190,7 @@ impl MessageBus {
 
         let transport =
             Self::get_or_create_transport(&self.tcp_transports, target_bundle, || async move {
-                Some(TcpTransport::connect(addr))
+                TcpTransport::connect(addr).await.ok()
             })
             .await?;
 
@@ -198,7 +214,7 @@ impl MessageBus {
 
         let transport =
             Self::get_or_create_transport(&self.tcp_transports, source_bundle, || async move {
-                Some(TcpTransport::connect(addr))
+                TcpTransport::connect(addr).await.ok()
             })
             .await?;
 
@@ -320,8 +336,6 @@ impl MessageBus {
     pub async fn subscriber_from<M>(&self, source_service: &str) -> Result<AnySubscriber<M>>
     where
         M: Message + Clone,
-        M::Archived: for<'a> rkyv::CheckBytes<rkyv::validation::validators::DefaultValidator<'a>>
-            + rkyv::Deserialize<M, rkyv::Infallible>,
     {
         let topology = self.topology.as_ref().ok_or_else(|| {
             TransportError::ServiceNotFound(
@@ -409,7 +423,7 @@ impl MessageBus {
 
     /// Get the number of active subscribers for a message type
     pub fn subscriber_count<M: Message>(&self) -> usize {
-        self.local.subscriber_count(M::TOPIC).unwrap_or(0)
+        self.local.subscriber_count::<M>()
     }
 
     /// Get the bundle name this bus belongs to

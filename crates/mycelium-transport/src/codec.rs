@@ -1,5 +1,4 @@
 use mycelium_protocol::Message;
-use rkyv::Deserialize;
 use thiserror::Error;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
@@ -35,11 +34,11 @@ const MAX_MESSAGE_SIZE: usize = 10 * 1024 * 1024;
 /// Write a TLV-framed message to an async stream
 pub async fn write_message<M, W>(stream: &mut W, msg: &M) -> Result<()>
 where
-    M: Message + rkyv::Serialize<rkyv::ser::serializers::AllocSerializer<1024>>,
+    M: Message,
     W: AsyncWriteExt + Unpin,
 {
-    // Serialize with rkyv
-    let bytes = rkyv::to_bytes::<_, 1024>(msg).map_err(|_| CodecError::SerializationFailed)?;
+    // Serialize with zerocopy (zero-copy)
+    let bytes = msg.as_bytes();
 
     let len = bytes.len();
     if len > MAX_MESSAGE_SIZE {
@@ -49,7 +48,7 @@ where
     // Write TLV frame
     stream.write_all(&(len as u32).to_le_bytes()).await?;
     stream.write_all(&M::TYPE_ID.to_le_bytes()).await?;
-    stream.write_all(&bytes).await?;
+    stream.write_all(bytes).await?;
 
     Ok(())
 }
@@ -82,27 +81,24 @@ where
     Ok((type_id, payload))
 }
 
-/// Deserialize a message from rkyv bytes
-pub fn deserialize_message<M: Message>(bytes: &[u8]) -> Result<M>
-where
-    M::Archived: for<'a> rkyv::CheckBytes<rkyv::validation::validators::DefaultValidator<'a>>
-        + rkyv::Deserialize<M, rkyv::Infallible>,
-{
-    let archived = unsafe { rkyv::archived_root::<M>(bytes) };
-    archived
-        .deserialize(&mut rkyv::Infallible)
-        .map_err(|_| CodecError::DeserializationFailed)
+/// Deserialize a message from zerocopy bytes
+pub fn deserialize_message<M: Message>(bytes: &[u8]) -> Result<M> {
+    if bytes.len() != std::mem::size_of::<M>() {
+        return Err(CodecError::DeserializationFailed);
+    }
+
+    M::read_from(bytes).ok_or(CodecError::DeserializationFailed)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use mycelium_protocol::impl_message;
-    use rkyv::{Archive, Deserialize, Serialize};
+    use zerocopy::{AsBytes, FromBytes, FromZeroes};
     use tokio::net::{UnixListener, UnixStream};
 
-    #[derive(Debug, Clone, PartialEq, Archive, Serialize, Deserialize)]
-    #[archive(check_bytes)]
+    #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+    #[repr(C)]
     struct TestMsg {
         value: u64,
         data: u64,
