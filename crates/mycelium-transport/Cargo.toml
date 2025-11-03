@@ -10,7 +10,7 @@ tokio = { version = "1", features = ["full"] }
 dashmap = "5.5"
 thiserror = "1.0"
 tracing = "0.1"
-rkyv = { version = "0.7", features = ["validation"] }
+zerocopy = "0.7"
 
 [dev-dependencies]
 tokio-test = "0.4"

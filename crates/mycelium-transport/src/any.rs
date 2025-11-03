@@ -20,7 +20,7 @@ pub enum AnyPublisher<M: Message> {
 
 impl<M: Message> AnyPublisher<M>
 where
-    M: rkyv::Serialize<rkyv::ser::serializers::AllocSerializer<1024>>,
+    M: zerocopy::AsBytes,
 {
     /// Publish a message using the underlying transport
     pub async fn publish(&self, msg: M) -> Result<()> {
@@ -58,8 +58,7 @@ pub enum AnySubscriber<M: Message> {
 
 impl<M: Message + Clone> AnySubscriber<M>
 where
-    M::Archived: for<'a> rkyv::CheckBytes<rkyv::validation::validators::DefaultValidator<'a>>
-        + rkyv::Deserialize<M, rkyv::Infallible>,
+    M: zerocopy::FromBytes,
 {
     /// Receive the next message using the underlying transport
     pub async fn recv(&mut self) -> Option<M> {
@@ -106,10 +105,10 @@ mod tests {
     use super::*;
     use crate::LocalTransport;
     use mycelium_protocol::impl_message;
-    use rkyv::{Archive, Deserialize, Serialize};
+    use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
-    #[derive(Debug, Clone, PartialEq, Archive, Serialize, Deserialize)]
-    #[archive(check_bytes)]
+    #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+    #[repr(C)]
     struct TestMsg {
         value: u64,
     }

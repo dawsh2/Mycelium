@@ -81,8 +81,7 @@ impl<M> StreamSubscriber<M> {
 
 impl<M: Message> StreamSubscriber<M>
 where
-    M::Archived: for<'a> rkyv::CheckBytes<rkyv::validation::validators::DefaultValidator<'a>>
-        + rkyv::Deserialize<M, rkyv::Infallible>,
+    M: zerocopy::FromBytes,
 {
     /// Receive the next message
     ///
@@ -130,11 +129,11 @@ where
 mod tests {
     use super::*;
     use mycelium_protocol::impl_message;
-    use rkyv::{Archive, Deserialize, Serialize};
     use tokio::net::{UnixListener, UnixStream};
+    use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
-    #[derive(Debug, Clone, PartialEq, Archive, Serialize, Deserialize)]
-    #[archive(check_bytes)]
+    #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+    #[repr(C)]
     struct TestMsg {
         value: u64,
     }
@@ -146,11 +145,12 @@ mod tests {
         let (tx, rx) = broadcast::channel(10);
         let mut sub: StreamSubscriber<TestMsg> = StreamSubscriber::new(rx);
 
-        // Create a raw frame
-        let bytes = rkyv::to_bytes::<_, 1024>(&TestMsg { value: 42 }).unwrap();
+        // Create a raw frame with zerocopy-encoded message
+        let msg = TestMsg { value: 42 };
+        let tlv_bytes = mycelium_protocol::encode_message(&msg).unwrap();
         let frame = RawFrame {
             type_id: 123,
-            bytes: Arc::new(bytes.to_vec()),
+            bytes: Arc::new(tlv_bytes),
         };
 
         // Send envelope with raw frame
@@ -162,8 +162,8 @@ mod tests {
         tx.send(envelope).unwrap();
 
         // Receive and verify
-        let msg = sub.recv().await.unwrap();
-        assert_eq!(msg.value, 42);
+        let received_msg = sub.recv().await.unwrap();
+        assert_eq!(received_msg.value, 42);
     }
 
     #[tokio::test]
@@ -185,11 +185,12 @@ mod tests {
         );
         tx.send(wrong_envelope).unwrap();
 
-        // Send correct type_id
-        let bytes = rkyv::to_bytes::<_, 1024>(&TestMsg { value: 42 }).unwrap();
+        // Send correct type_id with zerocopy encoding
+        let msg = TestMsg { value: 42 };
+        let tlv_bytes = mycelium_protocol::encode_message(&msg).unwrap();
         let correct_frame = RawFrame {
             type_id: 123,
-            bytes: Arc::new(bytes.to_vec()),
+            bytes: Arc::new(tlv_bytes),
         };
 
         let correct_envelope = Envelope::from_raw(
@@ -200,8 +201,8 @@ mod tests {
         tx.send(correct_envelope).unwrap();
 
         // Should receive only the correct message
-        let msg = sub.recv().await.unwrap();
-        assert_eq!(msg.value, 42);
+        let received_msg = sub.recv().await.unwrap();
+        assert_eq!(received_msg.value, 42);
     }
 
     #[tokio::test]

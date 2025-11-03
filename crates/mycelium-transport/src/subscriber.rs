@@ -90,18 +90,18 @@ impl<M: Message> Subscriber<M> {
 mod tests {
     use super::*;
     use mycelium_protocol::impl_message;
-    use rkyv::{Archive, Deserialize, Serialize};
+    use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
-    #[derive(Debug, Clone, PartialEq, Archive, Serialize, Deserialize)]
-    #[archive(check_bytes)]
+    #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+    #[repr(C)]
     struct TestMsg {
         value: u64,
     }
 
     impl_message!(TestMsg, 1, "test");
 
-    #[derive(Debug, Clone, Archive, Serialize, Deserialize)]
-    #[archive(check_bytes)]
+    #[derive(Debug, Clone, Copy, AsBytes, FromBytes, FromZeroes)]
+    #[repr(C)]
     struct OtherMsg {
         data: u64,
     }

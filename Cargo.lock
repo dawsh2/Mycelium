@@ -319,12 +319,12 @@ dependencies = [
  "dashmap",
  "mycelium-config",
  "mycelium-protocol",
- "rkyv",
  "tempfile",
  "thiserror",
  "tokio",
  "tokio-test",
  "tracing",
+ "zerocopy",
 ]
 
 [[package]]

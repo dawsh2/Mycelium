@@ -219,7 +219,7 @@ impl MessageBus {
     /// - Transport initialization fails
     pub async fn publisher_to<M>(&self, target_service: &str) -> Result<AnyPublisher<M>>
     where
-        M: Message + rkyv::Serialize<rkyv::ser::serializers::AllocSerializer<1024>>,
+        M: Message + zerocopy::AsBytes,
     {
         let topology = self.topology.as_ref().ok_or_else(|| {
             TransportError::ServiceNotFound(
@@ -319,9 +319,7 @@ impl MessageBus {
     /// - Transport initialization fails
     pub async fn subscriber_from<M>(&self, source_service: &str) -> Result<AnySubscriber<M>>
     where
-        M: Message + Clone,
-        M::Archived: for<'a> rkyv::CheckBytes<rkyv::validation::validators::DefaultValidator<'a>>
-            + rkyv::Deserialize<M, rkyv::Infallible>,
+        M: Message + zerocopy::FromBytes,
     {
         let topology = self.topology.as_ref().ok_or_else(|| {
             TransportError::ServiceNotFound(
@@ -433,13 +431,13 @@ impl Default for MessageBus {
 mod tests {
     use super::*;
     use mycelium_protocol::impl_message;
-    use rkyv::{Archive, Deserialize, Serialize};
+    use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
-    #[derive(Debug, Clone, PartialEq, Archive, Serialize, Deserialize)]
-    #[archive(check_bytes)]
+    #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+    #[repr(C)]
     struct SwapEvent {
         pool: u64,
-        amount: u128,
+        amount: u64,  // Simplified to u64 to avoid padding
     }
 
     impl_message!(SwapEvent, 11, "market-data");

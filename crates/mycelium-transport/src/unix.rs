@@ -134,7 +134,7 @@ pub struct UnixPublisher<M> {
 
 impl<M: Message> UnixPublisher<M>
 where
-    M: rkyv::Serialize<rkyv::ser::serializers::AllocSerializer<1024>>,
+    M: zerocopy::AsBytes,
 {
     /// Publish a message over Unix socket
     pub async fn publish(&self, msg: M) -> Result<()> {
@@ -158,10 +158,10 @@ pub type UnixSubscriber<M> = StreamSubscriber<M>;
 mod tests {
     use super::*;
     use mycelium_protocol::impl_message;
-    use rkyv::{Archive, Deserialize, Serialize};
+    use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
-    #[derive(Debug, Clone, PartialEq, Archive, Serialize, Deserialize)]
-    #[archive(check_bytes)]
+    #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+    #[repr(C)]
     struct TestMsg {
         value: u64,
     }
