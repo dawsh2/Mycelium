@@ -1,4 +1,4 @@
-# <img src="docs/assets/cultures.svg" alt="Mycelium Logo" width="32" style="vertical-align: middle;"> Mycelium
+# Mycelium <img src="docs/assets/cultures.svg" alt="Mycelium Logo" width="48" style="vertical-align: middle;">
 
 **Pub/Sub Transport Layer with Adaptive Routing**
 
