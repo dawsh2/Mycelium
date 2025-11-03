@@ -1,15 +1,13 @@
-use rkyv::{
-    ser::serializers::AllocSerializer, Archive, Serialize,
-};
 use std::fmt::Debug;
+use zerocopy::{AsBytes, FromBytes};
 
 /// Core trait for all messages in the Mycelium system.
 ///
 /// Messages must be:
-/// - Zero-copy serializable (rkyv)
+/// - Zero-copy serializable (zerocopy)
 /// - Send + Sync (can be shared across threads)
 /// - Have a unique type ID and topic
-pub trait Message: Archive + Serialize<AllocSerializer<256>> + Send + Sync + Debug + 'static {
+pub trait Message: AsBytes + FromBytes + Send + Sync + Debug + Copy + 'static {
     /// Unique message type ID (for TLV encoding)
     const TYPE_ID: u16;
 
@@ -31,10 +29,10 @@ macro_rules! impl_message {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rkyv::Deserialize;
+    use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
-    #[derive(Debug, Clone, PartialEq, Archive, Serialize, Deserialize)]
-    #[archive(check_bytes)]
+    #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+    #[repr(C)]
     struct TestMessage {
         id: u64,
         value: u64,
@@ -49,18 +47,17 @@ mod tests {
     }
 
     #[test]
-    fn test_rkyv_roundtrip() {
+    fn test_zerocopy_roundtrip() {
         let original = TestMessage {
             id: 42,
             value: 100,
         };
 
-        // Serialize
-        let bytes = rkyv::to_bytes::<_, 256>(&original).unwrap();
+        // Serialize with zerocopy
+        let bytes = original.as_bytes();
 
         // Deserialize (zero-copy)
-        let archived = unsafe { rkyv::archived_root::<TestMessage>(&bytes) };
-        let deserialized: TestMessage = archived.deserialize(&mut rkyv::Infallible).unwrap();
+        let deserialized = TestMessage::read_from(bytes).unwrap();
 
         assert_eq!(original, deserialized);
     }

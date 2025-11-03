@@ -4,9 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-rkyv = { version = "0.7", features = ["validation"] }
+zerocopy = { version = "0.7", features = ["derive"] }
 thiserror = "1.0"
-primitive-types = "0.12"  # For U256 support
+primitive-types = { version = "0.12", default-features = false }  # For U256 support, disable zerocopy to avoid version conflict
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }

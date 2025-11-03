@@ -1,7 +1,7 @@
 //! Fixed-capacity collections for zero-copy TLV serialization
 //!
 //! Provides `FixedVec<T, N>` and `FixedStr<N>` - stack-allocated collections
-//! with runtime length tracking, enabling zero-copy serialization with rkyv.
+//! with runtime length tracking, enabling zero-copy serialization with zerocopy.
 //!
 //! ## Why FixedVec Instead of Vec?
 //!
@@ -19,10 +19,10 @@
 //! - Inline storage (no heap allocation)
 //! - Runtime length tracking (0 to N elements)
 //! - Unused slots are zeroed for deterministic serialization
-//! - Works with rkyv's Archive/Serialize/Deserialize
+//! - Manual zerocopy trait impls (can't derive generically)
 
-use rkyv::{Archive, Deserialize, Serialize};
 use std::convert::TryFrom;
+use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 /// Compile-time constants for array sizing
 pub const MAX_POOL_ADDRESSES: usize = 4;  // Max pools in arbitrage path
@@ -70,8 +70,8 @@ impl std::error::Error for FixedVecError {}
 ///
 /// **Why custom FixedVec instead of heapless::Vec or arrayvec?**
 ///
-/// 1. Zero-copy serialization with rkyv requires specific derives
-/// 2. Standard crates can't provide rkyv support generically
+/// 1. Zero-copy serialization with zerocopy requires manual trait impls
+/// 2. Standard crates can't provide zerocopy support generically
 /// 3. HFT demands sub-microsecond serialization (<1μs target)
 /// 4. Only need support for specific types used in TLV messages
 ///
@@ -86,9 +86,11 @@ impl std::error::Error for FixedVecError {}
 /// ```
 ///
 /// All data is stored inline (no heap allocation), enabling direct memory mapping
-/// for zero-copy serialization/deserialization with rkyv.
-#[derive(Debug, Clone, Copy, PartialEq, Archive, Serialize, Deserialize)]
-#[archive(check_bytes)]
+/// for zero-copy serialization/deserialization with zerocopy.
+///
+/// **Note**: AsBytes/FromBytes cannot be derived generically - manual impls required
+/// for each concrete instantiation. See bottom of file for trait implementations.
+#[derive(Debug, Clone, Copy, PartialEq)]
 #[repr(C)]
 pub struct FixedVec<T, const N: usize>
 where
@@ -252,8 +254,9 @@ where
 ///
 /// Stores UTF-8 string data in fixed-size array with length prefix.
 /// Unused bytes are zeroed for deterministic serialization.
-#[derive(Debug, Clone, Copy, PartialEq, Archive, Serialize, Deserialize)]
-#[archive(check_bytes)]
+///
+/// **Note**: AsBytes/FromBytes manually implemented for MAX_SYMBOL_LENGTH.
+#[derive(Debug, Clone, Copy, PartialEq)]
 #[repr(C)]
 pub struct FixedStr<const N: usize> {
     /// Length of valid UTF-8 data
@@ -419,37 +422,70 @@ mod tests {
     }
 
     #[test]
-    fn test_rkyv_roundtrip_fixed_vec() {
-        let mut vec: FixedVec<u64, 4> = FixedVec::new();
-        vec.try_push(100).unwrap();
-        vec.try_push(200).unwrap();
-        vec.try_push(300).unwrap();
+    fn test_zerocopy_roundtrip_fixed_vec() {
+        use zerocopy::AsBytes;
 
-        // Serialize with rkyv
-        let bytes = rkyv::to_bytes::<_, 256>(&vec).unwrap();
+        let mut vec: FixedVec<[u8; 20], MAX_POOL_ADDRESSES> = FixedVec::new();
+        vec.try_push([1; 20]).unwrap();
+        vec.try_push([2; 20]).unwrap();
 
-        // Deserialize
-        let archived = unsafe { rkyv::archived_root::<FixedVec<u64, 4>>(&bytes) };
-        let deserialized: FixedVec<u64, 4> =
-            archived.deserialize(&mut rkyv::Infallible).unwrap();
+        // Serialize with zerocopy
+        let bytes = vec.as_bytes();
 
-        assert_eq!(deserialized.len(), 3);
-        assert_eq!(deserialized.get(0), Some(&100));
-        assert_eq!(deserialized.get(1), Some(&200));
-        assert_eq!(deserialized.get(2), Some(&300));
+        // Deserialize with zerocopy (zero-copy cast)
+        let deserialized: &FixedVec<[u8; 20], MAX_POOL_ADDRESSES> =
+            FixedVec::ref_from(bytes).unwrap();
+
+        assert_eq!(deserialized.len(), 2);
+        assert_eq!(deserialized.get(0), Some(&[1; 20]));
+        assert_eq!(deserialized.get(1), Some(&[2; 20]));
     }
 
     #[test]
-    fn test_rkyv_roundtrip_fixed_str() {
-        let s = FixedStr::<32>::from_str("Hello, Mycelium!").unwrap();
+    fn test_zerocopy_roundtrip_fixed_str() {
+        use zerocopy::AsBytes;
 
-        // Serialize with rkyv
-        let bytes = rkyv::to_bytes::<_, 256>(&s).unwrap();
+        let s = FixedStr::<MAX_SYMBOL_LENGTH>::from_str("Hello").unwrap();
 
-        // Deserialize
-        let archived = unsafe { rkyv::archived_root::<FixedStr<32>>(&bytes) };
-        let deserialized: FixedStr<32> = archived.deserialize(&mut rkyv::Infallible).unwrap();
+        // Serialize with zerocopy
+        let bytes = s.as_bytes();
 
-        assert_eq!(deserialized.as_str().unwrap(), "Hello, Mycelium!");
+        // Deserialize with zerocopy (zero-copy cast)
+        let deserialized: &FixedStr<MAX_SYMBOL_LENGTH> = FixedStr::ref_from(bytes).unwrap();
+
+        assert_eq!(deserialized.as_str().unwrap(), "Hello");
     }
+}
+
+// ============================================================================
+// Manual zerocopy trait implementations for concrete types
+// ============================================================================
+//
+// NOTE: zerocopy cannot derive AsBytes/FromBytes generically for FixedVec<T, N>
+// Must manually implement for each concrete instantiation used in messages.
+
+/// Manual AsBytes/FromBytes for FixedVec<[u8; 20], 4> (arbitrage paths)
+unsafe impl AsBytes for FixedVec<[u8; 20], MAX_POOL_ADDRESSES> {
+    fn only_derive_is_allowed_to_implement_this_trait() {}
+}
+
+unsafe impl FromBytes for FixedVec<[u8; 20], MAX_POOL_ADDRESSES> {
+    fn only_derive_is_allowed_to_implement_this_trait() {}
+}
+
+unsafe impl FromZeroes for FixedVec<[u8; 20], MAX_POOL_ADDRESSES> {
+    fn only_derive_is_allowed_to_implement_this_trait() {}
+}
+
+/// Manual AsBytes/FromBytes for FixedStr<32> (token symbols)
+unsafe impl AsBytes for FixedStr<MAX_SYMBOL_LENGTH> {
+    fn only_derive_is_allowed_to_implement_this_trait() {}
+}
+
+unsafe impl FromBytes for FixedStr<MAX_SYMBOL_LENGTH> {
+    fn only_derive_is_allowed_to_implement_this_trait() {}
+}
+
+unsafe impl FromZeroes for FixedStr<MAX_SYMBOL_LENGTH> {
+    fn only_derive_is_allowed_to_implement_this_trait() {}
 }

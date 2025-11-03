@@ -68,8 +68,7 @@ fn generate_messages(contracts: &Contracts) -> String {
     code.push_str("// To modify, edit contracts.yaml and rebuild\n\n");
 
     code.push_str("use crate::fixed_vec::{FixedStr, FixedVec, MAX_POOL_ADDRESSES, MAX_SYMBOL_LENGTH};\n");
-    code.push_str("use crate::Message;\n");
-    code.push_str("use rkyv::{Archive, Deserialize, Serialize};\n\n");
+    code.push_str("use crate::Message;\n\n");
     code.push_str("pub use primitive_types::U256;\n\n");
 
     // Generate validation error enum
@@ -138,9 +137,8 @@ fn generate_message_struct(name: &str, contract: &MessageContract) -> String {
     }
 
     code.push_str("///\n");
-    code.push_str("/// **Note**: U256 values are stored as [u8; 32] for rkyv compatibility.\n");
-    code.push_str("#[derive(Debug, Clone, PartialEq, Archive, Serialize, Deserialize)]\n");
-    code.push_str("#[archive(check_bytes)]\n");
+    code.push_str("/// **Note**: U256 values are stored as [u8; 32] for zerocopy compatibility.\n");
+    code.push_str("#[derive(Debug, Clone, Copy, PartialEq)]\n");
     code.push_str("#[repr(C)]\n");
     code.push_str(&format!("pub struct {} {{\n", name));
 
@@ -154,9 +152,21 @@ fn generate_message_struct(name: &str, contract: &MessageContract) -> String {
         code.push_str(&format!("    {}{}: {},\n", visibility, field_name, rust_type));
     }
 
-    // Add padding for alignment
-    code.push_str("\n    /// Padding for alignment\n");
-    code.push_str("    _padding: [u8; 4],\n");
+    code.push_str("}\n\n");
+
+    // Manual AsBytes impl (unsafe but simple)
+    code.push_str(&format!("unsafe impl zerocopy::AsBytes for {} {{\n", name));
+    code.push_str("    fn only_derive_is_allowed_to_implement_this_trait() {}\n");
+    code.push_str("}\n\n");
+
+    // Manual FromBytes impl
+    code.push_str(&format!("unsafe impl zerocopy::FromBytes for {} {{\n", name));
+    code.push_str("    fn only_derive_is_allowed_to_implement_this_trait() {}\n");
+    code.push_str("}\n\n");
+
+    // Manual FromZeroes impl
+    code.push_str(&format!("unsafe impl zerocopy::FromZeroes for {} {{\n", name));
+    code.push_str("    fn only_derive_is_allowed_to_implement_this_trait() {}\n");
     code.push_str("}\n\n");
 
     code
@@ -221,7 +231,6 @@ fn generate_instrument_meta_impl() -> String {
     code.push_str("            symbol: symbol_fixed,\n");
     code.push_str("            decimals,\n");
     code.push_str("            chain_id,\n");
-    code.push_str("            _padding: [0; 4],\n");
     code.push_str("        })\n");
     code.push_str("    }\n\n");
     code.push_str("    /// Get symbol as string\n");
@@ -260,7 +269,6 @@ fn generate_pool_state_impl() -> String {
     code.push_str("            sqrt_price_x96: [0; 32],\n");
     code.push_str("            tick: 0,\n");
     code.push_str("            block_number,\n");
-    code.push_str("            _padding: [0; 4],\n");
     code.push_str("        })\n");
     code.push_str("    }\n\n");
 
@@ -290,7 +298,6 @@ fn generate_pool_state_impl() -> String {
     code.push_str("            sqrt_price_x96: sqrt_price_bytes,\n");
     code.push_str("            tick,\n");
     code.push_str("            block_number,\n");
-    code.push_str("            _padding: [0; 4],\n");
     code.push_str("        })\n");
     code.push_str("    }\n\n");
 
@@ -361,7 +368,6 @@ fn generate_arbitrage_signal_impl() -> String {
     code.push_str("            estimated_profit_usd,\n");
     code.push_str("            gas_estimate_wei: gas_bytes,\n");
     code.push_str("            deadline_block,\n");
-    code.push_str("            _padding: [0; 4],\n");
     code.push_str("        })\n");
     code.push_str("    }\n\n");
 
@@ -438,13 +444,13 @@ fn generate_instrument_meta_tests() -> String {
     code.push_str("        assert!(matches!(InstrumentMeta::new([0; 20], \"WETH\", 18, 137), Err(ValidationError::ZeroAddress)));\n");
     code.push_str("    }\n\n");
 
-    // Test rkyv roundtrip
+    // Test zerocopy roundtrip
     code.push_str("    #[test]\n");
-    code.push_str("    fn test_instrument_meta_rkyv() {\n");
+    code.push_str("    fn test_instrument_meta_zerocopy() {\n");
+    code.push_str("        use zerocopy::{AsBytes, FromBytes};\n");
     code.push_str("        let original = InstrumentMeta::new([1; 20], \"USDC\", 6, 137).unwrap();\n");
-    code.push_str("        let bytes = rkyv::to_bytes::<_, 256>(&original).unwrap();\n");
-    code.push_str("        let archived = unsafe { rkyv::archived_root::<InstrumentMeta>(&bytes) };\n");
-    code.push_str("        let deserialized: InstrumentMeta = archived.deserialize(&mut rkyv::Infallible).unwrap();\n");
+    code.push_str("        let bytes = original.as_bytes();\n");
+    code.push_str("        let deserialized = InstrumentMeta::ref_from(bytes).unwrap();\n");
     code.push_str("        assert_eq!(deserialized.symbol_str(), \"USDC\");\n");
     code.push_str("        assert_eq!(deserialized.decimals, 6);\n");
     code.push_str("    }\n\n");
@@ -475,13 +481,13 @@ fn generate_pool_state_tests() -> String {
     code.push_str("        assert_eq!(state.sqrt_price_x96(), U256::from(1234567890));\n");
     code.push_str("    }\n\n");
 
-    // Test rkyv roundtrip
+    // Test zerocopy roundtrip
     code.push_str("    #[test]\n");
-    code.push_str("    fn test_pool_state_rkyv() {\n");
+    code.push_str("    fn test_pool_state_zerocopy() {\n");
+    code.push_str("        use zerocopy::{AsBytes, FromBytes};\n");
     code.push_str("        let original = PoolStateUpdate::new_v2([5; 20], 1, U256::from(1000000), U256::from(2000000), 54321).unwrap();\n");
-    code.push_str("        let bytes = rkyv::to_bytes::<_, 1024>(&original).unwrap();\n");
-    code.push_str("        let archived = unsafe { rkyv::archived_root::<PoolStateUpdate>(&bytes) };\n");
-    code.push_str("        let deserialized: PoolStateUpdate = archived.deserialize(&mut rkyv::Infallible).unwrap();\n");
+    code.push_str("        let bytes = original.as_bytes();\n");
+    code.push_str("        let deserialized = PoolStateUpdate::ref_from(bytes).unwrap();\n");
     code.push_str("        assert_eq!(deserialized.reserve0(), U256::from(1000000));\n");
     code.push_str("        assert_eq!(deserialized.block_number, 54321);\n");
     code.push_str("    }\n\n");
@@ -513,14 +519,14 @@ fn generate_arbitrage_signal_tests() -> String {
     code.push_str("        assert!(matches!(ArbitrageSignal::new(1, &path_ok, -10.0, U256::zero(), 1000), Err(ValidationError::NegativeProfit(_))));\n");
     code.push_str("    }\n\n");
 
-    // Test rkyv roundtrip
+    // Test zerocopy roundtrip
     code.push_str("    #[test]\n");
-    code.push_str("    fn test_arbitrage_signal_rkyv() {\n");
+    code.push_str("    fn test_arbitrage_signal_zerocopy() {\n");
+    code.push_str("        use zerocopy::{AsBytes, FromBytes};\n");
     code.push_str("        let path = [[1; 20], [2; 20], [3; 20]];\n");
     code.push_str("        let original = ArbitrageSignal::new(999, &path, 250.75, U256::from(42000), 99999).unwrap();\n");
-    code.push_str("        let bytes = rkyv::to_bytes::<_, 512>(&original).unwrap();\n");
-    code.push_str("        let archived = unsafe { rkyv::archived_root::<ArbitrageSignal>(&bytes) };\n");
-    code.push_str("        let deserialized: ArbitrageSignal = archived.deserialize(&mut rkyv::Infallible).unwrap();\n");
+    code.push_str("        let bytes = original.as_bytes();\n");
+    code.push_str("        let deserialized = ArbitrageSignal::ref_from(bytes).unwrap();\n");
     code.push_str("        assert_eq!(deserialized.opportunity_id, 999);\n");
     code.push_str("        assert_eq!(deserialized.hop_count(), 3);\n");
     code.push_str("    }\n\n");

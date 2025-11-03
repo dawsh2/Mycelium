@@ -48,7 +48,11 @@ impl Envelope {
         }
     }
 
-    /// Create an envelope from raw components (for transport layer use)
+    /// Create an envelope from raw components (for internal transport layer use)
+    ///
+    /// **Note**: This is a low-level API used by transport implementations.
+    /// Most users should use `Envelope::new()` instead.
+    #[doc(hidden)]
     pub fn from_raw(type_id: u16, topic: String, payload: Arc<dyn Any + Send + Sync>) -> Self {
         Self {
             type_id,
@@ -100,10 +104,10 @@ impl Clone for Envelope {
 mod tests {
     use super::*;
     use crate::impl_message;
-    use rkyv::{Archive, Deserialize, Serialize};
+    use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
-    #[derive(Debug, Clone, PartialEq, Archive, Serialize, Deserialize)]
-    #[archive(check_bytes)]
+    #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+    #[repr(C)]
     struct TestMessage {
         value: u64,
     }
@@ -131,8 +135,8 @@ mod tests {
 
     #[test]
     fn test_envelope_downcast_type_mismatch() {
-        #[derive(Debug, Clone, Archive, Serialize, Deserialize)]
-        #[archive(check_bytes)]
+        #[derive(Debug, Clone, Copy, AsBytes, FromBytes, FromZeroes)]
+        #[repr(C)]
         struct OtherMessage {
             data: u64,
         }
@@ -145,7 +149,10 @@ mod tests {
         let result = envelope.downcast::<OtherMessage>();
         assert!(matches!(
             result,
-            Err(EnvelopeError::TypeMismatch { expected: 100, got: 99 })
+            Err(EnvelopeError::TypeMismatch {
+                expected: 100,
+                got: 99
+            })
         ));
     }
 
