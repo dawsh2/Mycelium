@@ -1,17 +1,12 @@
-<div style="display: flex; align-items: center;">
-  <img src="docs/assets/cultures.svg" alt="Mycelium Logo" width="40" style="margin-right: 15px;">
-  <h1>Mycelium</h1>
-</div>
+# <img src="docs/assets/cultures.svg" alt="Mycelium Logo" width="32" style="vertical-align: middle;"> Mycelium
 
 **Pub/Sub Transport Layer with Adaptive Routing**
 
-Mycelium is a type-safe pub/sub messaging system implemented in Rust that provides **topology-based transport selection**. Write your pub/sub code once, configure your topology, and the transport is inferred from node placement:
+Mycelium is a type-safe pub/sub messaging system implemented in Rust that provides **topology-based transport selection**. Write your pub/sub code once, configure your topology, and the transport is inferred from node placement. Actor system foundation (routing types, envelope metadata) is in place for future actor-based supervision patterns (see [docs/ACTORS.md](docs/ACTORS.md)).
 
 - **Same node (process)**: `Arc<T>` zero-copy sharing (~200ns latency) - no serialization
 - **Different nodes, same host**: Unix domain sockets (~50μs latency) - TLV wire protocol
 - **Different nodes, different hosts**: TCP with zero-copy deserialization (~500μs + network) - TLV wire protocol
-
-**Actor system** (Phase 1 foundation available, Phase 2 deferred): Routing types and envelope metadata in place for future actor-based supervision and fault isolation. See [docs/ACTORS.md](docs/ACTORS.md) for evolution path.
 
 **Applications**: High-frequency trading, multiplayer game servers, real-time analytics pipelines, IoT/sensor networks.
 
