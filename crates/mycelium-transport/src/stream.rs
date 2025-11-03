@@ -1,7 +1,7 @@
 use crate::codec::{deserialize_message, read_frame};
 use crate::error::Result;
 use dashmap::DashMap;
-use mycelium_protocol::{Envelope, Message};
+use mycelium_protocol::{codec::HEADER_SIZE, Envelope, Message};
 use std::any::Any;
 use std::marker::PhantomData;
 use std::sync::Arc;
@@ -118,8 +118,9 @@ impl<M: Message> StreamSubscriber<M> {
                 }
             };
 
-            // Deserialize from raw bytes
-            match deserialize_message::<M>(&raw_frame.bytes) {
+            // Deserialize from raw bytes (skip header to get payload)
+            let payload = &raw_frame.bytes[HEADER_SIZE..];
+            match deserialize_message::<M>(payload) {
                 Ok(msg) => return Some(msg),
                 Err(e) => {
                     tracing::error!("Failed to deserialize message: {}", e);
@@ -150,12 +151,19 @@ mod tests {
         let (tx, rx) = broadcast::channel(10);
         let mut sub: StreamSubscriber<TestMsg> = StreamSubscriber::new(rx);
 
-      // Create a raw frame
+        // Create a raw frame with TLV header
         let msg = TestMsg { value: 42 };
-        let bytes = msg.as_bytes();
+        let payload = msg.as_bytes();
+
+        // Build TLV bytes: [type_id: u16][length: u32][payload]
+        let mut tlv_bytes = Vec::with_capacity(HEADER_SIZE + payload.len());
+        tlv_bytes.extend_from_slice(&123u16.to_le_bytes());
+        tlv_bytes.extend_from_slice(&(payload.len() as u32).to_le_bytes());
+        tlv_bytes.extend_from_slice(payload);
+
         let frame = RawFrame {
             type_id: 123,
-            bytes: Arc::new(bytes.to_vec()),
+            bytes: Arc::new(tlv_bytes),
         };
 
         // Send envelope with raw frame
@@ -176,11 +184,16 @@ mod tests {
         let (tx, rx) = broadcast::channel(10);
         let mut sub: StreamSubscriber<TestMsg> = StreamSubscriber::new(rx);
 
-        // Send wrong type_id
-        let bytes = vec![0u8; 10];
+        // Send wrong type_id (with TLV header)
+        let wrong_payload = vec![0u8; 10];
+        let mut wrong_tlv = Vec::with_capacity(HEADER_SIZE + 10);
+        wrong_tlv.extend_from_slice(&999u16.to_le_bytes());
+        wrong_tlv.extend_from_slice(&10u32.to_le_bytes());
+        wrong_tlv.extend_from_slice(&wrong_payload);
+
         let wrong_frame = RawFrame {
             type_id: 999,
-            bytes: Arc::new(bytes),
+            bytes: Arc::new(wrong_tlv),
         };
 
         let wrong_envelope = Envelope::from_raw(
@@ -190,11 +203,17 @@ mod tests {
         );
         tx.send(wrong_envelope).unwrap();
 
-    // Send correct type_id
+        // Send correct type_id (with TLV header)
         let msg = TestMsg { value: 42 };
+        let payload = msg.as_bytes();
+        let mut correct_tlv = Vec::with_capacity(HEADER_SIZE + payload.len());
+        correct_tlv.extend_from_slice(&123u16.to_le_bytes());
+        correct_tlv.extend_from_slice(&(payload.len() as u32).to_le_bytes());
+        correct_tlv.extend_from_slice(payload);
+
         let correct_frame = RawFrame {
             type_id: 123,
-            bytes: Arc::new(msg.as_bytes().to_vec()),
+            bytes: Arc::new(correct_tlv),
         };
 
         let correct_envelope = Envelope::from_raw(
