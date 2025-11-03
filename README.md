@@ -1,6 +1,6 @@
 # Mycelium
 
-**Topology-aware pub/sub messaging for Rust services.**
+**Messaging System for Rust services, with configurable deployment topology and transport mechanisms.**
 
 Mycelium provides direct service-to-service communication with automatic transport selection. Services publish and subscribe to typed messages. The transport layer (Arc/Unix/TCP) is determined by configuration, not code.
 
