@@ -1,14 +1,16 @@
 # Mycelium <img src="docs/assets/cultures.svg" alt="Mycelium Logo" width="48" style="vertical-align: middle; margin-bottom: -8px;">
 
-**Pub/Sub Transport Layer with Adaptive Routing**
+Mycelium is a **type-safe pub/sub messaging system** with topology-based transport selection. Define messages once in YAML, write pub/sub code once, deploy anywhere - transport is inferred from configuration. Same binary runs as single-process (Arc), multi-process (Unix sockets), or distributed (TCP). Built for low-latency systems like high-frequency trading, multiplayer game servers, and real-time analytics.
 
-Mycelium is a type-safe pub/sub messaging system implemented in Rust that provides **topology-based transport selection**. Write your pub/sub code once, configure your topology, and the transport is inferred from node placement. Actor system foundation (routing types, envelope metadata) is in place for future actor-based supervision patterns (see [docs/ACTORS.md](docs/ACTORS.md)).
+**Key features:** Schema-driven code generation, bijective zerocopy serialization, ~200ns local latency, can be wrapped in lightweight actor runtime for supervision patterns.
+
+---
+
+## Transport Performance
 
 - **Same node (process)**: `Arc<T>` zero-copy sharing (~200ns latency) - no serialization
 - **Different nodes, same host**: Unix domain sockets (~50μs latency) - TLV wire protocol
 - **Different nodes, different hosts**: TCP with zero-copy deserialization (~500μs + network) - TLV wire protocol
-
-**Applications**: High-frequency trading, multiplayer game servers, real-time analytics pipelines, IoT/sensor networks.
 
 ---
 
