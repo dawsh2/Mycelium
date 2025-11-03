@@ -4,6 +4,7 @@ pub mod codec;
 pub mod error;
 pub mod local;
 pub mod publisher;
+pub mod stream;
 pub mod subscriber;
 pub mod tcp;
 pub mod unix;

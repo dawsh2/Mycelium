@@ -1,5 +1,6 @@
-use crate::codec::{deserialize_message, read_frame, write_message};
+use crate::codec::write_message;
 use crate::error::Result;
+use crate::stream::{handle_stream_connection, StreamSubscriber};
 use dashmap::DashMap;
 use mycelium_protocol::{Envelope, Message};
 use std::marker::PhantomData;
@@ -69,7 +70,7 @@ impl TcpTransport {
                         tracing::debug!("Accepted TCP connection from {}", addr);
                         let channels = Arc::clone(&channels);
                         tokio::spawn(async move {
-                            if let Err(e) = handle_connection(stream, channels).await {
+                            if let Err(e) = handle_stream_connection(stream, channels).await {
                                 tracing::error!("Connection error from {}: {}", addr, e);
                             }
                         });
@@ -102,58 +103,12 @@ impl TcpTransport {
     pub fn subscriber<M: Message>(&self) -> TcpSubscriber<M> {
         let tx = self.get_or_create_channel(M::TOPIC);
         let rx = tx.subscribe();
-
-        TcpSubscriber {
-            rx,
-            _phantom: PhantomData,
-        }
+        TcpSubscriber::new(rx)
     }
 
     /// Get the bound address
     pub fn local_addr(&self) -> SocketAddr {
         self.bind_addr
-    }
-}
-
-/// Raw message frame (type_id + bytes)
-#[derive(Clone)]
-struct RawFrame {
-    type_id: u16,
-    bytes: Arc<Vec<u8>>,
-}
-
-/// Handle an incoming TCP connection
-async fn handle_connection(
-    mut stream: TcpStream,
-    channels: Arc<DashMap<String, broadcast::Sender<Envelope>>>,
-) -> Result<()> {
-    loop {
-        // Read frame
-        let (type_id, bytes) = match read_frame(&mut stream).await {
-            Ok(frame) => frame,
-            Err(e) => {
-                tracing::debug!("Connection closed: {}", e);
-                return Ok(());
-            }
-        };
-
-        // Store raw bytes in Arc for zero-copy sharing
-        let frame = RawFrame {
-            type_id,
-            bytes: Arc::new(bytes),
-        };
-
-        // Broadcast to all channels - subscribers will filter by type_id
-        for entry in channels.iter() {
-            // Create envelope with RawFrame payload - subscribers will deserialize
-            let envelope = Envelope::from_raw(
-                frame.type_id,
-                entry.key().clone(),
-                Arc::new(frame.clone()) as Arc<dyn std::any::Any + Send + Sync>,
-            );
-
-            let _ = entry.value().send(envelope);
-        }
     }
 }
 
@@ -182,54 +137,8 @@ where
     }
 }
 
-/// Subscriber for TCP socket transport
-pub struct TcpSubscriber<M> {
-    rx: broadcast::Receiver<Envelope>,
-    _phantom: PhantomData<M>,
-}
-
-impl<M: Message> TcpSubscriber<M>
-where
-    M::Archived: for<'a> rkyv::CheckBytes<rkyv::validation::validators::DefaultValidator<'a>>
-        + rkyv::Deserialize<M, rkyv::Infallible>,
-{
-    /// Receive the next message
-    pub async fn recv(&mut self) -> Option<M> {
-        loop {
-            let envelope = match self.rx.recv().await {
-                Ok(env) => env,
-                Err(broadcast::error::RecvError::Closed) => return None,
-                Err(broadcast::error::RecvError::Lagged(n)) => {
-                    tracing::warn!("Subscriber lagged by {} messages", n);
-                    continue;
-                }
-            };
-
-            // Filter by type ID
-            if envelope.type_id != M::TYPE_ID {
-                continue;
-            }
-
-            // Downcast payload to RawFrame
-            let raw_frame = match envelope.downcast_any::<RawFrame>() {
-                Ok(frame) => frame,
-                Err(e) => {
-                    tracing::error!("Failed to downcast envelope payload to RawFrame: {}", e);
-                    continue;
-                }
-            };
-
-            // Deserialize from raw bytes
-            match deserialize_message::<M>(&raw_frame.bytes) {
-                Ok(msg) => return Some(msg),
-                Err(e) => {
-                    tracing::error!("Failed to deserialize message: {}", e);
-                    continue;
-                }
-            }
-        }
-    }
-}
+/// Subscriber for TCP socket transport (re-exported from stream module)
+pub type TcpSubscriber<M> = StreamSubscriber<M>;
 
 #[cfg(test)]
 mod tests {
@@ -273,12 +182,9 @@ mod tests {
         pub_.publish(msg.clone()).await.unwrap();
 
         // Wait for message with timeout
-        let received = tokio::time::timeout(
-            tokio::time::Duration::from_secs(1),
-            sub.recv()
-        )
-        .await
-        .expect("Timeout waiting for message");
+        let received = tokio::time::timeout(tokio::time::Duration::from_secs(1), sub.recv())
+            .await
+            .expect("Timeout waiting for message");
 
         assert_eq!(received.unwrap().value, 42);
     }
@@ -303,12 +209,9 @@ mod tests {
 
         // Receive messages
         for i in 0..3 {
-            let received = tokio::time::timeout(
-                tokio::time::Duration::from_secs(1),
-                sub.recv()
-            )
-            .await
-            .expect("Timeout waiting for message");
+            let received = tokio::time::timeout(tokio::time::Duration::from_secs(1), sub.recv())
+                .await
+                .expect("Timeout waiting for message");
 
             assert_eq!(received.unwrap().value, i);
         }

@@ -1,44 +1,102 @@
-# Torq v2: Clean Slate Rewrite with Actor Model
+# Mycelium: Clean Rewrite with Transport Abstraction
 
-**Status**: Design Document
-**Created**: 2025-11-02
+**Status**: Foundation Complete (v0.1.0)
+**Created**: 2025-11-02  
 **Philosophy**: Quality > Quantity. Code is reality. Reality must match spec.
 
 ---
 
 ## Executive Summary
 
-**Yes, a clean rewrite with actor model from the start is the right approach.**
+**Yes, a clean rewrite with transport abstraction from the start is the right approach.**
 
-The current system has accumulated architectural debt that makes it harder to reason about, test, and evolve. Starting fresh with actor model primitives from day one will:
+The current Torq system has accumulated architectural debt that makes it harder to reason about, test, and evolve. Starting fresh with **pub/sub messaging** and **adaptive transport** from day one will:
 
-1. **Eliminate coordination complexity** - Location-transparent messaging replaces manual orchestration
-2. **Enable true parallel development** - Teams can work on different actors without stepping on each other
-3. **Make testing tractable** - Each actor is an isolated unit with clear contracts
-4. **Support deployment flexibility** - Same code runs as monolith or distributed cluster
-5. **Prevent architectural drift** - GUARDRAILS enforce spec-to-reality consistency from commit #1
+1. **Eliminate deployment complexity** - Same code runs as monolith or distributed
+2. **Enable true parallel development** - Teams work on different services without coordination
+3. **Make testing tractable** - Each service is independently testable
+4. **Support deployment flexibility** - Config file determines topology
+5. **Prevent architectural drift** - GUARDRAILS enforce spec-to-reality consistency
 
-**Critical modification to the proposed plan**: The 24-week timeline is optimistic. We'll use **2-week iteration cycles** with **working software at every checkpoint**, using git worktrees for parallel exploration and rigorous PR reviews to maintain quality.
+**Timeline**: **8 weeks** using 2-week iteration cycles with working software at every checkpoint.
 
 ---
 
 ## Why Rewrite? (The Honest Assessment)
 
-### Current System Pain Points
+### Current Torq Pain Points
 
 1. **Coupling sprawl** - Services share state through Redis in undocumented ways
 2. **Testing nightmare** - Integration tests require full stack spinup
-3. **Deployment rigidity** - Can't run services independently without breaking assumptions
+3. **Deployment rigidity** - Can't run services independently
 4. **Performance uncertainty** - No clear bottleneck attribution
-5. **Onboarding friction** - New contributors can't understand data flow from code alone
+5. **Onboarding friction** - New contributors can't understand data flow from code
 
-### What We'll Gain
+### What We'll Gain with Mycelium
 
-1. **Actor-first architecture** - Message passing as the fundamental primitive
-2. **Location transparency** - Same actor code runs in-process or across network
+1. **Pub/sub messaging** - Type-safe event streaming as the fundamental primitive
+2. **Adaptive transport** - Arc<T> (local) → Unix sockets (IPC) → TCP (distributed)
 3. **Contract enforcement** - Compile-time guarantees for message types
-4. **Testability by design** - Every actor is independently testable
+4. **Testability by design** - Every service is independently testable
 5. **Deployment flexibility** - Config file determines topology (monolith → cluster)
+
+---
+
+## Architecture: Pub/Sub with Adaptive Transport
+
+### Core Principle
+
+**Same pub/sub code, different performance based on deployment topology.**
+
+```rust
+// Developer writes this once:
+let pub_ = bus.publisher::<SwapEvent>();
+pub_.publish(event).await?;
+
+// Runtime chooses transport:
+// - Monolith:      Arc<T> clone         (~200ns, zero-copy)
+// - Multi-process: Unix domain socket   (~50μs, zero-copy via shared mem)
+// - Distributed:   TCP with rkyv        (~500μs, zero-copy deserialization)
+```
+
+**Not an actor framework**. Not point-to-point messaging. Just **simple pub/sub** with smart routing.
+
+---
+
+## What We're Building
+
+### Core Components (✅ Complete)
+
+1. **Message Protocol** (`mycelium-protocol`)
+   - Type-safe messages with TYPE_ID and TOPIC
+   - Envelope abstraction for transport
+   - rkyv serialization for zero-copy remote messaging
+
+2. **Transport Layer** (`mycelium-transport`)
+   - Local transport (Arc<T> pub/sub)
+   - Unix socket transport (IPC)
+   - TCP transport (distributed)
+   - TLV wire protocol
+   - Generic stream handling
+
+3. **Configuration System** (`mycelium-config`)
+   - Topology-driven deployment
+   - DeploymentMode (Monolith, Bundled, Distributed)
+   - TOML-based configuration
+
+4. **MessageBus** - Unified API
+   - Automatic transport selection
+   - Service discovery via topology
+   - Lazy connection management
+
+### What We're NOT Building
+
+- ❌ Actor supervision trees (use systemd/k8s)
+- ❌ Request/reply patterns (use separate topics)
+- ❌ Distributed consensus (use external coordination)
+- ❌ Custom process management (use systemd/k8s)
+
+**Keep it simple**. Add complexity only when proven necessary.
 
 ---
 
@@ -47,12 +105,12 @@ The current system has accumulated architectural debt that makes it harder to re
 ### Core Principles from `docs/GUARDRAILS/`
 
 1. **Code is reality. Spec mirrors reality. CI enforces sync.**
-2. **`system.yaml` is the canonical architecture definition** - Services, events, storage, invariants
-3. **Testing pyramid** - 70% unit, 20% integration, 10% E2E (all automated)
-4. **Contract-first development** - TLV schemas and service contracts written before code
+2. **`system.yaml` is the canonical architecture definition**
+3. **Testing pyramid** - 70% unit, 20% integration, 10% E2E
+4. **Contract-first development** - Message schemas before code
 5. **Financial safety** - If it moves money, test it exhaustively
 
-### New Requirements for Torq v2
+### Requirements for Mycelium
 
 #### 1. Pre-Code Architecture Spec
 
@@ -61,56 +119,46 @@ Before writing any service code:
 ```yaml
 # system.yaml (excerpt)
 services:
-  market_adapter:
-    description: "Consumes blockchain events, produces normalized TLVs"
-    actor_type: "ReliableConsumer"
-    consumes:
-      - BlockchainSwapEvent  # External
-    produces:
-      - PoolStateUpdate      # TLV type 16
-      - InstrumentMeta       # TLV type 18
+  polygon_adapter:
+    description: "Consumes Polygon events, produces normalized SwapEvents"
+    bundle: "adapters"
+    publishes:
+      - SwapEvent        # TYPE_ID 100
+      - PoolMetadata     # TYPE_ID 101
+    subscribes: []
     dependencies:
-      - RPC providers (4x rotation)
+      - Polygon RPC (4x rotation)
       - Redis (cache)
-    authority:
-      - pool_metadata        # Only this actor fetches from RPC
-    restart_policy: "one_for_one"
-    max_restarts: 3
+    restart_policy: "systemd"
 ```
 
-**CI Enforcement**: Service code must implement exactly these contracts. CI fails if:
-- Service produces undeclared TLV types
-- Service reads from stores it's not authoritative for
-- Service communicates in ways not in `system.yaml`
+**CI Enforcement**: Service code must implement exactly these contracts.
 
-#### 2. Contract-First TLV Development
+#### 2. Contract-First Message Development
 
 ```rust
-// BEFORE implementing any actor, define message contracts
+// BEFORE implementing any service, define message contracts
 
-/// Pool state update (TLV type 16, domain: MarketData)
-#[derive(TLVMessage, Debug, Clone)]
-#[tlv(type = 16, domain = "MarketData", version = 1)]
-pub struct PoolStateUpdate {
-    pub pool_address: [u8; 20],
-    #[tlv(validate = "venue_id_known")]
-    pub venue_id: u16,
-    pub reserve0: U256,
-    pub reserve1: U256,
-    pub block_number: u64,
+#[derive(Debug, Clone, Archive, Serialize, Deserialize)]
+#[archive(check_bytes)]
+pub struct SwapEvent {
+    pub pool: Address,
+    pub token_in: Address,
+    pub amount_in: U256,
+    pub amount_out: U256,
 }
 
-// Contract test is written BEFORE actor implementation
+impl_message!(SwapEvent, 100, "market-data");
+
+// Contract test is written BEFORE service implementation
 #[cfg(test)]
 mod contract_tests {
     #[test]
-    fn pool_state_serializes_correctly() {
-        let update = PoolStateUpdate { /* ... */ };
-        let tlv = update.to_tlv();
-        assert_eq!(tlv.type_id, 16);
-
-        let roundtrip: PoolStateUpdate = tlv.try_into().unwrap();
-        assert_eq!(roundtrip.pool_address, update.pool_address);
+    fn swap_event_roundtrip() {
+        let event = SwapEvent { /* ... */ };
+        let bytes = rkyv::to_bytes(&event).unwrap();
+        let decoded: SwapEvent = rkyv::from_bytes(&bytes).unwrap();
+        assert_eq!(decoded.pool, event.pool);
     }
 }
 ```
@@ -119,11 +167,10 @@ mod contract_tests {
 
 | Test Type | Coverage Target | Max Runtime | Purpose |
 |-----------|----------------|-------------|---------|
-| Unit | 90% of pure logic | < 1ms each | Validate calculations, parsing |
-| Contract | 100% of actor messages | < 100ms each | Verify TLV encode/decode |
-| Integration | Actor pairs | < 1s each | Test actor communication |
-| Replay | Critical scenarios | < 5s each | Prevent regressions |
-| E2E | 3-5 golden paths | < 30s each | Full system validation |
+| Unit | 90% of pure logic | < 1ms each | Validate calculations |
+| Contract | 100% of messages | < 100ms each | Verify serialization |
+| Integration | Service pairs | < 1s each | Test pub/sub |
+| E2E | 3-5 golden paths | < 30s each | Full pipeline |
 
 **CI Pipeline**:
 ```bash
@@ -133,13 +180,13 @@ cargo fmt --check
 cargo clippy -- -D warnings
 
 # PR checks (CI)
-cargo test                  # All tests except E2E
+cargo test                  # All tests
 cargo tarpaulin --out Xml   # Coverage report
-python3 scripts/validate_system_yaml.py  # Spec drift check
+python3 scripts/validate_system_yaml.py
 
 # Merge to main (CI)
 cargo test --ignored        # E2E tests
-cargo bench --no-run        # Performance regression check
+cargo bench --no-run        # Performance check
 ```
 
 ---
@@ -148,72 +195,38 @@ cargo bench --no-run        # Performance regression check
 
 ### Why Worktrees?
 
-**Problem**: Context switching between branches destroys flow state.
-**Solution**: Multiple working directories pointing to same git repo.
+**Problem**: Context switching destroys flow state.
+**Solution**: Multiple working directories for same repo.
 
 ```bash
 # Main development tree
-~/torq/main/              # Always on main branch
+~/mycelium/main/              # Always on main branch
 
 # Feature worktrees
-~/torq/actor-system/      # Building actor framework
-~/torq/tlv-codec/         # Implementing TLV codec
-~/torq/market-adapter/    # First adapter actor
+~/mycelium/polygon-adapter/   # Building first adapter
+~/mycelium/strategy/          # Building first strategy
+~/mycelium/observability/     # Adding metrics
 
 # Each worktree is independent - no checkout thrashing
 ```
 
 ### Worktree Workflow
 
-#### 1. Create Feature Worktree
-
 ```bash
-# From main repo
-cd ~/torq/main
-git worktree add ~/torq/actor-system -b feature/actor-framework
+# Create feature worktree
+git worktree add ~/mycelium/polygon-adapter -b feature/polygon-adapter
 
-# Now you have two independent directories
-cd ~/torq/actor-system
-# Work here without disturbing main
-```
+# Work in isolation
+cd ~/mycelium/polygon-adapter
+cargo test
+git commit -m "Add Polygon adapter"
 
-#### 2. Parallel Development
+# Merge when ready
+cd ~/mycelium/main
+git merge feature/polygon-adapter
 
-Developer A works on actor framework:
-```bash
-cd ~/torq/actor-system
-cargo test --lib
-git commit -m "Add ActorRef with location transparency"
-```
-
-Developer B works on TLV codec simultaneously:
-```bash
-cd ~/torq/tlv-codec
-cargo test --lib
-git commit -m "Implement zero-copy TLV deserialization"
-```
-
-**No merge conflicts** - they're in separate worktrees!
-
-#### 3. Integration Point
-
-When both features are ready:
-```bash
-# Merge actor-system first
-cd ~/torq/main
-git merge feature/actor-framework
-cargo test --all  # Ensure no breakage
-
-# Then merge tlv-codec
-git merge feature/tlv-codec
-cargo test --all
-```
-
-#### 4. Cleanup
-
-```bash
-git worktree remove ~/torq/actor-system
-git branch -d feature/actor-framework
+# Cleanup
+git worktree remove ~/mycelium/polygon-adapter
 ```
 
 ### Pull Request Discipline
@@ -221,210 +234,144 @@ git branch -d feature/actor-framework
 **Every PR must include:**
 
 1. **System.yaml update** (if architecture changes)
-   ```yaml
-   # Added in PR #42
-   services:
-     new_actor:
-       consumes: [...]
-       produces: [...]
-   ```
-
 2. **Contract tests** (100% coverage of new messages)
-   ```rust
-   #[test]
-   fn new_message_roundtrips() { /* ... */ }
-   ```
-
-3. **Unit tests** (90%+ coverage of logic)
+3. **Unit tests** (90%+ coverage)
 4. **Documentation** (if public API changes)
-5. **Benchmark comparison** (if performance-critical path)
-
-**PR Review Checklist:**
-
-- [ ] Does `system.yaml` reflect these changes?
-- [ ] Are all TLV messages tested for roundtrip?
-- [ ] Does coverage meet thresholds?
-- [ ] Are failure modes documented?
-- [ ] Is the commit history clean? (no "fix typo" commits)
 
 **Merge Requirements:**
 
 - ✅ All CI checks pass
 - ✅ At least 1 approving review
-- ✅ No unresolved discussions
-- ✅ Branch is up-to-date with main
+- ✅ Branch up-to-date with main
 - ✅ Squash merge for clean history
 
 ---
 
-## Modified Development Chronology
+## Development Chronology (8 Weeks)
 
-### Key Changes from Original Plan
+### Phase 1: Foundation (Weeks 1-2) ✅ COMPLETE
 
-1. **Shorter iterations** - 2-week sprints instead of 4-week phases
-2. **Working software first** - Each sprint delivers runnable artifact
-3. **Parallel workstreams** - Use worktrees for concurrent development
-4. **Continuous integration** - Merge to main weekly (not at phase end)
-5. **Quality gates** - Coverage + performance regressions block merges
+**Sprint 1: Core Transport Protocol**
 
-### Phase 1: Foundation (Weeks 1-8)
-
-**Sprint 1-2: Core TLV Protocol**
-
-Working artifact: TLV message serialization/deserialization library
+Deliverable: Working transport layer with Arc, Unix, TCP
 
 ```bash
-# Deliverable
-cargo test --lib -p tlv-codec
-# All tests pass, 95%+ coverage
+# ✅ Completed
+cargo test -p mycelium-protocol -p mycelium-config -p mycelium-transport
+# Result: 52 tests passed
 
-# Can serialize/deserialize messages
-let msg = PoolStateUpdate { /* ... */ };
-let bytes = msg.to_tlv();
-let decoded: PoolStateUpdate = bytes.try_into().unwrap();
+# Can publish/subscribe across transports
+let pub_ = bus.publisher::<SwapEvent>();
+pub_.publish(event).await?;
 ```
 
-**Sprint 3-4: Actor Framework**
+**What was built**:
+- ✅ Message protocol (TYPE_ID, TOPIC, Message trait)
+- ✅ Local transport (Arc-based pub/sub)
+- ✅ Unix socket transport (IPC)
+- ✅ TCP transport (distributed)
+- ✅ TLV wire protocol
+- ✅ rkyv serialization
+- ✅ MessageBus with automatic transport selection
+- ✅ Topology configuration (TOML)
+- ✅ Comprehensive test suite
+- ✅ Code refactoring (eliminated 220 lines of duplication)
 
-Working artifact: Location-transparent actor system
+**Status**: Foundation is rock-solid. Ready for services.
+
+---
+
+### Phase 2: First Service (Weeks 3-4) 🚧 NEXT
+
+**Sprint 2: Polygon Market Data Adapter**
+
+Deliverable: Real adapter publishing swap events
 
 ```bash
-# Deliverable
-cargo run --example ping_pong
-# Two actors exchange messages via mailbox
-
-# Demonstrates
-- Actor spawn/shutdown
-- Message passing (local)
-- Supervision (restart on panic)
+# Goal
+cargo run --bin polygon-adapter --config config/dev.toml
+# Connects to Polygon RPC
+# Publishes SwapEvent messages to Mycelium transport
 ```
 
-**Sprint 5-6: Configuration System**
+**Tasks**:
+1. Create `crates/services/polygon-adapter`
+2. Integrate with Polygon RPC (ethers-rs or alloy)
+3. Parse swap logs → SwapEvent
+4. Publish via MessageBus
+5. Add health checks
+6. Add metrics (events/sec, latency)
 
-Working artifact: Configurable deployment modes
+**Success criteria**:
+- Publishes real swap events from Polygon mainnet
+- 100% uptime for 24h continuous run
+- < 1s latency from blockchain to publish
 
-```toml
-# config/dev.toml
-[deployment]
-mode = "monolith"
-actors = ["*"]
+---
 
-# config/prod.toml
-[deployment.market_adapter]
-mode = "distributed"
-nodes = ["adapter-1:9000", "adapter-2:9000"]
-```
+### Phase 3: First Strategy (Weeks 5-6)
+
+**Sprint 3: Flash Arbitrage Detector**
+
+Deliverable: Strategy that consumes SwapEvents
 
 ```bash
-# Deliverable
-cargo run --config config/dev.toml    # All actors in-process
-cargo run --config config/prod.toml   # Actors distributed
+# Goal
+cargo run --bin flash-arbitrage --config config/dev.toml
+# Subscribes to SwapEvent
+# Detects arbitrage opportunities
+# Publishes ArbitrageSignal
 ```
 
-**Sprint 7-8: Testing Infrastructure**
+**Tasks**:
+1. Create `crates/services/flash-arbitrage`
+2. Subscribe to SwapEvent via MessageBus
+3. Implement arbitrage detection logic
+4. Publish ArbitrageSignal
+5. Add backtesting support
+6. Validate with historical data
 
-Working artifact: Complete test harness
+**Success criteria**:
+- Correctly identifies profitable opportunities in backtests
+- < 100μs processing latency per event
+- Zero false positives in test suite
 
-```bash
-# Deliverable
-cargo test                    # Unit + integration
-cargo test --ignored          # E2E tests
-cargo tarpaulin --out Html    # Coverage report > 90%
-```
+---
 
-### Phase 2: First Trading Strategy (Weeks 9-16)
+### Phase 4: Production Readiness (Weeks 7-8)
 
-**Sprint 9-10: Market Data Adapter**
+**Sprint 4: Observability + Hardening**
 
-Working artifact: Polygon blockchain → TLV pipeline
+Deliverable: Production-ready deployment
 
-```bash
-# Deliverable
-cargo run --bin market_adapter
-# Connects to Polygon WebSocket
-# Emits PoolStateUpdate TLVs
-# Validates with contract tests
-```
+**Tasks**:
 
-**Sprint 11-12: Strategy Framework**
+1. **Observability**
+   - Integrate `tracing` crate
+   - Prometheus metrics export
+   - Grafana dashboards
+   - Alert rules (latency, errors, restarts)
 
-Working artifact: Strategy actor trait + reference implementation
+2. **Error Handling**
+   - Graceful degradation patterns
+   - Circuit breakers for external APIs
+   - Retry policies (exponential backoff)
 
-```rust
-// Deliverable
-pub trait StrategyActor: Actor {
-    type Signal: Message;
-    async fn on_pool_update(&mut self, update: PoolStateUpdate) -> Option<Self::Signal>;
-}
+3. **Deployment**
+   - Docker images for each service
+   - Kubernetes manifests
+   - Helm charts
+   - Runbook documentation
 
-// Reference strategy (trivial)
-struct LoggingStrategy;
-impl StrategyActor for LoggingStrategy {
-    async fn on_pool_update(&mut self, update: PoolStateUpdate) {
-        println!("Pool {}: reserves={}/{}",
-            hex::encode(update.pool_address),
-            update.reserve0,
-            update.reserve1);
-    }
-}
-```
+4. **Testing**
+   - Load testing (1M msg/sec sustained)
+   - Chaos testing (kill pods randomly)
+   - Network partition testing
 
-**Sprint 13-14: Flash Arbitrage Strategy**
-
-Working artifact: Real arbitrage detector with backtesting
-
-```bash
-# Deliverable
-cargo run --bin backtest \
-    --strategy flash_arb \
-    --data tests/replays/2025-10-baseline.json
-
-# Output
-Opportunities detected: 47
-Profitable (after gas): 3
-Total profit: $12.45
-```
-
-**Sprint 15-16: Integration + Hardening**
-
-Working artifact: Full pipeline with monitoring
-
-```bash
-# Deliverable
-docker-compose up
-# Starts: Redis, Postgres, market_adapter, strategy, signal_relay
-# Dashboard shows: pools tracked, opportunities found, latency p99
-```
-
-### Phase 3: Production Readiness (Weeks 17-24)
-
-**Sprint 17-18: Observability**
-
-- Prometheus metrics
-- Jaeger tracing
-- Grafana dashboards
-- Alert rules
-
-**Sprint 19-20: Risk Management**
-
-- Position limits
-- Stop-loss mechanisms
-- Portfolio tracking
-- P&L calculation
-
-**Sprint 21-22: Execution Service**
-
-- Order lifecycle management
-- Gas oracle integration
-- Transaction signing
-- Execution tracking
-
-**Sprint 23-24: Production Deployment**
-
-- Kubernetes manifests
-- Load testing (1M msg/s sustained)
-- Chaos testing (random pod kills)
-- Runbook documentation
+**Success criteria**:
+- 99.9%+ uptime in staging
+- p99 latency < 5ms end-to-end
+- Clean failover when services crash
 
 ---
 
@@ -433,28 +380,23 @@ docker-compose up
 ### Workstream Organization
 
 ```
-Team A (Foundation):
-├─ ~/torq/actor-system      # Core actor framework
-├─ ~/torq/tlv-codec         # Message protocol
-└─ ~/torq/config-system     # Deployment config
+Team A (Services):
+├─ ~/mycelium/polygon-adapter    # Market data ingestion
+├─ ~/mycelium/flash-arbitrage    # Strategy implementation
+└─ ~/mycelium/order-executor     # Trade execution
 
-Team B (Domain Logic):
-├─ ~/torq/defi-primitives   # AMM math, pool types
-├─ ~/torq/market-adapter    # Blockchain ingestion
-└─ ~/torq/strategy-framework # Trading strategy trait
-
-Team C (Infrastructure):
-├─ ~/torq/observability     # Metrics, tracing
-├─ ~/torq/testing-harness   # Test utilities
-└─ ~/torq/deployment        # Docker, K8s
+Team B (Infrastructure):
+├─ ~/mycelium/observability      # Metrics, tracing, dashboards
+├─ ~/mycelium/testing-harness    # Load testing, chaos testing
+└─ ~/mycelium/deployment         # Docker, K8s, Helm
 ```
 
 ### Integration Cadence
 
-**Daily**: Push to feature branches, run CI
-**Weekly**: Integration sync - merge feature branches to main
-**Bi-weekly**: Sprint demo - show working artifact to stakeholders
-**Monthly**: Architecture review - validate system.yaml matches reality
+- **Daily**: Push to feature branches, run CI
+- **Weekly**: Integration sync - merge to main
+- **Bi-weekly**: Sprint demo - show working artifact
+- **End of 8 weeks**: Production deployment
 
 ---
 
@@ -466,16 +408,14 @@ Team C (Infrastructure):
 - [ ] **Performance**: No p99 latency regressions
 - [ ] **Documentation**: All public APIs documented
 - [ ] **System.yaml**: Updated if architecture changed
-- [ ] **Benchmarks**: No unexpected memory/CPU increases
-- [ ] **Replays**: All golden tests pass
 - [ ] **Linting**: `cargo clippy` with zero warnings
 
 ### Monthly Audit
 
 - **Dependency audit**: `cargo audit` - no critical CVEs
 - **Dead code**: `cargo-udeps` - remove unused deps
-- **Binary size**: Track total binary size (should not balloon)
-- **Technical debt**: Review FIXME/TODO comments, schedule cleanup
+- **Binary size**: Track total binary size
+- **Technical debt**: Review FIXME/TODO, schedule cleanup
 
 ---
 
@@ -485,19 +425,19 @@ Team C (Infrastructure):
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|------------|--------|-----------|
-| Actor framework bugs | Medium | High | Comprehensive unit + integration tests |
-| TLV protocol evolution | Low | Medium | Versioned messages, backward compat |
-| Performance bottlenecks | Medium | High | Continuous benchmarking, profiling |
-| State explosion (actor memory) | Low | Medium | Supervision policies, monitoring |
+| Transport layer bugs | Low | High | ✅ Complete test suite (52 tests) |
+| Message protocol evolution | Low | Medium | Versioned messages, backward compat |
+| Performance bottlenecks | Medium | High | Continuous benchmarking |
+| External API failures | High | Medium | Circuit breakers, retry policies |
 
 ### Process Risks
 
 | Risk | Likelihood | Impact | Mitigation |
 |------|------------|--------|-----------|
-| Feature creep | High | High | Strict sprint scope, 2-week lockdown |
-| Technical debt accumulation | Medium | High | Monthly cleanup sprints |
-| Spec drift | Medium | High | CI enforcement via system.yaml validation |
-| Team burnout | Low | Critical | Quality > speed, sustainable pace |
+| Feature creep | High | High | Strict 8-week timeline |
+| Technical debt | Medium | High | Monthly cleanup sprints |
+| Spec drift | Medium | High | CI enforcement via system.yaml |
+| Team burnout | Low | Critical | Sustainable pace, quality > speed |
 
 ---
 
@@ -506,17 +446,15 @@ Team C (Infrastructure):
 ### Technical KPIs
 
 - **Latency**: p50 < 50ns (local), p99 < 100μs (IPC), p999 < 5ms (network)
-- **Throughput**: 1M msg/s sustained (local), 500K msg/s (IPC)
-- **Uptime**: 99.95%+ (excluding planned maintenance)
+- **Throughput**: 1M msg/sec sustained (local), 200K msg/sec (IPC)
+- **Uptime**: 99.9%+ (excluding planned maintenance)
 - **Test coverage**: 90%+ overall, 100% critical paths
 - **Build time**: < 5min clean build, < 30sec incremental
-- **Backtest speed**: 10x+ parallel speedup vs sequential
 
 ### Business KPIs
 
 - **Strategy profitability**: Positive P&L in 3-month backtest
 - **Execution quality**: < 0.5% average slippage
-- **Risk compliance**: Zero position limit breaches
 - **Development velocity**: Working artifact every 2 weeks
 
 ---
@@ -525,232 +463,158 @@ Team C (Infrastructure):
 
 ### 1. Big Bang Integration
 
-**Wrong**:
-```
-Week 1-12: Build everything in isolation
-Week 13: Try to integrate for first time
-Week 14-20: Debug integration hell
-```
-
-**Right**:
-```
-Week 1-2: TLV codec (works standalone)
-Week 3: Integrate with actor framework
-Week 4: Deploy to staging, fix issues
-Week 5: Repeat for next component
-```
+**Wrong**: Build everything for 6 weeks, integrate at the end.
+**Right**: Integrate continuously. Deploy to staging weekly.
 
 ### 2. Premature Optimization
 
-**Wrong**:
-```rust
-// First implementation - way too complex
-struct ZeroCopyCircularBufferPool<T, const N: usize> { /* 500 lines */ }
-```
+**Wrong**: Over-engineer from day one.
+**Right**: Start simple. Profile. Optimize bottlenecks.
 
-**Right**:
-```rust
-// First implementation - simple
-struct Mailbox<T> {
-    queue: VecDeque<T>,
-}
+### 3. Undocumented Code
 
-// Later, after profiling shows it's a bottleneck
-struct OptimizedMailbox<T> { /* ... */ }
-```
-
-### 3. Undocumented Clever Code
-
-**Wrong**:
-```rust
-// No comment, uses unsafe, unclear purpose
-unsafe { std::mem::transmute::<&[u8], &Header>(bytes.as_ptr()) }
-```
-
-**Right**:
-```rust
-/// Zero-copy parse header from byte slice.
-/// SAFETY: Header is repr(C) with no padding, slice is validated to be 32 bytes.
-let header = unsafe {
-    zerocopy::Ref::<_, Header>::new(bytes)
-        .expect("Header must be 32 bytes aligned")
-        .into_ref()
-};
-```
+**Wrong**: Clever code with no explanation.
+**Right**: Clear code with comments for non-obvious parts.
 
 ### 4. "We'll Add Tests Later"
 
-**Wrong**: Ship feature, promise to add tests in next sprint (never happens)
-
-**Right**: Test-driven development
-1. Write contract test (defines expected behavior)
-2. Implement feature (makes test pass)
-3. PR includes both feature + tests
+**Wrong**: Ship feature, promise tests in next sprint (never happens).
+**Right**: Test-driven development. Tests in same PR as feature.
 
 ---
 
-## Migration Strategy (From Current System)
+## Migration from Torq
 
-### Parallel Run Phase (Weeks 17-24)
+### Parallel Run Phase (Weeks 7-8)
 
-Run Torq v1 and v2 side-by-side in production:
+Run Torq and Mycelium side-by-side:
 
-1. **Shadow mode** - v2 consumes same events as v1, compares outputs
-2. **Divergence alerts** - Log when v1 and v2 disagree on signals
-3. **Gradual cutover** - Route 1% → 10% → 50% → 100% traffic to v2
-4. **Rollback plan** - Feature flag to revert to v1 instantly
+1. **Shadow mode** - Mycelium consumes same events, compares outputs
+2. **Divergence alerts** - Log when Torq and Mycelium disagree
+3. **Gradual cutover** - Route 1% → 10% → 50% → 100% traffic
+4. **Rollback plan** - Feature flag to revert instantly
 
 ### Data Migration
 
 ```sql
--- Postgres migration: Add v2 schema
-CREATE SCHEMA torq_v2;
+-- Postgres migration: Add mycelium schema
+CREATE SCHEMA mycelium;
 
 -- Copy data, transform if needed
-INSERT INTO torq_v2.pool_metadata
-SELECT
-    pool_address,
-    token0_address,
-    token1_address,
-    -- v2 requires non-null decimals
-    COALESCE(token0_decimals, 18) as token0_decimals,
-    -- ...
-FROM torq_v1.pools;
+INSERT INTO mycelium.pool_metadata
+SELECT pool_address, token0, token1, ...
+FROM torq.pools;
 ```
 
-### Sunset v1 (Week 25+)
+### Sunset Torq (Week 9+)
 
-After 4 weeks of stable v2 in production:
-1. Stop v1 services
-2. Archive v1 codebase to `torq-v1-archive/`
-3. Redirect all traffic to v2
-4. Decommission v1 infrastructure
+After 2 weeks stable in production:
+1. Stop Torq services
+2. Archive Torq codebase
+3. Redirect all traffic to Mycelium
+4. Decommission Torq infrastructure
+
+---
+
+## Current Status (Week 2 Complete)
+
+### ✅ Completed
+
+- [x] Core message protocol
+- [x] Local transport (Arc)
+- [x] Unix socket transport
+- [x] TCP transport
+- [x] TLV wire protocol
+- [x] rkyv serialization
+- [x] MessageBus API
+- [x] Topology configuration
+- [x] 52 comprehensive tests
+- [x] Code refactoring (90% reduction in duplication)
+- [x] Documentation (TRANSPORT.md)
+
+### 🚧 Next Sprint (Weeks 3-4)
+
+- [ ] Polygon adapter service
+- [ ] Health check framework
+- [ ] Metrics export (Prometheus)
+- [ ] Integration with real blockchain data
+
+### 📋 Upcoming (Weeks 5-8)
+
+- [ ] Flash arbitrage strategy
+- [ ] Backtesting framework
+- [ ] Order executor service
+- [ ] Full observability stack
+- [ ] Production deployment
 
 ---
 
 ## Appendices
 
-### A. System.yaml Example (Full Service Definition)
+### A. System.yaml Example
 
 ```yaml
 services:
-  market_adapter:
-    description: "Polygon blockchain → TLV pipeline"
-    actor_type: "ReliableConsumer"
-    consumes:
-      - source: websocket
-        format: "JSON-RPC 2.0 notification"
-        events: ["eth_subscription (newPendingTransactions, logs)"]
-    produces:
-      - tlv_type: 16  # PoolStateUpdate
-        domain: MarketData
-        ordering: "per-pool sequential, cross-pool concurrent"
-      - tlv_type: 18  # InstrumentMeta
-        domain: MarketData
-        ordering: "at-most-once per token"
+  polygon_adapter:
+    description: "Polygon blockchain → SwapEvent pipeline"
+    bundle: "adapters"
+    publishes:
+      - type: SwapEvent
+        type_id: 100
+        topic: "market-data"
+    subscribes: []
     dependencies:
-      rpc_providers:
-        - "https://polygon-rpc.com"
-        - "https://polygon-mainnet.g.alchemy.com/v2/..."
-      redis:
-        keys: ["pool:{address}", "token:{address}"]
-        authority: read_write
-      postgres:
-        tables: ["pool_metadata", "token_metadata"]
-        authority: write_only
-    restart_policy:
-      strategy: "one_for_one"
-      max_restarts: 3
-      window_secs: 60
-    invariants:
-      - "InstrumentMeta emitted before first PoolStateUpdate for any pool"
-      - "Pool metadata cached in Redis before RPC fetch"
+      - Polygon RPC
+      - Redis (pool metadata cache)
+    restart_policy: "systemd one-for-one"
 ```
 
 ### B. Git Worktree Cheat Sheet
 
 ```bash
-# List all worktrees
+# List worktrees
 git worktree list
 
-# Create new worktree + branch
-git worktree add ~/torq/feature-name -b feature/feature-name
+# Create worktree
+git worktree add ~/mycelium/feature-name -b feature/feature-name
 
-# Create worktree from existing branch
-git worktree add ~/torq/bugfix origin/bugfix/critical-issue
-
-# Remove worktree (keep branch)
-git worktree remove ~/torq/feature-name
-
-# Remove worktree (delete branch)
-git worktree remove ~/torq/feature-name
+# Remove worktree
+git worktree remove ~/mycelium/feature-name
 git branch -D feature/feature-name
-
-# Prune stale worktrees
-git worktree prune
 ```
 
-### C. Pre-Commit Hook Template
+### C. Pre-Commit Hook
 
 ```bash
 #!/bin/bash
-# .git/hooks/pre-commit
-
 set -e
 
-echo "Running pre-commit checks..."
+cargo fmt -- --check
+cargo clippy -- -D warnings
+cargo test --lib
+python3 scripts/validate_system_yaml.py
 
-# 1. Format check
-cargo fmt -- --check || {
-    echo "❌ Code not formatted. Run: cargo fmt"
-    exit 1
-}
-
-# 2. Clippy
-cargo clippy -- -D warnings || {
-    echo "❌ Clippy warnings found"
-    exit 1
-}
-
-# 3. Unit tests
-cargo test --lib || {
-    echo "❌ Unit tests failed"
-    exit 1
-}
-
-# 4. System.yaml validation
-python3 scripts/validate_system_yaml.py || {
-    echo "❌ System.yaml validation failed"
-    exit 1
-}
-
-echo "✅ All pre-commit checks passed"
+echo "✅ All checks passed"
 ```
 
 ---
 
 ## Conclusion
 
-**Rewriting Torq with actor model from day one is the right call.**
+**Phase 1 (Foundation) is complete.** The transport layer is solid, tested, and ready for services.
 
-The proposed 24-week timeline is achievable **if and only if**:
+**8-week timeline is achievable** if we:
 
-1. We use **2-week sprints** with working artifacts every cycle
-2. We leverage **git worktrees** for true parallel development
-3. We enforce **GUARDRAILS** (system.yaml, contract tests, CI gates)
-4. We prioritize **quality over speed** (no shortcuts on tests/docs)
-5. We do **continuous integration** (merge weekly, not at phase end)
+1. Use **2-week sprints** with working artifacts
+2. Leverage **git worktrees** for parallel development
+3. Enforce **GUARDRAILS** (system.yaml, tests, CI)
+4. Prioritize **quality over speed**
+5. Do **continuous integration** (merge weekly)
 
-The alternative (incremental refactor of current system) is slower and riskier. Clean slate means:
-- No legacy assumptions to work around
-- Clear actor boundaries from commit #1
-- Testing built into DNA (not bolted on later)
-- Deployment flexibility baked in (not retrofitted)
+**Recommendation**: Proceed to Phase 2 (Polygon adapter). First service will validate all our design decisions.
 
-**Recommendation**: Approve rewrite, allocate 6 months, start with Phase 1 Sprint 1 (TLV protocol).
-
-First PR should be: `system.yaml` defining the complete architecture. Code follows spec, not the other way around.
+First task: Define `SwapEvent` message contract in `system.yaml`. Code follows spec, not the other way around.
 
 ---
 
-**Quality > Quantity. Code is reality. Reality must match spec. CI enforces truth.**
+**Quality > Quantity. Code is reality. Reality must match spec. CI enforces truth.** 🦀

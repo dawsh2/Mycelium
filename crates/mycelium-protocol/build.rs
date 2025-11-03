@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -16,10 +16,12 @@ struct MessageContract {
     domain: String,
     description: String,
     #[serde(default)]
+    #[allow(dead_code)]
     required_prior_messages: Vec<String>,
     #[serde(default)]
     sensitivity: Option<String>,
     #[serde(default)]
+    #[allow(dead_code)]
     log_payload: Option<bool>,
     // Use IndexMap to preserve YAML field order (important for #[repr(C)] layout!)
     fields: indexmap::IndexMap<String, FieldContract>,
@@ -32,8 +34,10 @@ struct FieldContract {
     field_type: String,
     description: String,
     #[serde(default)]
+    #[allow(dead_code)]
     optional: Option<bool>,
     #[serde(default)]
+    #[allow(dead_code)]
     validation: Vec<HashMap<String, serde_yaml::Value>>,
 }
 
@@ -95,7 +99,7 @@ fn generate_messages(contracts: &Contracts) -> String {
     code
 }
 
-fn generate_validation_error(contracts: &Contracts) -> String {
+fn generate_validation_error(_contracts: &Contracts) -> String {
     let mut code = String::new();
 
     code.push_str("/// Validation errors for message construction\n");
