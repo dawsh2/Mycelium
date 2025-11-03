@@ -18,10 +18,7 @@ pub enum AnyPublisher<M: Message> {
     Tcp(TcpPublisher<M>),
 }
 
-impl<M: Message> AnyPublisher<M>
-where
-    M: zerocopy::AsBytes,
-{
+impl<M: Message> AnyPublisher<M> {
     /// Publish a message using the underlying transport
     pub async fn publish(&self, msg: M) -> Result<()> {
         match self {
@@ -56,10 +53,7 @@ pub enum AnySubscriber<M: Message> {
     Tcp(TcpSubscriber<M>),
 }
 
-impl<M: Message + Clone> AnySubscriber<M>
-where
-    M: zerocopy::FromBytes,
-{
+impl<M: Message + Clone> AnySubscriber<M> {
     /// Receive the next message using the underlying transport
     pub async fn recv(&mut self) -> Option<M> {
         match self {

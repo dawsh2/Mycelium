@@ -6,12 +6,13 @@ edition = "2021"
 [dependencies]
 mycelium-protocol = { path = "../mycelium-protocol" }
 mycelium-config = { path = "../mycelium-config" }
-tokio = { version = "1", features = ["full"] }
-dashmap = "5.5"
-thiserror = "1.0"
-tracing = "0.1"
-zerocopy = "0.7"
+tokio = { workspace = true }
+dashmap = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+zerocopy = { workspace = true }
+futures = "0.3"
 
 [dev-dependencies]
 tokio-test = "0.4"
-tempfile = "3.8"
+tempfile = { workspace = true }

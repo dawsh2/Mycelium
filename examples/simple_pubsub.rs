@@ -3,15 +3,16 @@
 /// Run with: cargo run --example simple_pubsub
 use mycelium_protocol::{impl_message, Message};
 use mycelium_transport::MessageBus;
-use rkyv::{Archive, Deserialize, Serialize};
+use rkyv::Archive;
+use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
-// Define a message type
-#[derive(Debug, Clone, PartialEq, Archive, Serialize, Deserialize)]
-#[archive(check_bytes)]
+// Define a message type (C layout for zerocopy)
+#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+#[repr(C)]
 struct SwapEvent {
     pool_address: u64,
-    amount_in: u128,
-    amount_out: u128,
+    amount_in: u64,
+    amount_out: u64,
     block_number: u64,
 }
 
@@ -65,8 +66,8 @@ async fn main() {
     for i in 1..=3 {
         let event = SwapEvent {
             pool_address: i,
-            amount_in: 1000 * i as u128,
-            amount_out: 900 * i as u128,
+            amount_in: 1000 * i as u64,
+            amount_out: 900 * i as u64,
             block_number: 10000 + i,
         };
 

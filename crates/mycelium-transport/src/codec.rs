@@ -1,4 +1,4 @@
-use mycelium_protocol::{Message, HEADER_SIZE, MAX_PAYLOAD_SIZE};
+use mycelium_protocol::Message;
 use thiserror::Error;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use zerocopy::{AsBytes, FromBytes};
@@ -31,14 +31,21 @@ pub type Result<T> = std::result::Result<T, CodecError>;
 /// Uses the protocol codec's zerocopy encoding for true zero-copy serialization.
 pub async fn write_message<M, W>(stream: &mut W, msg: &M) -> Result<()>
 where
-    M: Message + AsBytes,
+    M: Message,
     W: AsyncWriteExt + Unpin,
 {
-    // Use protocol codec for zerocopy encoding
-    let tlv_bytes = mycelium_protocol::encode_message(msg)?;
+    // Serialize with zerocopy (zero-copy)
+    let bytes = msg.as_bytes();
 
-    // Write entire TLV frame (header + payload)
-    stream.write_all(&tlv_bytes).await?;
+    let len = bytes.len();
+    if len > MAX_MESSAGE_SIZE {
+        return Err(CodecError::MessageTooLarge(len));
+    }
+
+    // Write TLV frame
+    stream.write_all(&(len as u32).to_le_bytes()).await?;
+    stream.write_all(&M::TYPE_ID.to_le_bytes()).await?;
+    stream.write_all(bytes).await?;
 
     Ok(())
 }
@@ -75,22 +82,20 @@ where
     Ok((type_id, tlv_bytes))
 }
 
-/// Deserialize a message from TLV bytes using zerocopy
-///
-/// This performs zero-copy deserialization by casting the bytes directly
-/// to the message struct (no allocation, no copying).
-pub fn deserialize_message<M: Message>(tlv_bytes: &[u8]) -> Result<M>
-where
-    M: FromBytes,
-{
-    Ok(mycelium_protocol::decode_message(tlv_bytes)?)
+/// Deserialize a message from zerocopy bytes
+pub fn deserialize_message<M: Message>(bytes: &[u8]) -> Result<M> {
+    if bytes.len() != std::mem::size_of::<M>() {
+        return Err(CodecError::DeserializationFailed);
+    }
+
+    M::read_from(bytes).ok_or(CodecError::DeserializationFailed)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use mycelium_protocol::impl_message;
-    use tokio::net::{UnixListener, UnixStream};
+use tokio::net::{UnixListener, UnixStream};
     use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
     #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]

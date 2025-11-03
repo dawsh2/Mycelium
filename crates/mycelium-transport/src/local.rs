@@ -1,7 +1,5 @@
-use crate::{Publisher, Subscriber};
-use dashmap::DashMap;
+use crate::{config::TransportConfig, Publisher, Subscriber, ChannelManager};
 use mycelium_protocol::{Envelope, Message};
-use tokio::sync::broadcast;
 
 /// Local transport using Arc<T> for zero-copy message passing
 ///
@@ -10,60 +8,61 @@ use tokio::sync::broadcast;
 ///
 /// Performance: ~50-200ns per message (just an Arc clone)
 pub struct LocalTransport {
-    // Topic -> broadcast channel
-    channels: DashMap<String, broadcast::Sender<Envelope>>,
-    channel_capacity: usize,
+    channel_manager: ChannelManager,
 }
 
 impl LocalTransport {
-    /// Create a new local transport
-    ///
-    /// # Arguments
-    /// * `channel_capacity` - Capacity of each broadcast channel (default: 1000)
-    pub fn new(channel_capacity: usize) -> Self {
+    /// Create a new local transport with default configuration
+    pub fn new() -> Self {
+        Self::with_config(TransportConfig::default())
+    }
+
+    /// Create a new local transport with custom configuration
+    pub fn with_config(config: TransportConfig) -> Self {
         Self {
-            channels: DashMap::new(),
-            channel_capacity,
+            channel_manager: ChannelManager::new(config),
         }
     }
 
-    /// Get or create a broadcast channel for a topic
-    fn get_or_create_channel(&self, topic: &str) -> broadcast::Sender<Envelope> {
-        self.channels
-            .entry(topic.to_string())
-            .or_insert_with(|| broadcast::channel(self.channel_capacity).0)
-            .clone()
+    /// Create a new local transport (deprecated: use with_config)
+    ///
+    /// # Arguments
+    /// * `channel_capacity` - Capacity of each broadcast channel
+    #[deprecated(since = "0.2.0", note = "Use with_config(TransportConfig) instead")]
+    pub fn with_capacity(channel_capacity: usize) -> Self {
+        let mut config = TransportConfig::default();
+        config.channel_capacity = channel_capacity;
+        Self::with_config(config)
     }
+
 
     /// Create a publisher for a message type
     pub fn publisher<M: Message>(&self) -> Publisher<M> {
-        let tx = self.get_or_create_channel(M::TOPIC);
+        let tx = self.channel_manager.get_or_create_channel::<M>();
         Publisher::new(tx)
     }
 
     /// Create a subscriber for a message type
     pub fn subscriber<M: Message>(&self) -> Subscriber<M> {
-        let tx = self.get_or_create_channel(M::TOPIC);
+        let tx = self.channel_manager.get_or_create_channel::<M>();
         let rx = tx.subscribe();
         Subscriber::new(rx)
     }
 
     /// Get the number of active topics
     pub fn topic_count(&self) -> usize {
-        self.channels.len()
+        self.channel_manager.topic_count()
     }
 
     /// Get the number of subscribers for a topic
-    pub fn subscriber_count(&self, topic: &str) -> Option<usize> {
-        self.channels
-            .get(topic)
-            .map(|tx| tx.receiver_count())
+    pub fn subscriber_count<M: Message>(&self) -> usize {
+        self.channel_manager.subscriber_count::<M>()
     }
 }
 
 impl Default for LocalTransport {
     fn default() -> Self {
-        Self::new(1000)
+        Self::new()
     }
 }
 

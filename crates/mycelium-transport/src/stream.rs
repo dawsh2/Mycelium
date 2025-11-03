@@ -88,10 +88,7 @@ impl<M> StreamSubscriber<M> {
     }
 }
 
-impl<M: Message> StreamSubscriber<M>
-where
-    M: zerocopy::FromBytes,
-{
+impl<M: Message> StreamSubscriber<M> {
     /// Receive the next message
     ///
     /// Filters envelopes by type ID and deserializes matching messages.
@@ -138,7 +135,7 @@ where
 mod tests {
     use super::*;
     use mycelium_protocol::impl_message;
-    use tokio::net::{UnixListener, UnixStream};
+  use tokio::net::{UnixListener, UnixStream};
     use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
     #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
@@ -154,12 +151,12 @@ mod tests {
         let (tx, rx) = broadcast::channel(10);
         let mut sub: StreamSubscriber<TestMsg> = StreamSubscriber::new(rx);
 
-        // Create a raw frame with zerocopy-encoded message
+      // Create a raw frame
         let msg = TestMsg { value: 42 };
-        let tlv_bytes = mycelium_protocol::encode_message(&msg).unwrap();
+        let bytes = msg.as_bytes();
         let frame = RawFrame {
             type_id: 123,
-            bytes: Arc::new(tlv_bytes),
+            bytes: Arc::new(bytes.to_vec()),
         };
 
         // Send envelope with raw frame
@@ -194,12 +191,11 @@ mod tests {
         );
         tx.send(wrong_envelope).unwrap();
 
-        // Send correct type_id with zerocopy encoding
+    // Send correct type_id
         let msg = TestMsg { value: 42 };
-        let tlv_bytes = mycelium_protocol::encode_message(&msg).unwrap();
         let correct_frame = RawFrame {
             type_id: 123,
-            bytes: Arc::new(tlv_bytes),
+            bytes: Arc::new(msg.as_bytes().to_vec()),
         };
 
         let correct_envelope = Envelope::from_raw(
