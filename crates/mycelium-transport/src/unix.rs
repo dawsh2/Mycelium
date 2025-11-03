@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tokio::io::AsyncWriteExt;
 use tokio::net::{UnixListener, UnixStream};
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, Mutex};
 
 /// Unix socket transport for inter-process communication
 ///
@@ -19,6 +19,8 @@ use tokio::sync::broadcast;
 pub struct UnixTransport {
     socket_path: PathBuf,
     listener: Option<Arc<UnixListener>>,
+    /// Client-side persistent connection (for publishers)
+    connection: Option<Arc<Mutex<UnixStream>>>,
     // Topic -> broadcast channel
     channels: Arc<DashMap<String, broadcast::Sender<Envelope>>>,
     channel_capacity: usize,
@@ -45,6 +47,7 @@ impl UnixTransport {
         let transport = Self {
             socket_path,
             listener: Some(Arc::new(listener)),
+            connection: None,
             channels: Arc::new(DashMap::new()),
             channel_capacity: 1000,
         };
@@ -56,6 +59,8 @@ impl UnixTransport {
     }
 
     /// Connect to a Unix socket transport (client side)
+    ///
+    /// Establishes a persistent connection that will be reused for all publishes.
     pub async fn connect<P: AsRef<Path>>(socket_path: P) -> Result<Self> {
         let socket_path = socket_path.as_ref().to_path_buf();
 
@@ -66,9 +71,13 @@ impl UnixTransport {
             ));
         }
 
+        // Establish persistent connection
+        let stream = UnixStream::connect(&socket_path).await?;
+
         Ok(Self {
             socket_path,
             listener: None,
+            connection: Some(Arc::new(Mutex::new(stream))),
             channels: Arc::new(DashMap::new()),
             channel_capacity: 1000,
         })
@@ -111,11 +120,14 @@ impl UnixTransport {
     }
 
     /// Create a publisher for a message type
-    pub fn publisher<M: Message>(&self) -> UnixPublisher<M> {
-        UnixPublisher {
-            socket_path: self.socket_path.clone(),
+    ///
+    /// Returns None if this is a server-side transport (no client connection).
+    pub fn publisher<M: Message>(&self) -> Option<UnixPublisher<M>> {
+        let connection = self.connection.as_ref()?.clone();
+        Some(UnixPublisher {
+            connection,
             _phantom: PhantomData,
-        }
+        })
     }
 
     /// Create a subscriber for a message type
@@ -126,9 +138,9 @@ impl UnixTransport {
     }
 }
 
-/// Publisher for Unix socket transport
+/// Publisher for Unix socket transport with persistent connection
 pub struct UnixPublisher<M> {
-    socket_path: PathBuf,
+    connection: Arc<Mutex<UnixStream>>,
     _phantom: PhantomData<M>,
 }
 
@@ -136,16 +148,19 @@ impl<M: Message> UnixPublisher<M>
 where
     M: zerocopy::AsBytes,
 {
-    /// Publish a message over Unix socket
+    /// Publish a message over Unix socket using the persistent connection
+    ///
+    /// The connection is shared across all publishers from the same transport,
+    /// protected by a mutex. This eliminates the overhead of creating a new
+    /// connection for each message.
     pub async fn publish(&self, msg: M) -> Result<()> {
-        // Connect to server
-        let mut stream = UnixStream::connect(&self.socket_path).await?;
+        let mut stream = self.connection.lock().await;
 
-        // Write message
-        write_message(&mut stream, &msg).await?;
+        // Write message to persistent connection
+        write_message(&mut *stream, &msg).await?;
 
-        // Graceful shutdown
-        stream.shutdown().await?;
+        // Flush to ensure message is sent
+        stream.flush().await?;
 
         Ok(())
     }
@@ -203,7 +218,7 @@ mod tests {
 
         // Client publishes
         let client = UnixTransport::connect(&socket_path).await.unwrap();
-        let pub_ = client.publisher::<TestMsg>();
+        let pub_ = client.publisher::<TestMsg>().unwrap();
 
         let msg = TestMsg { value: 42 };
         pub_.publish(msg.clone()).await.unwrap();

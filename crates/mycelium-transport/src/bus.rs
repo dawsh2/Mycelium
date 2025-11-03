@@ -138,7 +138,7 @@ impl MessageBus {
             })
             .await?;
 
-        Some(transport.publisher())
+        transport.publisher()
     }
 
     /// Get a Unix subscriber from a specific bundle
@@ -174,11 +174,11 @@ impl MessageBus {
 
         let transport =
             Self::get_or_create_transport(&self.tcp_transports, target_bundle, || async move {
-                Some(TcpTransport::connect(addr))
+                TcpTransport::connect(addr).await.ok()
             })
             .await?;
 
-        Some(transport.publisher())
+        transport.publisher()
     }
 
     /// Get a TCP subscriber from a specific remote bundle
@@ -198,7 +198,7 @@ impl MessageBus {
 
         let transport =
             Self::get_or_create_transport(&self.tcp_transports, source_bundle, || async move {
-                Some(TcpTransport::connect(addr))
+                TcpTransport::connect(addr).await.ok()
             })
             .await?;
 
@@ -786,6 +786,12 @@ mod tests {
     async fn test_publisher_to_distributed_tcp() {
         use mycelium_config::{Bundle, Deployment, DeploymentMode, Topology};
 
+        // Bind a real TCP server for executor bundle
+        let executor_server = crate::tcp::TcpTransport::bind("127.0.0.1:0".parse().unwrap())
+            .await
+            .unwrap();
+        let executor_addr = executor_server.local_addr();
+
         let topology = Topology {
             deployment: Deployment {
                 mode: DeploymentMode::Distributed,
@@ -794,14 +800,14 @@ mod tests {
                 Bundle {
                     name: "portfolio".to_string(),
                     services: vec!["portfolio-state".to_string()],
-                    host: Some("127.0.0.1".to_string()),
+                    host: Some("192.168.1.10".to_string()),  // Different host
                     port: Some(9001),
                 },
                 Bundle {
                     name: "executor".to_string(),
                     services: vec!["order-executor".to_string()],
-                    host: Some("192.168.1.100".to_string()),
-                    port: Some(9002),
+                    host: Some(executor_addr.ip().to_string()),  // 127.0.0.1
+                    port: Some(executor_addr.port()),
                 },
             ],
             inter_bundle: None,

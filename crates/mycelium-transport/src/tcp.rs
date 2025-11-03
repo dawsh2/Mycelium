@@ -8,7 +8,7 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::io::AsyncWriteExt;
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, Mutex};
 
 /// TCP socket transport for distributed inter-process communication
 ///
@@ -19,6 +19,8 @@ use tokio::sync::broadcast;
 pub struct TcpTransport {
     bind_addr: SocketAddr,
     listener: Option<Arc<TcpListener>>,
+    /// Client-side persistent connection (for publishers)
+    connection: Option<Arc<Mutex<TcpStream>>>,
     // Topic -> broadcast channel
     channels: Arc<DashMap<String, broadcast::Sender<Envelope>>>,
     channel_capacity: usize,
@@ -35,6 +37,7 @@ impl TcpTransport {
         let transport = Self {
             bind_addr,
             listener: Some(Arc::new(listener)),
+            connection: None,
             channels: Arc::new(DashMap::new()),
             channel_capacity: 1000,
         };
@@ -46,13 +49,18 @@ impl TcpTransport {
     }
 
     /// Connect to a TCP transport (client side)
-    pub fn connect(addr: SocketAddr) -> Self {
-        Self {
+    ///
+    /// Establishes a persistent connection that will be reused for all publishes.
+    pub async fn connect(addr: SocketAddr) -> Result<Self> {
+        let stream = TcpStream::connect(addr).await?;
+
+        Ok(Self {
             bind_addr: addr,
             listener: None,
+            connection: Some(Arc::new(Mutex::new(stream))),
             channels: Arc::new(DashMap::new()),
             channel_capacity: 1000,
-        }
+        })
     }
 
     /// Spawn the accept loop for incoming connections
@@ -92,11 +100,14 @@ impl TcpTransport {
     }
 
     /// Create a publisher for a message type
-    pub fn publisher<M: Message>(&self) -> TcpPublisher<M> {
-        TcpPublisher {
-            addr: self.bind_addr,
+    ///
+    /// Returns None if this is a server-side transport (no client connection).
+    pub fn publisher<M: Message>(&self) -> Option<TcpPublisher<M>> {
+        let connection = self.connection.as_ref()?.clone();
+        Some(TcpPublisher {
+            connection,
             _phantom: PhantomData,
-        }
+        })
     }
 
     /// Create a subscriber for a message type
@@ -112,9 +123,9 @@ impl TcpTransport {
     }
 }
 
-/// Publisher for TCP socket transport
+/// Publisher for TCP socket transport with persistent connection
 pub struct TcpPublisher<M> {
-    addr: SocketAddr,
+    connection: Arc<Mutex<TcpStream>>,
     _phantom: PhantomData<M>,
 }
 
@@ -122,16 +133,19 @@ impl<M: Message> TcpPublisher<M>
 where
     M: zerocopy::AsBytes,
 {
-    /// Publish a message over TCP socket
+    /// Publish a message over TCP socket using the persistent connection
+    ///
+    /// The connection is shared across all publishers from the same transport,
+    /// protected by a mutex. This eliminates the overhead of creating a new
+    /// connection for each message.
     pub async fn publish(&self, msg: M) -> Result<()> {
-        // Connect to server
-        let mut stream = TcpStream::connect(self.addr).await?;
+        let mut stream = self.connection.lock().await;
 
-        // Write message
-        write_message(&mut stream, &msg).await?;
+        // Write message to persistent connection
+        write_message(&mut *stream, &msg).await?;
 
-        // Graceful shutdown
-        stream.shutdown().await?;
+        // Flush to ensure message is sent
+        stream.flush().await?;
 
         Ok(())
     }
@@ -175,8 +189,8 @@ mod tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
         // Client publishes
-        let client = TcpTransport::connect(server_addr);
-        let pub_ = client.publisher::<TestMsg>();
+        let client = TcpTransport::connect(server_addr).await.unwrap();
+        let pub_ = client.publisher::<TestMsg>().unwrap();
 
         let msg = TestMsg { value: 42 };
         pub_.publish(msg.clone()).await.unwrap();
@@ -200,8 +214,8 @@ mod tests {
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
         // Client publishes multiple messages
-        let client = TcpTransport::connect(server_addr);
-        let pub_ = client.publisher::<TestMsg>();
+        let client = TcpTransport::connect(server_addr).await.unwrap();
+        let pub_ = client.publisher::<TestMsg>().unwrap();
 
         for i in 0..3 {
             pub_.publish(TestMsg { value: i }).await.unwrap();
