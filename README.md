@@ -13,6 +13,9 @@ TCP.
   metrics hooks.
 - `MessageBus` encapsulates the transport. Swap the transport at startup; the
   service code stays untouched.
+- For single-process deployments you can bypass the bus entirely with
+  `routing_config!`, which generates compile-time routers that issue direct
+  function calls (no Arc, no heap, ~2–3 ns per handler).
 
 ## Core pieces
 
@@ -104,8 +107,9 @@ service code and generated message types are identical.
 ## When to use compile-time routing
 
 `routing_config!` generates a struct that routes messages by direct function
-calls (no dynamic dispatch). Use it when you run fully single-process and need
-single-digit nanosecond handler latency. For anything that crosses process
+calls (no dynamic dispatch, no `Arc<T>`). It gives you monolith-level latency
+with ~2–3 ns per handler invocation. Use it when you run fully single-process
+and need the absolute floor on overhead. For anything that crosses process
 boundaries or prefers dynamic subscriptions, stick with the runtime bus.
 
 ## Testing tips
