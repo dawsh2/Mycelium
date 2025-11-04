@@ -6,6 +6,7 @@ Mycelium is a **type-safe pub/sub messaging system** with topology-based transpo
 - **Compile-time code generation** - Message types, validation, and buffer pool configuration generated from `contracts.yaml` during build
 - **Zero-cost abstractions** - Type-safe `Publisher<M>` and `Subscriber<M>` with no runtime overhead
 - **Bijective zerocopy serialization** - Direct memory casting with no allocation or copying
+- **Flexible transport** - Same code runs with Arc (single-process), Unix sockets (multi-process), or TCP (distributed)
 - **Automatic observability** - Built-in tracing, metrics, and structured logging
 - **Actor-based supervision** - Exponential backoff retry for resilient services
 
@@ -92,7 +93,7 @@ impl PolygonAdapter {
 
 ```rust
 // Your main.rs - YOU control startup
-use mycelium_core::{MessageBus, ServiceRuntime};
+use mycelium_transport::{MessageBus, ServiceRuntime};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -127,17 +128,19 @@ cargo run --bin polygon_adapter
 ### 4. Choose Your Transport
 
 ```rust
-// Single process (Arc transport - zero copy)
+// Single process (Arc transport - zero-copy message sharing)
 let bus = MessageBus::new();
 
-// Multi-process, same host (Unix sockets)
-let bus = MessageBus::with_unix_transport("/tmp/bandit")?;
+// Multi-process, same host (Unix domain sockets)
+let bus = MessageBus::with_unix_transport("/tmp/mycelium")?;
 
 // Distributed (TCP)
 let bus = MessageBus::with_tcp_transport("10.0.1.10:9000")?;
 ```
 
 **Same service code works with any transport.** Change one line, redeploy.
+
+**Performance:** Arc-based routing provides ~65ns overhead per message. For applications requiring sub-microsecond latency, see [docs/implementation/MYCELIUM_MONOMORPHIZATION.md](docs/implementation/MYCELIUM_MONOMORPHIZATION.md) for a future compile-time routing optimization (Phase 4) that reduces overhead to 2-3ns via direct function calls.
 
 ---
 
@@ -170,10 +173,9 @@ When you call `ctx.emit(message).await?`, here's what Mycelium handles automatic
 
 ### Core Components
 
-- **`mycelium-protocol`** - Message trait, TYPE_ID, TOPIC, TLV serialization
-- **`mycelium-core`** - MessageBus, Publishers, Subscribers, Arc/Unix/TCP transports, configuration
-- **`mycelium-service`** - `#[service]` macro, ServiceContext, ServiceRuntime (optional)
-- **`mycelium-service-macro`** - Proc macro implementation (internal)
+- **`mycelium-protocol`** - Message trait, TYPE_ID, TOPIC, TLV serialization, code generation from contracts.yaml
+- **`mycelium-transport`** - MessageBus, Publishers, Subscribers, Arc/Unix/TCP transports, ServiceContext, ServiceRuntime
+- **`mycelium-macro`** - `#[service]` proc macro for actor-based services
 
 ### Wire Protocol
 
