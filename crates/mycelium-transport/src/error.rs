@@ -2,8 +2,8 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum TransportError {
-    #[error("No subscribers available for topic")]
-    NoSubscribers,
+    #[error("No subscribers available for topic: {topic}")]
+    NoSubscribers { topic: String },
 
     #[error("Channel send failed")]
     SendFailed,

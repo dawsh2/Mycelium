@@ -3,7 +3,7 @@
 //! Tests combining different transport types and deployment modes.
 
 use crate::integration::{ArbitrageSignal, MessageBus, OrderExecution, SwapEvent};
-use mycelium_config::{Node, Topology};
+use mycelium_transport::config::{Node, Topology};
 use mycelium_transport::{TcpTransport, UnixTransport};
 use tempfile::TempDir;
 

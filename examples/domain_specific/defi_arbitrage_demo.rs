@@ -1,3 +1,4 @@
+use mycelium_protocol::{ArbitrageSignal, PoolStateUpdate};
 /// Example demonstrating the three new mycelium features:
 /// 1. ManagedService - Service lifecycle management
 /// 2. BoundedPublisher - Backpressure and flow control
@@ -12,7 +13,6 @@ use mycelium_transport::{
     BoundedPublisher, BoundedSubscriber, HealthStatus, ManagedService, MessageBus,
     OrderedSubscriber,
 };
-use mycelium_protocol::{ArbitrageSignal, PoolStateUpdate};
 use std::sync::Arc;
 
 /// Example handler that processes pool state updates
@@ -85,17 +85,24 @@ impl PoolMonitorHandler {
     async fn handle_update(&mut self, update: Arc<PoolStateUpdate>) {
         self.update_count += 1;
 
-        println!("📊 Processing update #{}: Pool {:x}", self.update_count, update.pool_address.as_u128());
+        println!(
+            "📊 Processing update #{}: Pool {:02x}{:02x}...{:02x}",
+            self.update_count,
+            update.pool_address[0],
+            update.pool_address[1],
+            update.pool_address[19]
+        );
 
         // Example: Detect arbitrage opportunity (simplified)
         if self.update_count % 100 == 0 {
+            use primitive_types::U256;
+
             let signal = ArbitrageSignal {
-                trade_path: [update.pool_address, Default::default(), Default::default()],
-                estimated_profit_bps: 150,
-                timestamp_ms: std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap()
-                    .as_millis() as u64,
+                opportunity_id: self.update_count,
+                path: vec![update.pool_address, Default::default()],
+                estimated_profit_usd: 150.0,
+                gas_estimate_wei: U256::from(21000),
+                deadline_block: update.block_number + 5,
             };
 
             // Publish signal (with backpressure)
@@ -164,7 +171,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Spawn signal consumer (simulates downstream consumer)
     tokio::spawn(async move {
         while let Some(signal) = signal_sub.recv().await {
-            println!("   → Received arbitrage signal: {} bps profit", signal.estimated_profit_bps);
+            println!(
+                "   → Received arbitrage signal: ${:.2} profit",
+                signal.estimated_profit_usd
+            );
             // Simulate slow consumer
             tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
         }
@@ -174,14 +184,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let publisher = bus.publisher::<PoolStateUpdate>();
 
     for i in 0..150 {
+        use primitive_types::U256;
+
+        let mut pool_addr = [0u8; 20];
+        pool_addr[0] = 0x12;
+        pool_addr[1] = 0x34;
+        pool_addr[19] = i as u8;
+
         let update = PoolStateUpdate {
-            pool_address: mycelium_protocol::U256::from(0x1234 + i),
-            reserve0: mycelium_protocol::U256::from(1000000),
-            reserve1: mycelium_protocol::U256::from(2000000),
-            timestamp_ms: std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .unwrap()
-                .as_millis() as u64,
+            pool_address: pool_addr,
+            venue_id: 1, // Uniswap V2
+            reserve0: Some(U256::from(1000000)),
+            reserve1: Some(U256::from(2000000)),
+            liquidity: None,
+            sqrt_price_x96: None,
+            tick: None,
+            block_number: 1000 + i as u64,
         };
 
         publisher.publish(update.clone()).await?;

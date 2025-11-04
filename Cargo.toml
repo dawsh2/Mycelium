@@ -2,7 +2,8 @@
 members = [
     "crates/mycelium-protocol",
     "crates/mycelium-transport",
-    "crates/mycelium-config",
+    "crates/mycelium-macro",
+    "examples/custom-protocol",
 ]
 exclude = [
     "scripts",
@@ -19,22 +20,49 @@ edition = "2021"
 [dependencies]
 mycelium-protocol = { path = "crates/mycelium-protocol" }
 mycelium-transport = { path = "crates/mycelium-transport" }
-mycelium-config = { path = "crates/mycelium-config" }
 tokio = { version = "1", features = ["full"] }
 rkyv = { version = "0.7", features = ["validation"] }
 zerocopy = { workspace = true }
 async-trait = { workspace = true }
+anyhow = { workspace = true }
+log = "0.4"
+env_logger = "0.11"
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
 
 [dev-dependencies]
 tempfile = "3.8"
+criterion = { version = "0.5", features = ["async_tokio"] }
+
+[[bench]]
+name = "emit_latency"
+harness = false
 
 [[example]]
 name = "simple_pubsub"
 path = "examples/simple_pubsub.rs"
 
 [[example]]
-name = "managed_service_demo"
-path = "examples/managed_service_demo.rs"
+name = "actor_demo"
+path = "examples/actor_demo.rs"
+
+# Generic examples (domain-agnostic)
+[[example]]
+name = "sensor_network"
+path = "examples/generic/sensor_network.rs"
+
+[[example]]
+name = "game_server"
+path = "examples/generic/game_server.rs"
+
+[[example]]
+name = "managed_service"
+path = "examples/generic/managed_service.rs"
+
+# Domain-specific examples (DeFi/crypto trading)
+[[example]]
+name = "defi_arbitrage_demo"
+path = "examples/domain_specific/defi_arbitrage_demo.rs"
 
 [workspace.package]
 version = "0.1.0"

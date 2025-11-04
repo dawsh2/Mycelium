@@ -20,7 +20,7 @@ impl TopicBuilder {
     ///
     /// # Example
     /// ```
-    /// use mycelium_transport::TopicBuilder;
+    /// use crate::TopicBuilder;
     ///
     /// let topic = TopicBuilder::broadcast("orderbook.updates");
     /// assert_eq!(topic, "orderbook.updates");
@@ -36,7 +36,7 @@ impl TopicBuilder {
     ///
     /// # Example
     /// ```
-    /// use mycelium_transport::TopicBuilder;
+    /// use crate::TopicBuilder;
     /// use mycelium_protocol::routing::ActorId;
     ///
     /// let actor_id = ActorId::from_u64(0x123abc);
@@ -54,7 +54,7 @@ impl TopicBuilder {
     ///
     /// # Example
     /// ```
-    /// use mycelium_transport::TopicBuilder;
+    /// use crate::TopicBuilder;
     ///
     /// let topic = TopicBuilder::partition("orderbook", 0);
     /// assert_eq!(topic, "orderbook.0");
@@ -70,7 +70,7 @@ impl TopicBuilder {
     ///
     /// # Example
     /// ```
-    /// use mycelium_transport::TopicBuilder;
+    /// use crate::TopicBuilder;
     ///
     /// let hash = 12345u64;
     /// let topic = TopicBuilder::partition_by_hash("orderbook", hash, 4);

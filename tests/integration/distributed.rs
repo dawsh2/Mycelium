@@ -3,7 +3,7 @@
 //! Services across different machines using TCP transport.
 
 use crate::integration::{ArbitrageSignal, MessageBus, SwapEvent};
-use mycelium_config::{Node, Topology};
+use mycelium_transport::config::{Node, Topology};
 use mycelium_transport::TcpTransport;
 use std::net::SocketAddr;
 use tokio::time::sleep;

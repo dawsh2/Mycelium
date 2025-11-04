@@ -3,7 +3,7 @@
 //! Services grouped in nodes with Arc<T> within nodes and Unix/TCP between nodes.
 
 use crate::integration::{ArbitrageSignal, MessageBus, OrderExecution, SwapEvent};
-use mycelium_config::{Node, Topology};
+use mycelium_transport::config::{Node, Topology};
 use mycelium_transport::{UnixTransport, TcpTransport};
 use tempfile::TempDir;
 use tokio::time::sleep;

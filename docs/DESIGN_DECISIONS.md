@@ -304,7 +304,7 @@ ArbitrageSignal:
 
 **No accidental collisions, clear domain boundaries.**
 
-**4. Zerocopy Trait Generation**
+**4. Zerocopy Trait Generation (DeFi-Critical)**
 
 Build script generates manual unsafe impls for zerocopy:
 
@@ -314,6 +314,33 @@ unsafe impl zerocopy::AsBytes for PoolStateUpdate {
     fn only_derive_is_allowed_to_implement_this_trait() {}
 }
 ```
+
+**Why U256?** DeFi amounts exceed u64 range:
+- Token amounts: 1e18 base units (18 decimals) × large quantities = >64 bits
+- Example: 1,000,000 USDC = 1,000,000 × 10^6 = 1e12 (fits in u64)
+- Example: 1,000,000 ETH = 1,000,000 × 10^18 = 1e24 (**requires U256**)
+- Uniswap V3 sqrt pricing: `sqrtPriceX96 = sqrt(price) × 2^96` (needs 160+ bits)
+- Liquidity values: Can exceed 2^128 in popular pools
+
+**Zerocopy challenge**: U256 has internal structure that prevents auto-derive
+```rust
+// U256 is [u64; 4] internally but zerocopy can't auto-verify safety
+pub struct U256([u64; 4]);  // 256 bits = 4 × 64-bit words
+```
+
+**Build script validation**:
+```rust
+// Verifies at compile time:
+// 1. No padding bytes (sizeof == sum of fields)
+// 2. repr(C) layout guaranteed
+// 3. All fields are AsBytes + FromBytes
+const _: fn() = || {
+    let _ = std::mem::transmute::<PoolStateUpdate, [u8; EXPECTED_SIZE]>;
+    // Compile error if sizes don't match
+};
+```
+
+**Result**: Safe zerocopy serialization of 256-bit DeFi amounts with compile-time guarantees.
 
 **5. Generated Tests**
 
@@ -341,6 +368,450 @@ Each message gets:
 
 ---
 
+## Actor Model vs Async Tasks
+
+### Decision
+
+Use actor model (mailbox-per-entity pattern) for stateful, long-lived services with supervision needs.
+
+### Context
+
+**Alternative approaches considered:**
+
+```rust
+// Option 1: Raw tokio::spawn
+tokio::spawn(async move {
+    loop {
+        // Manual supervision logic
+        // Manual state management
+        // Shared failure domains
+    }
+});
+
+// Option 2: Async functions in loop
+async fn run_service() {
+    loop {
+        // No isolation
+        // Process-level failure
+    }
+}
+
+// Option 3: Actor model (chosen)
+struct ServiceActor { state: HashMap<Key, Value> }
+impl Actor for ServiceActor {
+    async fn handle(&mut self, msg: Message) {
+        // Isolated state
+        // Structured supervision
+    }
+}
+```
+
+### Trade-offs
+
+| Aspect | Raw tokio::spawn | Async Functions | Actor Model (Chosen) |
+|--------|------------------|-----------------|----------------------|
+| **Fault isolation** | Manual, error-prone | None (shared crash) | Automatic per-actor |
+| **State management** | Arc<Mutex<T>> everywhere | Global state | Per-actor ownership |
+| **Supervision** | Manual per service (N×M) | Process-level only | Declarative policies |
+| **Recovery time** | 5-10s (process restart) | 5-10s (process restart) | 10-50ms (actor restart) |
+| **Code complexity** | High (boilerplate per service) | Low initially | Medium (framework overhead) |
+| **Message routing** | Manual channels | Pub/sub only | Unicast + pub/sub |
+
+### Rationale
+
+**1. Fault Isolation for Multi-Entity Systems**
+
+CEX trading example (future use case):
+- 20+ exchange WebSocket connections (Binance, Coinbase, Kraken, etc.)
+- Each connection can fail independently
+- Binance outage should NOT crash Coinbase adapter
+
+**Without actors:**
+```rust
+// Crash in Binance handler kills entire process
+tokio::spawn(async {
+    let binance = connect_binance().await?;  // ❌ ? propagates to top
+    let coinbase = connect_coinbase().await?;
+    // All eggs in one basket
+});
+```
+
+**With actors:**
+```rust
+// Binance actor crashes → supervisor restarts just that actor (10-50ms)
+// Coinbase continues running unaffected
+system.spawn_supervised(BinanceActor::new(), RestartPolicy::Always).await;
+system.spawn_supervised(CoinbaseActor::new(), RestartPolicy::Always).await;
+```
+
+**2. Supervision Patterns at Scale**
+
+**Problem**: Manual supervision code grows O(N) per service
+
+```rust
+// Without actors: Manual supervision per service
+loop {
+    match run_binance_adapter().await {
+        Err(e) => {
+            error!("Binance failed: {}", e);
+            sleep(exponential_backoff()).await;
+            // Duplicate this logic for 20 services...
+        }
+    }
+}
+```
+
+**Solution**: Declarative supervision policies
+
+```rust
+// With actors: Single supervision strategy
+SupervisionStrategy::Restart {
+    max_retries: 5,
+    backoff: ExponentialBackoff { base: 1000 },
+}
+// Applied uniformly across all actors
+```
+
+**3. Per-Entity State Management**
+
+**Use case**: 100+ trading strategies, each with isolated PnL/risk limits
+
+**Without actors**: Shared HashMap + contention
+```rust
+// Global state → lock contention nightmare
+let strategies: Arc<Mutex<HashMap<StrategyId, Strategy>>> = Arc::new(Mutex::new(HashMap::new()));
+
+// Every access needs lock
+let mut guard = strategies.lock().await;  // ❌ Bottleneck
+guard.get_mut(&id).unwrap().update(data);
+```
+
+**With actors**: Each strategy owns its state
+```rust
+// Each StrategyActor owns its state (no mutex needed)
+struct StrategyActor {
+    pnl: f64,
+    positions: Vec<Position>,
+    risk_limits: RiskLimits,
+}
+// Zero contention - actors process messages sequentially
+```
+
+**4. Why Not Just Pub/Sub?**
+
+**Pub/sub is for broadcast (1→N)**:
+- Market data → 100 strategies (broadcast)
+- All strategies receive same swap event
+
+**Actors are for unicast (1→1) with state**:
+- Risk manager → specific strategy (targeted message)
+- "Strategy #42, reduce position by 50%"
+
+**Mycelium supports both**:
+```rust
+// Broadcast via pub/sub
+ctx.broadcast(PoolUpdate { ... }).await;
+
+// Unicast via actor ref
+ctx.send_to(strategy_42_ref, ReducePosition { amount: 0.5 }).await;
+```
+
+**5. Implementation: Mailbox = Topic**
+
+**Key insight**: Actor mailboxes ARE topics (single subscriber)
+
+```rust
+// Broadcast topic (pub/sub)
+Topic: "pool_updates" → [Sub A, Sub B, Sub C]
+
+// Actor mailbox (unicast)
+Topic: "actor.0000000000123abc" → [Actor 123 only]
+```
+
+**Benefits**:
+- Zero new infrastructure (reuses MessageBus)
+- True isolation (actor 123's messages never touch actor 456)
+- Per-actor backpressure (slow actor doesn't affect others)
+- Simple routing (no filtering logic needed)
+
+**Trade-off**: ~200ns overhead vs raw pub/sub (hash lookup + single-subscriber check)
+
+### When to Reconsider
+
+**This decision should be revisited if:**
+
+1. **Only using pub/sub patterns**
+   - Pure DeFi arbitrage with global state → actors add complexity
+   - All messages are broadcast → pub/sub alone is simpler
+
+2. **Process-level supervision is acceptable**
+   - Can tolerate 5-10s recovery on failures
+   - Running in Kubernetes with fast pod restarts
+   - State can be rebuilt quickly
+
+3. **No per-entity state requirements**
+   - Stateless services only
+   - All state in external databases
+   - No isolation benefit
+
+4. **Performance-critical single service**
+   - <100ns latency requirements
+   - Actor overhead (200ns) is significant
+   - No fault isolation needed
+
+### Current Status
+
+**Phase 2 Complete** (see docs/ACTORS.md):
+- ✅ Full actor system implemented
+- ✅ Supervision with restart policies
+- ✅ Actor runtime with lifecycle hooks
+- ✅ Mailbox = topic design validated
+- ✅ Examples: `examples/actor_demo.rs`
+
+**Coexists with pub/sub** - services choose actors OR pub/sub based on needs.
+
+---
+
+## Library vs Framework: Mycelium and Bandit Separation
+
+### Decision
+
+**Mycelium = Reusable messaging library** (runtime primitives)  
+**Bandit = Trading framework built on Mycelium** (orchestration + business logic)
+
+Clear separation of concerns: library provides transport-agnostic messaging, framework handles service registry and deployment.
+
+### Context
+
+**Problem:** How to make Mycelium reusable across different domains (trading, gaming, analytics) while still providing ergonomic service orchestration?
+
+**Alternative approaches considered:**
+
+```rust
+// Option 1: Monolithic framework (rejected)
+// Mycelium knows about PolygonAdapter, ArbitrageService, etc.
+mycelium::ServiceRegistry::register("PolygonAdapter", ...);
+// ❌ Mycelium becomes domain-specific, not reusable
+
+// Option 2: Pure library, no orchestration (rejected)
+// Users manually wire everything
+let bus = MessageBus::new();
+let adapter = PolygonAdapter::new(config);
+tokio::spawn(adapter.run());
+// ❌ Every project reimplements supervision, registry, deployment
+
+// Option 3: Library + Framework pattern (chosen)
+// Mycelium: Generic primitives
+// Bandit: Domain-specific orchestration built on Mycelium
+```
+
+### Rationale
+
+**1. Clean Separation of Concerns**
+
+**Mycelium responsibilities (library):**
+- ✅ TLV codegen from `contracts.yaml` (build-time)
+- ✅ Transport abstraction (Arc/Unix/TCP interfaces)
+- ✅ Actor runtime primitives (`ActorRuntime`, `ActorRef<T>`)
+- ✅ Service wrapper (`#[mycelium::service]` macro)
+- ✅ MessageBus (pub/sub + actor mailboxes)
+- ✅ ServiceContext (emit, get_actor, metrics, logging)
+- ✅ Observability hooks (metrics, tracing, health)
+
+**Bandit responsibilities (framework):**
+- ✅ Service implementations (PolygonAdapter, ArbitrageService, etc.)
+- ✅ Service registry (type-safe mapping: service name → constructor)
+- ✅ Deployment orchestration (reads topology, spawns services)
+- ✅ Config loading (business logic configs)
+- ✅ Node agent (optional - for multi-node deployments)
+
+**Clear boundary:** Mycelium never knows about trading concepts. Bandit uses Mycelium APIs like any other application.
+
+**2. Reusability Across Domains**
+
+**With this separation:**
+```rust
+// Trading system (Bandit)
+mycelium::service! { impl PolygonAdapter { ... } }
+
+// Multiplayer game server
+mycelium::service! { impl PlayerSession { ... } }
+
+// Real-time analytics
+mycelium::service! { impl StreamProcessor { ... } }
+```
+
+**All use the same Mycelium library.** Only service implementations differ.
+
+**3. Type-Safe Service Registry Pattern**
+
+**Problem:** Topology YAML contains strings (unavoidable), but we want compile-time validation.
+
+**Solution:** Macro-generated registry in application code (Bandit), not library (Mycelium)
+
+```rust
+// In Bandit (NOT Mycelium)
+mycelium::service_registry! {
+    PolygonAdapter => {
+        let config = load_config("poly.toml")?;
+        PolygonAdapter::new(config)
+    },
+    ArbitrageService => {
+        let config = load_config("arb.toml")?;
+        ArbitrageService::new(config)
+    },
+}
+// Expands to type-safe spawn methods with compile-time validation
+```
+
+**Benefits:**
+- Strings only exist in YAML (unavoidable) and macro invocation (validated)
+- Mycelium stays generic (no hardcoded service names)
+- Bandit gets type safety (macro checks constructors exist)
+- Topology validation at startup (fail fast on unknown services)
+
+**4. Actor-Centric API (Library Primitive)**
+
+**Mycelium provides:**
+```rust
+// Generic actor runtime
+pub struct ActorRuntime {
+    pub async fn spawn_actor<A: Actor>(&self, actor: A) -> ActorRef<A>;
+    pub async fn get_actor<A: Actor>(&self) -> Option<ActorRef<A>>;
+}
+
+// Typed actor references
+pub struct ActorRef<A: Actor> {
+    pub async fn send(&self, msg: A::Message) -> Result<()>;
+}
+
+// Service context (combines pub/sub + actors)
+pub struct ServiceContext {
+    pub async fn emit<M: Message>(&self, msg: M) -> Result<()>;
+    pub async fn get_actor<A: Actor>(&self) -> Result<ActorRef<A>>;
+}
+```
+
+**Services are deployment-agnostic:**
+```rust
+#[mycelium::service]
+impl PolygonAdapter {
+    async fn run(&mut self, ctx: ServiceContext) -> Result<()> {
+        // Pub/sub broadcast
+        ctx.emit(V2Swap { ... }).await?;
+        
+        // Actor unicast (if needed)
+        let risk_mgr = ctx.get_actor::<RiskManager>().await?;
+        risk_mgr.send(CheckPosition { ... }).await?;
+        
+        Ok(())
+    }
+}
+```
+
+**Transport is determined by topology (Bandit), not code (Mycelium).**
+
+**5. Topology-Driven Deployment (Framework Concern)**
+
+**Topology configuration (Bandit):**
+```yaml
+# topology.yaml (read by Bandit, not Mycelium)
+nodes:
+  adapters:
+    host: "10.0.1.10:9000"  # TCP
+    services:
+      - PolygonAdapter  # Type names validated by macro
+      - BaseAdapter
+  
+  strategies:
+    host: null  # Local (Arc)
+    services:
+      - ArbitrageService
+  
+  execution:
+    host: "unix:///tmp/bandit"  # Unix sockets
+    services:
+      - ExecutionService
+```
+
+**Bandit orchestration:**
+```rust
+// Deployment orchestrator (Bandit, not Mycelium)
+pub struct BanditDeployment {
+    topology: Topology,
+    registry: ServiceRegistry,  // Macro-generated
+}
+
+impl BanditDeployment {
+    pub async fn run(self, node_name: &str) -> Result<()> {
+        // Read topology to determine transport
+        let bus = self.topology.create_bus_for_node(node_name)?;
+        let runtime = ActorRuntime::new(bus);  // Mycelium primitive
+        
+        // Spawn services for this node
+        for service_name in self.topology.services_on_node(node_name) {
+            self.registry.spawn_actor(service_name, &runtime)?;
+        }
+        
+        runtime.run().await
+    }
+}
+```
+
+**Key insight:** Same service code works everywhere. Topology determines transport at deployment time.
+
+### Benefits of This Design
+
+1. **Transport abstraction preserved** - Services never know about Arc/Unix/TCP
+2. **Type safety** - `ActorRef<T>`, macro validation, compile-time checks
+3. **Clean separation** - Mycelium is reusable, Bandit is trading-specific
+4. **Flexibility** - Same code works: single-process, multi-process, distributed
+5. **Performance** - Zero-copy shared memory when co-located
+6. **Extensibility** - Pluggable transports (RDMA, DPDK in future)
+7. **Simplicity** - Minimal API surface in library
+
+### Implementation Status
+
+**Current (as of 2025-01-03):**
+- ✅ Actor runtime primitives (`ActorRuntime`, `ActorRef<M>`)
+- ✅ Actor trait and context (`Actor`, `ActorContext`)
+- ✅ MessageBus with pub/sub
+- ✅ Local transport (Arc)
+- ⏳ Typed actor discovery (`get_actor::<T>()`) - **planned Phase 3**
+- ⏳ ServiceContext unification - **planned Phase 3**
+- ⏳ Service registry macro - **planned Phase 3**
+- ⏳ Topology configuration - **planned Phase 3**
+- ⏳ Multi-transport support (Unix/TCP) - **planned Phase 4**
+
+**Bandit framework:**
+- ⏳ Not yet started (will be separate repository)
+- Will demonstrate reference implementation of service registry
+- Will provide deployment patterns and examples
+
+### When to Reconsider
+
+**This decision should be revisited if:**
+
+1. **Mycelium never gets reused outside trading**
+   - If no one builds games/analytics on Mycelium
+   - Separation adds complexity without benefit
+
+2. **Service registry becomes too boilerplate-heavy**
+   - If every application reimplements same patterns
+   - Consider moving common patterns into optional library extension
+
+3. **Type-safe registry proves too complex**
+   - Macro maintenance burden too high
+   - Consider runtime-only validation with good error messages
+
+4. **Single-domain focus**
+   - If Mycelium pivots to trading-only
+   - Could merge with Bandit for simpler architecture
+
+**For now:** Keep separation. Enables reuse, maintains clean boundaries, follows library-not-framework principle.
+
+---
+
 ## Summary
 
 **Core philosophy:** Optimize for correctness, maintainability, and flexibility first. Micro-optimize only when profiling shows bottlenecks.
@@ -349,6 +820,8 @@ Each message gets:
 1. **Envelope abstraction** → Worth 1-5ns for metadata, uniformity, and smaller binaries
 2. **Runtime transport selection** → Worth 1-2 cycles for single-binary deployment
 3. **Schema-driven codegen** → Worth build complexity for type safety and consistency
+4. **Actor model** → Worth complexity for fault isolation and supervision at scale
+5. **Library/framework separation** → Mycelium = primitives, Bandit = orchestration
 
 **Performance optimization order:**
 1. Channel tuning
@@ -361,5 +834,5 @@ Each message gets:
 
 ---
 
-**Last Updated:** 2025-01-03
+**Last Updated:** 2025-11-03
 **Reviewers:** @daws

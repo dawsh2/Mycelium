@@ -54,6 +54,43 @@ impl<M: Message> Subscriber<M> {
         }
     }
 
+    /// Receive the next message with its sequence number
+    ///
+    /// This method is similar to `recv()` but also returns the sequence number
+    /// from the envelope metadata. Used by OrderedSubscriber for message reordering.
+    ///
+    /// Returns None if the channel is closed.
+    pub async fn recv_with_sequence(&mut self) -> Option<(Arc<M>, Option<u64>)> {
+        loop {
+            // Receive envelope from broadcast channel
+            let envelope = match self.rx.recv().await {
+                Ok(env) => env,
+                Err(broadcast::error::RecvError::Closed) => return None,
+                Err(broadcast::error::RecvError::Lagged(n)) => {
+                    tracing::warn!("Subscriber lagged by {} messages", n);
+                    continue;
+                }
+            };
+
+            // Filter by type ID
+            if envelope.type_id != M::TYPE_ID {
+                continue;
+            }
+
+            // Extract sequence before downcast
+            let sequence = envelope.sequence;
+
+            // Downcast to concrete type
+            match envelope.downcast::<M>() {
+                Ok(msg) => return Some((msg, sequence)),
+                Err(e) => {
+                    tracing::error!("Failed to downcast message: {}", e);
+                    continue;
+                }
+            }
+        }
+    }
+
     /// Try to receive a message (non-blocking)
     ///
     /// Returns immediately with None if no message is available.

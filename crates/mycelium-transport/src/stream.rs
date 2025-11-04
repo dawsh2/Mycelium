@@ -1,4 +1,5 @@
-use crate::codec::{deserialize_message, read_frame};
+use crate::buffer_pool::BufferPool;
+use crate::codec::{deserialize_message, read_frame, read_frame_pooled};
 use crate::error::Result;
 use dashmap::DashMap;
 use mycelium_protocol::{codec::HEADER_SIZE, Envelope, Message};
@@ -22,21 +23,40 @@ pub struct RawFrame {
 ///
 /// Reads TLV frames from the stream and broadcasts them to the appropriate channel
 /// based on type_id → topic mapping. This avoids broadcasting to all channels.
+///
+/// When `buffer_pool` is provided, uses pooled buffers for reading (reduces allocations).
 pub async fn handle_stream_connection<S>(
     mut stream: S,
     channels: Arc<DashMap<String, broadcast::Sender<Envelope>>>,
     type_to_topic: Arc<DashMap<u16, String>>,
+    buffer_pool: Option<&BufferPool>,
 ) -> Result<()>
 where
     S: AsyncReadExt + AsyncWriteExt + Unpin + Send,
 {
     loop {
-        // Read TLV frame from stream
-        let (type_id, bytes) = match read_frame(&mut stream).await {
-            Ok(frame) => frame,
-            Err(e) => {
-                tracing::debug!("Connection closed: {}", e);
-                return Ok(());
+        // Read TLV frame from stream (use buffer pool if available)
+        let (type_id, bytes) = if let Some(pool) = buffer_pool {
+            // Use pooled reading for zero allocations (after warmup)
+            match read_frame_pooled(&mut stream, pool).await {
+                Ok((type_id, buffer)) => {
+                    // Convert pooled buffer to Vec for Arc sharing
+                    // Buffer returns to pool after this line
+                    (type_id, buffer.to_vec())
+                }
+                Err(e) => {
+                    tracing::debug!("Connection closed: {}", e);
+                    return Ok(());
+                }
+            }
+        } else {
+            // Fall back to regular reading
+            match read_frame(&mut stream).await {
+                Ok(frame) => frame,
+                Err(e) => {
+                    tracing::debug!("Connection closed: {}", e);
+                    return Ok(());
+                }
             }
         };
 
@@ -55,7 +75,7 @@ where
             if let Some(channel) = channels.get(&topic) {
                 let envelope = Envelope::from_raw(
                     frame.type_id,
-                    topic,
+                    Arc::from(topic.as_str()),
                     Arc::new(frame) as Arc<dyn Any + Send + Sync>,
                 );
 
@@ -135,7 +155,7 @@ impl<M: Message> StreamSubscriber<M> {
 mod tests {
     use super::*;
     use mycelium_protocol::impl_message;
-  use tokio::net::{UnixListener, UnixStream};
+    use tokio::net::{UnixListener, UnixStream};
     use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
     #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
@@ -169,7 +189,7 @@ mod tests {
         // Send envelope with raw frame
         let envelope = Envelope::from_raw(
             123,
-            "test-stream".to_string(),
+            Arc::from("test-stream"),
             Arc::new(frame) as Arc<dyn Any + Send + Sync>,
         );
         tx.send(envelope).unwrap();
@@ -198,7 +218,7 @@ mod tests {
 
         let wrong_envelope = Envelope::from_raw(
             999,
-            "test-stream".to_string(),
+            Arc::from("test-stream"),
             Arc::new(wrong_frame) as Arc<dyn Any + Send + Sync>,
         );
         tx.send(wrong_envelope).unwrap();
@@ -218,7 +238,7 @@ mod tests {
 
         let correct_envelope = Envelope::from_raw(
             123,
-            "test-stream".to_string(),
+            Arc::from("test-stream"),
             Arc::new(correct_frame) as Arc<dyn Any + Send + Sync>,
         );
         tx.send(correct_envelope).unwrap();
@@ -247,7 +267,7 @@ mod tests {
         let server_type_to_topic = Arc::clone(&type_to_topic);
         let server_handle = tokio::spawn(async move {
             let (stream, _) = listener.accept().await.unwrap();
-            handle_stream_connection(stream, server_channels, server_type_to_topic).await
+            handle_stream_connection(stream, server_channels, server_type_to_topic, None).await
         });
 
         // Give server time to start

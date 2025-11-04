@@ -2,101 +2,162 @@
 
 Mycelium is a **type-safe pub/sub messaging system** with topology-based transport selection. Define messages once in YAML, write pub/sub code once, deploy anywhere - transport is inferred from configuration. Same binary runs as single-process (Arc), multi-process (Unix sockets), or distributed (TCP). Built for low-latency systems like high-frequency trading, multiplayer game servers, and real-time analytics.
 
-**Key features:** Schema-driven code generation, bijective zerocopy serialization, ~200ns local latency, can be wrapped in lightweight actor runtime for supervision patterns.
+**Key features:** Schema-driven code generation, bijective zerocopy serialization, automatic observability, actor-based supervision with exponential backoff.
 
 ---
 
-## Transport Performance
+## Performance (Measured in Release Mode)
 
-- **Same node (process)**: `Arc<T>` zero-copy sharing (~200ns latency) - no serialization
-- **Different nodes, same host**: Unix domain sockets (~50μs latency) - TLV wire protocol
-- **Different nodes, different hosts**: TCP with zero-copy deserialization (~500μs + network) - TLV wire protocol
+**Service API (`ctx.emit()` with full observability):**
+- **120 nanoseconds** per emit (includes tracing, metrics, timing)
+- **8 million emits/second** per core
+- **2.5x overhead** vs raw publish (for full instrumentation)
+
+**Raw Transport Layer:**
+- **Same process**: `Arc<T>` zero-copy sharing (47ns) - no serialization
+- **Multi-process**: Unix domain sockets (unmeasured, TLV protocol)
+- **Distributed**: TCP with zero-copy deserialization (unmeasured, TLV protocol)
+
+*Note: Unix and TCP transport benchmarks pending Phase 3 implementation.*
 
 ---
 
 ## Quick Start
 
-### 1. Define Messages in contracts.yaml
+### 1. Define Your Message Contract
 
 ```yaml
-# crates/mycelium-protocol/contracts.yaml
+# contracts.yaml
 messages:
-  PoolStateUpdate:
-    tlv_type: 11
-    domain: MarketData
-    description: "DEX pool state update"
+  V2Swap:
+    type_id: 19
+    domain: market_data
     fields:
-      pool_address: { type: "[u8; 20]" }
-      reserve0: { type: "U256" }
-      reserve1: { type: "U256" }
-      block_number: { type: "u64" }
+      pool_address: "[u8; 20]"
+      token0_address: "[u8; 20]"
+      token1_address: "[u8; 20]"
+      amount0_in: "U256"
+      amount0_out: "U256"
+      timestamp_ns: "u64"
 ```
 
-Run `cargo build` - messages are **generated automatically** at build time.
+Run `cargo build` - messages are **generated automatically** with the `Message` trait.
 
-### 2. Publish and Subscribe
+### 2. Implement Your Service
 
 ```rust
-use mycelium_protocol::PoolStateUpdate;
-use mycelium_transport::MessageBus;
+use mycelium::prelude::*;
 
-// Create bus (uses Local transport by default)
-let bus = MessageBus::new();
+pub struct PolygonAdapter {
+    config: PolygonConfig,  // Your domain config
+    cache: MetadataCache,
+}
 
-// Publisher
-let pub_ = bus.publisher::<PoolStateUpdate>();
-pub_.publish(PoolStateUpdate { /* ... */ }).await?;
+#[mycelium::service]
+impl PolygonAdapter {
+    async fn run(&mut self, ctx: ServiceContext) -> Result<()> {
+        // Connect to data source
+        let mut ws = connect_websocket(&self.config.ws_url).await?;
 
-// Subscriber
-let mut sub = bus.subscriber::<PoolStateUpdate>();
-while let Some(update) = sub.recv().await {
-    println!("Pool update: {:?}", update);
+        // Process events
+        while let Some(event) = ws.next().await {
+            let swap = parse_swap(&event)?;
+            
+            // Emit typed message - Mycelium handles everything:
+            // - TLV serialization (zerocopy)
+            // - Routing to subscribers
+            // - Transport selection (Arc/Unix/TCP)
+            // - Trace context propagation
+            // - Metrics collection
+            ctx.emit(swap).await?;
+        }
+
+        Ok(())
+    }
 }
 ```
 
-### 3. Configure Deployment Topology
+**What `#[mycelium::service]` does:**
+- Wraps your service in an actor with supervision (exponential backoff retry)
+- Sets up routing based on message types
+- Provides `ServiceContext` with publishers pre-configured
+- Adds automatic observability (tracing, metrics, structured logging)
 
-**Single node** (one process):
-```toml
-# config/dev.toml
-[[nodes]]
-name = "main"
-services = ["polygon-adapter", "flash-arbitrage", "order-executor"]
+### 3. Wire It Up in Your Binary
+
+```rust
+// Your main.rs - YOU control startup
+use mycelium_core::{MessageBus, ServiceRuntime};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    // Load your config (any format you want)
+    let config = load_config("config.toml")?;
+    
+    // Create your service
+    let adapter = PolygonAdapter::new(config);
+    
+    // Create Mycelium infrastructure
+    let bus = MessageBus::new();  // Arc transport (same process)
+    let runtime = ServiceRuntime::new(bus);
+    
+    // Spawn service with supervision
+    runtime.spawn_service(adapter).await?;
+    
+    // Your shutdown logic
+    tokio::signal::ctrl_c().await?;
+    runtime.shutdown().await?;
+    
+    Ok(())
+}
 ```
 
-**Multiple nodes, same host** (multiple processes, one machine):
-```toml
-# config/staging.toml
-socket_dir = "/tmp/mycelium"
-
-[[nodes]]
-name = "adapters"
-services = ["polygon-adapter"]
-
-[[nodes]]
-name = "strategies"
-services = ["flash-arbitrage"]
-# No host specified → uses Unix sockets via socket_dir
+**Start it like any Rust program:**
+```bash
+cargo run --bin polygon_adapter
+# or
+./target/release/polygon_adapter
 ```
 
-**Multiple nodes, different hosts** (distributed):
-```toml
-# config/prod.toml
-[[nodes]]
-name = "adapters"
-services = ["polygon-adapter"]
-host = "10.0.1.10"
-port = 9000
+### 4. Choose Your Transport
 
-[[nodes]]
-name = "strategies"
-services = ["flash-arbitrage"]
-host = "10.0.2.20"
-port = 9001
-# Different hosts → uses TCP
+```rust
+// Single process (Arc transport - zero copy)
+let bus = MessageBus::new();
+
+// Multi-process, same host (Unix sockets)
+let bus = MessageBus::with_unix_transport("/tmp/bandit")?;
+
+// Distributed (TCP)
+let bus = MessageBus::with_tcp_transport("10.0.1.10:9000")?;
 ```
 
-**Same code, different configs.** The `MessageBus` reads your topology and infers transport: same node → Arc, same host → Unix, different hosts → TCP.
+**Same service code works with any transport.** Change one line, redeploy.
+
+---
+
+## What `ctx.emit()` Actually Does
+
+When you call `ctx.emit(message).await?`, here's what Mycelium handles automatically:
+
+1. **Timing**: Measures emit latency for metrics (40ns overhead)
+2. **Topic Routing**: Maps message type to topic (e.g., `V2Swap` → `"market_data.v2_swaps"`)
+3. **Publisher Lookup**: Finds the correct `Publisher` for this message type (40ns DashMap lookup)
+4. **Envelope Wrapping**: Wraps message in `Envelope` with type information
+5. **Transport**: Sends via `broadcast::channel` (local Arc transport)
+6. **Metrics Recording**: Records emit count and latency (2ns atomic operations)
+7. **Trace Logging**: Logs emit with trace_id context (1ns when disabled)
+
+**Current implementation** (Phase 2):
+- ✅ Local transport (`Arc<Envelope>`) - zero-copy, 47ns baseline
+- ✅ Automatic metrics collection (emits_total, emit_latency_us_avg)
+- ✅ Trace context in logs (trace_id included automatically)
+- ⏳ Wire format serialization (Unix/TCP) - deferred to Phase 2.5
+- ⏳ Cross-service trace propagation - deferred to Phase 2.5
+
+**Your code:** `ctx.emit(swap).await?;` (**120ns total**)
+
+**Mycelium does:** Timing → Routing → Envelope → Transport → Metrics → Logging
 
 ---
 
@@ -104,9 +165,10 @@ port = 9001
 
 ### Core Components
 
-- **`mycelium-protocol`** - Message trait, TYPE_ID, TOPIC, Envelope abstraction
-- **`mycelium-config`** - Topology configuration, deployment modes
-- **`mycelium-transport`** - Local (Arc), Unix socket, and TCP transports with unified MessageBus API
+- **`mycelium-protocol`** - Message trait, TYPE_ID, TOPIC, TLV serialization
+- **`mycelium-core`** - MessageBus, Publishers, Subscribers, Arc/Unix/TCP transports, configuration
+- **`mycelium-service`** - `#[service]` macro, ServiceContext, ServiceRuntime (optional)
+- **`mycelium-service-macro`** - Proc macro implementation (internal)
 
 ### Wire Protocol
 
@@ -129,8 +191,11 @@ Messages use [zerocopy](https://github.com/google/zerocopy) for **true zero-copy
 
 ## Documentation
 
-- **[docs/TRANSPORT.md](docs/TRANSPORT.md)** - Complete transport architecture, wire protocol, deployment topologies
-- **[docs/ACTORS.md](docs/ACTORS.md)** - Actor system evolution path (Phase 1 foundation → Phase 2 full actors)
+- **[docs/implementation/SERVICE-API-DESIGN.md](docs/implementation/SERVICE-API-DESIGN.md)** - Complete service API specification
+- **[docs/implementation/LIBRARY-NOT-FRAMEWORK.md](docs/implementation/LIBRARY-NOT-FRAMEWORK.md)** - Why Mycelium is a library, not a framework
+- **[docs/implementation/CONFIG-BOUNDARY-ANALYSIS.md](docs/implementation/CONFIG-BOUNDARY-ANALYSIS.md)** - Config ownership (Mycelium vs application)
+- **[docs/TRANSPORT.md](docs/TRANSPORT.md)** - Transport architecture, wire protocol, TLV format
+- **[docs/ACTORS.md](docs/ACTORS.md)** - Actor system (already implemented)
 
 ---
 

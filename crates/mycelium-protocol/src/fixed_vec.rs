@@ -6,10 +6,10 @@
 //! ## Why FixedVec Instead of Vec?
 //!
 //! ```text
-//! // ❌ Vec<T> - Heap allocated, pointer indirection → NOT zero-copy
+//! // Vec<T> - Heap allocated, pointer indirection → NOT zero-copy
 //! Vec<[u8; 20]>  // Pool addresses - requires heap allocation
 //!
-//! // ✅ FixedVec<T, N> - Stack allocated, inline storage → Zero-copy!
+//! // FixedVec<T, N> - Stack allocated, inline storage → Zero-copy!
 //! FixedVec<[u8; 20], 4>  // Up to 4 pool addresses, no heap
 //! ```
 //!
@@ -25,8 +25,8 @@ use std::convert::TryFrom;
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 /// Compile-time constants for array sizing
-pub const MAX_POOL_ADDRESSES: usize = 4;  // Max pools in arbitrage path
-pub const MAX_SYMBOL_LENGTH: usize = 32;   // Max token symbol length
+pub const MAX_POOL_ADDRESSES: usize = 4; // Max pools in arbitrage path
+pub const MAX_SYMBOL_LENGTH: usize = 32; // Max token symbol length
 
 /// Error type for fixed collection operations
 #[derive(Debug, Clone, PartialEq)]
@@ -131,9 +131,17 @@ where
 
     /// Set the element count (for direct array manipulation)
     ///
+    /// **Warning**: This is an unsafe API that bypasses bounds checking in release builds.
+    /// Use `try_push()` or `from_slice()` instead for safe operations.
+    ///
     /// # Safety
     ///
-    /// Caller must ensure that elements[0..count] are properly initialized
+    /// Caller must ensure that:
+    /// 1. `count <= N` (capacity)
+    /// 2. `elements[0..count]` are properly initialized
+    ///
+    /// Note: `debug_assert!` checks bounds in debug builds only.
+    /// In release builds, out-of-bounds count will be silently clamped to N.
     pub fn set_count(&mut self, count: usize) {
         debug_assert!(count <= N, "Count {} exceeds capacity {}", count, N);
         self.count = count.min(N) as u16;

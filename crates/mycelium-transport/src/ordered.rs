@@ -30,12 +30,12 @@ use std::sync::Arc;
 /// # Example
 ///
 /// ```rust,no_run
-/// use mycelium_transport::{MessageBus, OrderedSubscriber};
-/// # use mycelium_protocol::PoolStateUpdate;
+/// use crate::{MessageBus, OrderedSubscriber};
+/// # use mycelium_protocol::DataEvent;
 ///
 /// # async fn example() {
 /// let bus = MessageBus::new();
-/// let sub = bus.subscriber::<PoolStateUpdate>();
+/// let sub = bus.subscriber::<DataEvent>();
 ///
 /// // Wrap in OrderedSubscriber for ordered delivery
 /// let mut ordered = OrderedSubscriber::new(sub, 0);
@@ -65,11 +65,11 @@ impl<M: Message> OrderedSubscriber<M> {
     /// # Example
     ///
     /// ```rust,no_run
-    /// # use mycelium_transport::{MessageBus, OrderedSubscriber};
-    /// # use mycelium_protocol::PoolStateUpdate;
+    /// # use crate::{MessageBus, OrderedSubscriber};
+    /// # use mycelium_protocol::DataEvent;
     /// # async fn example() {
     /// let bus = MessageBus::new();
-    /// let sub = bus.subscriber::<PoolStateUpdate>();
+    /// let sub = bus.subscriber::<DataEvent>();
     /// let mut ordered = OrderedSubscriber::new(sub, 0);
     /// # }
     /// ```
@@ -93,11 +93,11 @@ impl<M: Message> OrderedSubscriber<M> {
                 return Some(msg);
             }
 
-            // Receive next envelope from underlying subscriber
-            let msg = self.inner.recv().await?;
+            // Receive next message with sequence from underlying subscriber
+            let (msg, sequence) = self.inner.recv_with_sequence().await?;
 
             // Add to tracker (will buffer if out-of-order, or deliver if in-order)
-            if let Some(ready) = self.tracker.add_message(msg) {
+            if let Some(ready) = self.tracker.add_message(msg, sequence) {
                 return Some(ready);
             }
 
@@ -154,34 +154,52 @@ impl<M: Message> SequenceTracker<M> {
     ///
     /// Returns `Some(msg)` if the message is in-order and can be delivered immediately.
     /// Returns `None` if the message was buffered (out-of-order).
-    fn add_message(&mut self, msg: Arc<M>) -> Option<Arc<M>> {
+    fn add_message(&mut self, msg: Arc<M>, sequence: Option<u64>) -> Option<Arc<M>> {
         self.stats.total_received += 1;
 
-        // TODO: Extract sequence number from envelope metadata
-        // Currently, envelopes have an optional `sequence` field, but we need
-        // a way to access it from the Arc<M>. This requires either:
-        // 1. Passing envelopes instead of downcasted messages, OR
-        // 2. Adding a Message::sequence() method
-        //
-        // For now, deliver all messages immediately (no reordering)
-        // This makes OrderedSubscriber a pass-through until sequence extraction is implemented
+        match sequence {
+            // Message has sequence number
+            Some(seq) if seq == self.next_expected => {
+                // In-order message - deliver immediately
+                self.stats.in_order_delivered += 1;
+                self.next_expected += 1;
+                self.update_max_buffer_used();
+                Some(msg)
+            }
+            Some(seq) if seq < self.next_expected => {
+                // Duplicate or already-delivered message - drop it
+                tracing::warn!(
+                    sequence = seq,
+                    expected = self.next_expected,
+                    "Dropping duplicate message"
+                );
+                self.stats.dropped += 1;
+                None
+            }
+            Some(seq) => {
+                // Out-of-order message - buffer it
+                tracing::debug!(
+                    sequence = seq,
+                    expected = self.next_expected,
+                    gap = seq - self.next_expected,
+                    "Buffering out-of-order message"
+                );
+                self.buffer.insert(seq, msg);
+                self.update_max_buffer_used();
+                None
+            }
+            // No sequence number - deliver immediately (bypass ordering)
+            None => {
+                self.stats.in_order_delivered += 1;
+                Some(msg)
+            }
+        }
+    }
 
-        self.stats.in_order_delivered += 1;
-        self.next_expected += 1;
-        Some(msg)
-
-        // Future implementation will be:
-        // match envelope.sequence {
-        //     Some(seq) if seq == self.next_expected => {
-        //         self.next_expected += 1;
-        //         Some(msg)
-        //     }
-        //     Some(seq) => {
-        //         self.buffer.insert(seq, msg);
-        //         None
-        //     }
-        //     None => Some(msg), // No sequence = deliver immediately
-        // }
+    fn update_max_buffer_used(&mut self) {
+        if self.buffer.len() > self.stats.max_buffer_used {
+            self.stats.max_buffer_used = self.buffer.len();
+        }
     }
 
     /// Try to deliver a buffered message if the next expected one is ready
@@ -292,6 +310,61 @@ mod tests {
 
         let stats = ordered.stats();
         println!("Stats: {}", stats);
+    }
+
+    #[tokio::test]
+    async fn test_ordered_subscriber_out_of_order() {
+        let (tx, rx) = broadcast::channel(10);
+        let sub: Subscriber<TestMsg> = Subscriber::new(rx);
+        let mut ordered = OrderedSubscriber::new(sub, 0);
+
+        // Send messages OUT of order: 0, 2, 1, 3
+        tx.send(Envelope::with_sequence(TestMsg { value: 0 }, 0)).unwrap();
+        tx.send(Envelope::with_sequence(TestMsg { value: 2 }, 2)).unwrap();
+        tx.send(Envelope::with_sequence(TestMsg { value: 1 }, 1)).unwrap();
+        tx.send(Envelope::with_sequence(TestMsg { value: 3 }, 3)).unwrap();
+
+        // Should receive IN order: 0, 1, 2, 3
+        for i in 0..4 {
+            let msg = ordered.recv().await.unwrap();
+            assert_eq!(msg.value, i, "Expected message {} but got {}", i, msg.value);
+        }
+
+        let stats = ordered.stats();
+        println!("Out-of-order stats: {}", stats);
+        assert_eq!(stats.total_received, 4);
+        // Messages 0, 1, 3 arrived in-order (matched next_expected when received)
+        // Message 2 was buffered then delivered
+        assert_eq!(stats.in_order_delivered, 3);
+        assert_eq!(stats.reordered_delivered, 1);
+        assert_eq!(stats.dropped, 0);
+    }
+
+    #[tokio::test]
+    async fn test_ordered_subscriber_with_gaps() {
+        let (tx, rx) = broadcast::channel(10);
+        let sub: Subscriber<TestMsg> = Subscriber::new(rx);
+        let mut ordered = OrderedSubscriber::new(sub, 0);
+
+        // Send messages with a gap: 0, 3, 1, 2
+        tx.send(Envelope::with_sequence(TestMsg { value: 0 }, 0)).unwrap();
+        tx.send(Envelope::with_sequence(TestMsg { value: 3 }, 3)).unwrap();
+        tx.send(Envelope::with_sequence(TestMsg { value: 1 }, 1)).unwrap();
+        tx.send(Envelope::with_sequence(TestMsg { value: 2 }, 2)).unwrap();
+
+        // Should receive in order: 0, 1, 2, 3
+        for i in 0..4 {
+            let msg = ordered.recv().await.unwrap();
+            assert_eq!(msg.value, i);
+        }
+
+        let stats = ordered.stats();
+        println!("Gap-filling stats: {}", stats);
+        // Messages 0, 1, 2 matched next_expected when received (in-order)
+        // Message 3 was delivered from buffer (reordered)
+        assert_eq!(stats.in_order_delivered, 3);
+        assert_eq!(stats.reordered_delivered, 1);
+        assert_eq!(stats.dropped, 0);
     }
 
     #[test]

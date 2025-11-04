@@ -1,5 +1,5 @@
-use mycelium_config::{Node, Topology};
 use mycelium_protocol::impl_message;
+use mycelium_transport::config::{Node, Topology};
 use mycelium_transport::{MessageBus, TcpTransport, UnixTransport};
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
@@ -7,11 +7,11 @@ use zerocopy::{AsBytes, FromBytes, FromZeroes};
 #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
 #[repr(C)]
 struct SwapEvent {
+    amount_in: u128,
+    amount_out: u128,
     pool_id: u64,
     token_in: u64,
     token_out: u64,
-    amount_in: u128,
-    amount_out: u128,
     timestamp: u64,
 }
 
@@ -21,9 +21,9 @@ impl_message!(SwapEvent, 1, "market-data");
 #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
 #[repr(C)]
 struct ArbitrageOpportunity {
+    profit: u128,
     pool_a: u64,
     pool_b: u64,
-    profit: u128,
     timestamp: u64,
 }
 
@@ -33,9 +33,10 @@ impl_message!(ArbitrageOpportunity, 2, "arbitrage");
 #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
 #[repr(C)]
 struct OrderExecution {
-    opportunity_id: u64,
     amount: u128,
-    success: u8, // bool is not safe for zerocopy, use u8
+    opportunity_id: u64,
+    success: u8,       // bool is not safe for zerocopy, use u8
+    _padding: [u8; 7], // Explicit padding to align to 8-byte boundary
 }
 
 impl_message!(OrderExecution, 3, "orders");
@@ -128,13 +129,10 @@ async fn test_bundled_deployment_simple() {
 
     // Verify messages received
     for i in 0..3 {
-        let event = tokio::time::timeout(
-            tokio::time::Duration::from_secs(1),
-            strategy_sub.recv(),
-        )
-        .await
-        .expect("Timeout")
-        .expect("Failed to receive");
+        let event = tokio::time::timeout(tokio::time::Duration::from_secs(1), strategy_sub.recv())
+            .await
+            .expect("Timeout")
+            .expect("Failed to receive");
 
         assert_eq!(event.pool_id, i);
     }
@@ -197,13 +195,10 @@ async fn test_distributed_deployment_simple() {
 
     // Verify messages received
     for i in 0..3 {
-        let event = tokio::time::timeout(
-            tokio::time::Duration::from_secs(1),
-            strategy_sub.recv(),
-        )
-        .await
-        .expect("Timeout")
-        .expect("Failed to receive");
+        let event = tokio::time::timeout(tokio::time::Duration::from_secs(1), strategy_sub.recv())
+            .await
+            .expect("Timeout")
+            .expect("Failed to receive");
 
         assert_eq!(event.pool_id, i);
     }

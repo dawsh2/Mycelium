@@ -7,6 +7,7 @@ use mycelium_protocol::Message;
 /// Messages are shared via Arc, avoiding serialization overhead.
 ///
 /// Performance: ~50-200ns per message (just an Arc clone)
+#[derive(Clone)]
 pub struct LocalTransport {
     channel_manager: ChannelManager,
 }

@@ -22,20 +22,66 @@ impl<M: Message> Publisher<M> {
 
     /// Publish a message to all subscribers
     ///
-    /// Messages are delivered to all active subscribers.
-    /// If there are no subscribers, the message is silently dropped.
+    /// Returns an error if there are no active subscribers.
+    /// This fail-fast behavior prevents silent message loss in production systems.
+    ///
+    /// For systems where no-subscriber scenarios are expected, use `try_publish_lossy`
+    /// which logs a warning instead of returning an error.
     pub async fn publish(&self, msg: M) -> Result<()> {
         let envelope = Envelope::new(msg);
-        let _ = self.tx.send(envelope);
+        let receiver_count = self
+            .tx
+            .send(envelope)
+            .map_err(|_| crate::TransportError::SendFailed)?;
+
+        if receiver_count == 0 {
+            return Err(crate::TransportError::NoSubscribers {
+                topic: M::TOPIC.to_string(),
+            });
+        }
+
         Ok(())
     }
 
     /// Try to publish a message (non-blocking)
     ///
-    /// Returns immediately. Messages are silently dropped if no subscribers.
+    /// Returns an error if there are no active subscribers (same as publish).
     pub fn try_publish(&self, msg: M) -> Result<()> {
         let envelope = Envelope::new(msg);
-        let _ = self.tx.send(envelope);
+        let receiver_count = self
+            .tx
+            .send(envelope)
+            .map_err(|_| crate::TransportError::SendFailed)?;
+
+        if receiver_count == 0 {
+            return Err(crate::TransportError::NoSubscribers {
+                topic: M::TOPIC.to_string(),
+            });
+        }
+
+        Ok(())
+    }
+
+    /// Publish a message with lossy semantics (logs warning on no subscribers)
+    ///
+    /// Use this variant when publishing to optional subscribers where
+    /// message loss is acceptable (e.g., metrics, debug telemetry).
+    ///
+    /// For critical messages, use `publish()` which fails if no subscribers exist.
+    pub async fn publish_lossy(&self, msg: M) -> Result<()> {
+        let envelope = Envelope::new(msg);
+        let receiver_count = self
+            .tx
+            .send(envelope)
+            .map_err(|_| crate::TransportError::SendFailed)?;
+
+        if receiver_count == 0 {
+            tracing::warn!(
+                topic = M::TOPIC,
+                "Published message but no active subscribers - message dropped"
+            );
+        }
+
         Ok(())
     }
 
@@ -76,13 +122,12 @@ mod tests {
         // Drop the receiver so there are no subscribers
         drop(rx);
 
-        // Broadcast allows sending with no subscribers
-        // Check that we can detect this via subscriber_count
+        // Check that there are no subscribers
         assert_eq!(pub_.subscriber_count(), 0);
 
-        // Publishing succeeds even with no subscribers
+        // Publishing with no subscribers should fail (critical for trading systems)
         let result = pub_.publish(TestMsg { value: 42 }).await;
-        assert!(result.is_ok());
+        assert!(result.is_err());
     }
 
     #[tokio::test]

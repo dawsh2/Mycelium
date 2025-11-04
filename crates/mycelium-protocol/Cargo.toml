@@ -10,6 +10,11 @@ thiserror = { workspace = true }
 primitive-types = { version = "0.12", default-features = false }  # For U256 support, disable zerocopy to avoid version conflict
 rand = "0.8"  # For ActorId and CorrelationId generation
 
+# Codegen dependencies (now that codegen is a public module in src/)
+serde = { workspace = true, features = ["derive"] }
+serde_yaml = "0.9"
+indexmap = { version = "2.0", features = ["serde"] }
+
 [dev-dependencies]
 tokio = { workspace = true }
 

@@ -4,13 +4,14 @@
 //! to reduce duplication and ensure consistent behavior.
 
 use crate::config::TransportConfig;
-use crate::{TransportError, Result};
+use crate::{Result, TransportError};
 use dashmap::DashMap;
 use mycelium_protocol::{Envelope, Message};
 use std::sync::Arc;
 use tokio::sync::broadcast;
 
 /// Common broadcast channel management for all transports
+#[derive(Clone)]
 pub struct ChannelManager {
     /// Topic -> broadcast channel mapping
     channels: Arc<DashMap<String, broadcast::Sender<Envelope>>>,
@@ -72,12 +73,8 @@ pub struct ConnectionInfo {
     pub messages_sent: u64,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum TransportType {
-    Local,
-    Unix,
-    Tcp,
-}
+// TransportType moved to config module
+pub use crate::config::TransportType;
 
 /// Common error context enhancement
 pub fn enrich_error(error: TransportError, context: &str) -> TransportError {
@@ -85,9 +82,7 @@ pub fn enrich_error(error: TransportError, context: &str) -> TransportError {
         TransportError::ServiceNotFound(service) => {
             TransportError::ServiceNotFound(format!("{}: {}", context, service))
         }
-        TransportError::Io(io_err) => {
-            TransportError::Io(io_err)
-        }
+        TransportError::Io(io_err) => TransportError::Io(io_err),
         other => other,
     }
 }
@@ -119,11 +114,11 @@ pub struct BufferSizes {
 impl Default for BufferSizes {
     fn default() -> Self {
         Self {
-            read_buffer: 64 * 1024,      // 64KB
-            write_buffer: 64 * 1024,     // 64KB
-            frame_buffer: 8 * 1024,      // 8KB
-            socket_buffer: 128 * 1024,   // 128KB
-            serialization_buffer: 1024,   // 1KB
+            read_buffer: 64 * 1024,     // 64KB
+            write_buffer: 64 * 1024,    // 64KB
+            frame_buffer: 8 * 1024,     // 8KB
+            socket_buffer: 128 * 1024,  // 128KB
+            serialization_buffer: 1024, // 1KB
         }
     }
 }
@@ -142,31 +137,31 @@ impl BufferSizes {
 
     pub fn for_high_throughput() -> Self {
         Self {
-            read_buffer: 1024 * 1024,    // 1MB
-            write_buffer: 1024 * 1024,   // 1MB
-            frame_buffer: 256 * 1024,    // 256KB
-            socket_buffer: 2 * 1024 * 1024, // 2MB
+            read_buffer: 1024 * 1024,        // 1MB
+            write_buffer: 1024 * 1024,       // 1MB
+            frame_buffer: 256 * 1024,        // 256KB
+            socket_buffer: 2 * 1024 * 1024,  // 2MB
             serialization_buffer: 64 * 1024, // 64KB
         }
     }
 
     pub fn for_low_latency() -> Self {
         Self {
-            read_buffer: 16 * 1024,       // 16KB
-            write_buffer: 16 * 1024,      // 16KB
-            frame_buffer: 4 * 1024,       // 4KB
-            socket_buffer: 32 * 1024,     // 32KB
-            serialization_buffer: 256,    // 256B
+            read_buffer: 16 * 1024,    // 16KB
+            write_buffer: 16 * 1024,   // 16KB
+            frame_buffer: 4 * 1024,    // 4KB
+            socket_buffer: 32 * 1024,  // 32KB
+            serialization_buffer: 256, // 256B
         }
     }
 
     pub fn for_memory_constrained() -> Self {
         Self {
-            read_buffer: 8 * 1024,        // 8KB
-            write_buffer: 8 * 1024,       // 8KB
-            frame_buffer: 2 * 1024,       // 2KB
-            socket_buffer: 16 * 1024,     // 16KB
-            serialization_buffer: 128,    // 128B
+            read_buffer: 8 * 1024,     // 8KB
+            write_buffer: 8 * 1024,    // 8KB
+            frame_buffer: 2 * 1024,    // 2KB
+            socket_buffer: 16 * 1024,  // 16KB
+            serialization_buffer: 128, // 128B
         }
     }
 
@@ -184,6 +179,10 @@ impl BufferSizes {
     }
 
     pub fn total_memory_usage(&self) -> usize {
-        self.read_buffer + self.write_buffer + self.frame_buffer + self.socket_buffer + self.serialization_buffer
+        self.read_buffer
+            + self.write_buffer
+            + self.frame_buffer
+            + self.socket_buffer
+            + self.serialization_buffer
     }
 }

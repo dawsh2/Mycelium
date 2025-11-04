@@ -42,15 +42,15 @@ use tokio::sync::mpsc;
 /// # Example
 ///
 /// ```rust,no_run
-/// use mycelium_transport::{BoundedPublisher, BoundedSubscriber};
-/// # use mycelium_protocol::PoolStateUpdate;
+/// use crate::{BoundedPublisher, BoundedSubscriber};
+/// # use mycelium_protocol::DataEvent;
 ///
 /// # async fn example() {
 /// // Create bounded channel with capacity 100
-/// let (pub_, mut sub) = BoundedPublisher::<PoolStateUpdate>::new(100);
+/// let (pub_, mut sub) = BoundedPublisher::<DataEvent>::new(100);
 ///
 /// // Publish message (blocks if channel is full)
-/// pub_.publish(PoolStateUpdate::default()).await.unwrap();
+/// pub_.publish(DataEvent::default()).await.unwrap();
 ///
 /// // Receive message
 /// if let Some(msg) = sub.recv().await {
@@ -74,9 +74,9 @@ impl<M: Message> BoundedPublisher<M> {
     /// # Example
     ///
     /// ```rust
-    /// # use mycelium_transport::BoundedPublisher;
-    /// # use mycelium_protocol::PoolStateUpdate;
-    /// let (publisher, subscriber) = BoundedPublisher::<PoolStateUpdate>::new(100);
+    /// # use crate::BoundedPublisher;
+    /// # use mycelium_protocol::DataEvent;
+    /// let (publisher, subscriber) = BoundedPublisher::<DataEvent>::new(100);
     /// ```
     pub fn new(capacity: usize) -> (Self, BoundedSubscriber<M>) {
         let (tx, rx) = mpsc::channel(capacity);
@@ -245,9 +245,9 @@ impl<M: Message> BoundedSubscriber<M> {
 /// # Example
 ///
 /// ```rust
-/// # use mycelium_transport::BoundedPublisherBuilder;
-/// # use mycelium_protocol::PoolStateUpdate;
-/// let (publisher, subscriber) = BoundedPublisherBuilder::<PoolStateUpdate>::new()
+/// # use crate::BoundedPublisherBuilder;
+/// # use mycelium_protocol::DataEvent;
+/// let (publisher, subscriber) = BoundedPublisherBuilder::<DataEvent>::new()
 ///     .capacity(1000)
 ///     .build();
 /// ```

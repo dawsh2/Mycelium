@@ -3,7 +3,7 @@
 //! Implements the message contracts defined in contracts.yaml.
 //! All types use rkyv for zero-copy serialization.
 
-use crate::fixed_vec::{FixedStr, FixedVec, MAX_POOL_ADDRESSES, MAX_SYMBOL_LENGTH};
+use crate::fixed_vec::{FixedStr, FixedVec, MAX_SYMBOL_LENGTH};
 use crate::Message;
 use rkyv::{Archive, Deserialize, Serialize};
 
@@ -53,8 +53,8 @@ impl InstrumentMeta {
             return Err(ValidationError::InvalidSymbolPrefix);
         }
 
-        let symbol_fixed = FixedStr::from_str(symbol)
-            .map_err(|_| ValidationError::SymbolTooLong(symbol.len()))?;
+        let symbol_fixed =
+            FixedStr::from_str(symbol).map_err(|_| ValidationError::SymbolTooLong(symbol.len()))?;
 
         // Validate decimals
         if decimals == 0 || decimals > 30 {
@@ -78,6 +78,37 @@ impl InstrumentMeta {
     /// Get symbol as string
     pub fn symbol_str(&self) -> &str {
         self.symbol.as_str().unwrap_or("<invalid>")
+    }
+
+    /// Validate message after deserialization
+    ///
+    /// This MUST be called after zerocopy deserialization to ensure
+    /// the message satisfies all invariants, since deserialization
+    /// bypasses the constructor validation.
+    pub fn validate(&self) -> Result<(), ValidationError> {
+        // Validate address is not zero
+        if self.token_address == [0u8; 20] {
+            return Err(ValidationError::ZeroAddress);
+        }
+
+        // Validate symbol is valid UTF-8 and not empty
+        let symbol_str = self
+            .symbol
+            .as_str()
+            .map_err(|_| ValidationError::EmptySymbol)?;
+        if symbol_str.is_empty() {
+            return Err(ValidationError::EmptySymbol);
+        }
+        if symbol_str.starts_with("0x") {
+            return Err(ValidationError::InvalidSymbolPrefix);
+        }
+
+        // Validate decimals
+        if self.decimals == 0 || self.decimals > 30 {
+            return Err(ValidationError::InvalidDecimals(self.decimals));
+        }
+
+        Ok(())
     }
 }
 
@@ -220,6 +251,22 @@ impl PoolStateUpdate {
     pub fn is_v3(&self) -> bool {
         self.liquidity != [0; 32] || self.sqrt_price_x96 != [0; 32]
     }
+
+    /// Validate message after deserialization
+    ///
+    /// This MUST be called after zerocopy deserialization to ensure
+    /// the message satisfies all invariants.
+    pub fn validate(&self) -> Result<(), ValidationError> {
+        // Validate address is not zero
+        if self.pool_address == [0u8; 20] {
+            return Err(ValidationError::ZeroAddress);
+        }
+
+        // Note: We don't validate reserves/liquidity values as zero can be valid
+        // (e.g., depleted pool, or fields not used for this pool type)
+
+        Ok(())
+    }
 }
 
 impl Message for PoolStateUpdate {
@@ -278,8 +325,8 @@ impl ArbitrageSignal {
             return Err(ValidationError::NegativeProfit(estimated_profit_usd));
         }
 
-        let path_fixed = FixedVec::from_slice(path)
-            .map_err(|_| ValidationError::PathTooLong(path.len()))?;
+        let path_fixed =
+            FixedVec::from_slice(path).map_err(|_| ValidationError::PathTooLong(path.len()))?;
 
         let mut gas_bytes = [0u8; 32];
         gas_estimate_wei.to_big_endian(&mut gas_bytes);
@@ -306,6 +353,28 @@ impl ArbitrageSignal {
     /// Number of hops in the arbitrage path
     pub fn hop_count(&self) -> usize {
         self.path.len()
+    }
+
+    /// Validate message after deserialization
+    ///
+    /// This MUST be called after zerocopy deserialization to ensure
+    /// the message satisfies all invariants.
+    pub fn validate(&self) -> Result<(), ValidationError> {
+        // Validate path length (2-4 pools)
+        let path_len = self.path.len();
+        if path_len < 2 {
+            return Err(ValidationError::PathTooShort(path_len));
+        }
+        if path_len > 4 {
+            return Err(ValidationError::PathTooLong(path_len));
+        }
+
+        // Validate profit is non-negative
+        if self.estimated_profit_usd < 0.0 {
+            return Err(ValidationError::NegativeProfit(self.estimated_profit_usd));
+        }
+
+        Ok(())
     }
 }
 
@@ -348,12 +417,7 @@ mod tests {
 
     #[test]
     fn test_instrument_meta_creation() {
-        let meta = InstrumentMeta::new(
-            [1; 20],
-            "WETH",
-            18,
-            137,
-        ).unwrap();
+        let meta = InstrumentMeta::new([1; 20], "WETH", 18, 137).unwrap();
 
         assert_eq!(meta.symbol_str(), "WETH");
         assert_eq!(meta.decimals, 18);
@@ -396,11 +460,12 @@ mod tests {
     fn test_pool_state_v2() {
         let state = PoolStateUpdate::new_v2(
             [1; 20],
-            1,  // Uniswap V2
+            1, // Uniswap V2
             U256::from(1000),
             U256::from(2000),
             12345,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(state.is_v2());
         assert!(!state.is_v3());
@@ -413,12 +478,13 @@ mod tests {
     fn test_pool_state_v3() {
         let state = PoolStateUpdate::new_v3(
             [1; 20],
-            2,  // Uniswap V3
+            2, // Uniswap V3
             U256::from(50000),
             U256::from(1234567890),
             100,
             12345,
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(!state.is_v2());
         assert!(state.is_v3());
@@ -430,13 +496,7 @@ mod tests {
     #[test]
     fn test_arbitrage_signal_creation() {
         let path = [[1; 20], [2; 20], [3; 20]];
-        let signal = ArbitrageSignal::new(
-            123,
-            &path,
-            100.5,
-            U256::from(21000),
-            67890,
-        ).unwrap();
+        let signal = ArbitrageSignal::new(123, &path, 100.5, U256::from(21000), 67890).unwrap();
 
         assert_eq!(signal.opportunity_id, 123);
         assert_eq!(signal.hop_count(), 3);
@@ -476,6 +536,8 @@ mod tests {
         let bytes = rkyv::to_bytes::<_, 256>(&original).unwrap();
 
         // Deserialize
+        // SAFETY: `bytes` was just created by rkyv::to_bytes with the same type,
+        // so the archived data is guaranteed to be valid for InstrumentMeta
         let archived = unsafe { rkyv::archived_root::<InstrumentMeta>(&bytes) };
         let deserialized: InstrumentMeta = archived.deserialize(&mut rkyv::Infallible).unwrap();
 
@@ -485,18 +547,16 @@ mod tests {
 
     #[test]
     fn test_rkyv_roundtrip_pool_state() {
-        let original = PoolStateUpdate::new_v2(
-            [5; 20],
-            1,
-            U256::from(1000000),
-            U256::from(2000000),
-            54321,
-        ).unwrap();
+        let original =
+            PoolStateUpdate::new_v2([5; 20], 1, U256::from(1000000), U256::from(2000000), 54321)
+                .unwrap();
 
         // Serialize
         let bytes = rkyv::to_bytes::<_, 1024>(&original).unwrap();
 
         // Deserialize
+        // SAFETY: `bytes` was just created by rkyv::to_bytes with the same type,
+        // so the archived data is guaranteed to be valid for PoolStateUpdate
         let archived = unsafe { rkyv::archived_root::<PoolStateUpdate>(&bytes) };
         let deserialized: PoolStateUpdate = archived.deserialize(&mut rkyv::Infallible).unwrap();
 
@@ -508,18 +568,14 @@ mod tests {
     #[test]
     fn test_rkyv_roundtrip_arbitrage_signal() {
         let path = [[1; 20], [2; 20], [3; 20]];
-        let original = ArbitrageSignal::new(
-            999,
-            &path,
-            250.75,
-            U256::from(42000),
-            99999,
-        ).unwrap();
+        let original = ArbitrageSignal::new(999, &path, 250.75, U256::from(42000), 99999).unwrap();
 
         // Serialize
         let bytes = rkyv::to_bytes::<_, 512>(&original).unwrap();
 
         // Deserialize
+        // SAFETY: `bytes` was just created by rkyv::to_bytes with the same type,
+        // so the archived data is guaranteed to be valid for ArbitrageSignal
         let archived = unsafe { rkyv::archived_root::<ArbitrageSignal>(&bytes) };
         let deserialized: ArbitrageSignal = archived.deserialize(&mut rkyv::Infallible).unwrap();
 

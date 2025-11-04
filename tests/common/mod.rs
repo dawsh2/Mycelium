@@ -2,17 +2,17 @@
 
 use mycelium_protocol::impl_message;
 use mycelium_transport::MessageBus;
-use zerocopy::{AsBytes, FromBytes, FromZeroes};
 use std::time::Duration;
 use tokio::time::sleep;
+use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 // Common test message types
 #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
 #[repr(C)]
 pub struct SwapEvent {
-    pub pool_id: u64,
     pub amount_in: u128,
     pub amount_out: u128,
+    pub pool_id: u64,
     pub timestamp: u64,
 }
 
@@ -21,8 +21,8 @@ impl_message!(SwapEvent, 1, "market-data");
 #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
 #[repr(C)]
 pub struct ArbitrageSignal {
-    pub opportunity_id: u64,
     pub profit: u128,
+    pub opportunity_id: u64,
     pub timestamp: u64,
 }
 
@@ -32,7 +32,7 @@ impl_message!(ArbitrageSignal, 2, "arbitrage");
 #[repr(C)]
 pub struct OrderExecution {
     pub order_id: u64,
-    pub success: u8,  // 1 = true, 0 = false (bool not safe for zerocopy)
+    pub success: u8, // 1 = true, 0 = false (bool not safe for zerocopy)
     pub timestamp: u64,
 }
 
@@ -41,9 +41,9 @@ impl_message!(OrderExecution, 3, "orders");
 #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
 #[repr(C)]
 pub struct PoolStateUpdate {
-    pub pool_address: u64,
     pub reserve0: u128,
     pub reserve1: u128,
+    pub pool_address: u64,
     pub block_number: u64,
 }
 
@@ -115,7 +115,9 @@ impl PerformanceMetrics {
         assert!(
             self.throughput >= min_throughput,
             "Throughput too low in {}: {:.2} msg/s (expected >= {:.2} msg/s)",
-            context, self.throughput, min_throughput
+            context,
+            self.throughput,
+            min_throughput
         );
     }
 
@@ -124,7 +126,9 @@ impl PerformanceMetrics {
         assert!(
             avg_latency_ms <= max_latency_ms,
             "Average latency too high in {}: {}ms (expected <= {}ms)",
-            context, avg_latency_ms, max_latency_ms
+            context,
+            avg_latency_ms,
+            max_latency_ms
         );
     }
 }

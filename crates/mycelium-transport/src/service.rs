@@ -8,7 +8,7 @@
 /// # Example
 ///
 /// ```rust
-/// use mycelium_transport::{ManagedService, HealthStatus};
+/// use crate::{ManagedService, HealthStatus};
 ///
 /// struct MyHandler {
 ///     // handler state
@@ -168,7 +168,7 @@ impl std::fmt::Display for HealthStatus {
 /// # Example
 ///
 /// ```rust,no_run
-/// use mycelium_transport::{ManagedService, ServiceRunner};
+/// use crate::{ManagedService, ServiceRunner};
 ///
 /// # struct MyService;
 /// # #[async_trait::async_trait]

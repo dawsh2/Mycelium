@@ -4,8 +4,8 @@
 
 use crate::common::*;
 use mycelium_transport::{MessageBus, TransportConfig};
-use tokio::time::{sleep, Duration};
 use std::sync::Arc;
+use tokio::time::{sleep, Duration};
 
 #[tokio::test]
 async fn test_local_basic_pubsub() {
@@ -25,8 +25,6 @@ async fn test_local_basic_pubsub() {
 async fn test_local_multiple_subscribers() {
     let bus = MessageBus::with_config(TransportConfig {
         channel_capacity: 1000,
-        connection_pool: Default::default(),
-        health_check: Default::default(),
     });
 
     let publisher = bus.publisher::<SwapEvent>();
@@ -80,14 +78,12 @@ async fn test_local_mixed_message_types() {
 async fn test_local_high_frequency_zero_copy() {
     let bus = MessageBus::with_config(TransportConfig {
         channel_capacity: 10000,
-        connection_pool: Default::default(),
-        health_check: Default::default(),
     });
 
     let publisher = bus.publisher::<SwapEvent>();
     let mut subscriber = bus.subscriber::<SwapEvent>();
 
-    let message_count = 10000;
+    let message_count: u64 = 10000;
     let start_time = std::time::Instant::now();
 
     // Publish high frequency messages
@@ -101,7 +97,7 @@ async fn test_local_high_frequency_zero_copy() {
         assert_eq!(*received, create_test_swap_event(i));
     }
 
-    let metrics = PerformanceMetrics::new(message_count, start_time.elapsed());
+    let metrics = PerformanceMetrics::new(message_count as usize, start_time.elapsed());
 
     // Local transport should be extremely fast (nanoseconds per message)
     metrics.assert_throughput_at_least(100000.0, "local transport");
@@ -120,8 +116,6 @@ async fn test_local_high_frequency_zero_copy() {
 async fn test_local_channel_backpressure() {
     let bus = MessageBus::with_config(TransportConfig {
         channel_capacity: 100, // Small capacity to test backpressure
-        connection_pool: Default::default(),
-        health_check: Default::default(),
     });
 
     let publisher = bus.publisher::<SwapEvent>();

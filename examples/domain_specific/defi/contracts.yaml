@@ -1,0 +1,197 @@
+# Mycelium Message Contracts
+# Last Updated: 2025-11-03
+
+# Schema Evolution
+# This section defines schema metadata for protocol versioning and compatibility
+schema:
+  # Unique identifier for this protocol (should be globally unique)
+  # Generated randomly: 0x4D594345 = "MYCE" in ASCII
+  id: 0x4D594345
+
+  # Schema version (increment on breaking changes)
+  version: 1
+
+  # Minimum compatible version (decoders can skip unknown fields within this range)
+  min_compatible: 1
+
+# Tag Ranges
+# Reserved ranges prevent conflicts between core framework and application messages
+tag_ranges:
+  core: 1-999 # Reserved for Mycelium framework (system messages, envelope metadata)
+  app: 1000-49999 # Application messages (trading, market data, etc.)
+  experimental: 50000-65535 # Unstable messages (can change without version bump)
+
+# Type ID Ranges (within 'app' tag range):
+# 1001-1019: Market Data domain
+# 1020-1039: Signal domain
+# 1040-1059: Execution domain
+# 1060-1079: State domain
+# 1080-1099: Control domain
+# 1100-49999: Reserved for future use
+
+messages:
+  InstrumentMeta:
+    tlv_type: 1018 # In 'app' range (1001-1019 for MarketData)
+    domain: MarketData
+    description: "Token metadata (symbol, decimals, chain)"
+    schema_version: "v1"
+    rust_type: "InstrumentMeta"
+    rkyv: true
+    fields:
+      token_address:
+        type: "[u8; 20]"
+        description: "ERC-20 token address"
+        validation:
+          - not_zero: true
+      symbol:
+        type: "String"
+        description: "Token symbol (e.g., WETH, USDC)"
+        validation:
+          - max_length: 32
+          - not_empty: true
+          - no_0x_prefix: true # Indicates RPC error if present
+      decimals:
+        type: "u8"
+        description: "Token decimals (e.g., 18 for WETH, 6 for USDC)"
+        validation:
+          - min: 1
+          - max: 30 # >30 unrealistic
+      chain_id:
+        type: "u32"
+        description: "Chain ID (e.g., 137 for Polygon)"
+        validation:
+          - known_chain: true
+
+  PoolStateUpdate:
+    tlv_type: 1011 # In 'app' range (1001-1019 for MarketData)
+    domain: MarketData
+    description: "DEX pool state update (reserves, liquidity, price)"
+    schema_version: "v3"
+    rust_type: "PoolStateUpdate"
+    rkyv: true
+    required_prior_messages: [InstrumentMeta] # Must know token metadata first
+    fields:
+      pool_address:
+        type: "[u8; 20]"
+        description: "Pool contract address"
+        validation:
+          - not_zero: true
+      venue_id:
+        type: "u16"
+        description: "Protocol identifier (e.g., 1=Uniswap V2, 2=Uniswap V3)"
+        validation:
+          - known_venue: true
+      reserve0:
+        type: "U256"
+        description: "Reserve of token0 (V2 only)"
+        optional: true
+      reserve1:
+        type: "U256"
+        description: "Reserve of token1 (V2 only)"
+        optional: true
+      liquidity:
+        type: "U256"
+        description: "Total liquidity (V3 only)"
+        optional: true
+      sqrt_price_x96:
+        type: "U256"
+        description: "Square root price in Q96 format (V3 only)"
+        optional: true
+      tick:
+        type: "i32"
+        description: "Current tick (V3 only)"
+        optional: true
+      block_number:
+        type: "u64"
+        description: "Block number when state was observed"
+        validation:
+          - monotonic: true # Should only increase
+
+  ArbitrageSignal:
+    tlv_type: 1020 # In 'app' range (1020-1039 for Signal)
+    domain: Signal
+    description: "Profitable arbitrage opportunity detected"
+    schema_version: "v1"
+    rust_type: "ArbitrageSignal"
+    rkyv: true
+    sensitivity: financially_destructive_if_leaked
+    log_payload: false # Never log signal details
+    fields:
+      opportunity_id:
+        type: "u64"
+        description: "Unique identifier for this opportunity"
+      path:
+        type: "Vec<[u8; 20]>"
+        description: "Sequence of pool addresses for arbitrage path"
+        validation:
+          - min_length: 2
+          - max_length: 4  # Most profitable arbs are 2-3 hops
+      estimated_profit_usd:
+        type: "f64"
+        description: "Estimated profit in USD"
+        validation:
+          - min: 0.0
+      gas_estimate_wei:
+        type: "U256"
+        description: "Estimated gas cost in wei"
+      deadline_block:
+        type: "u64"
+        description: "Block number after which opportunity expires"
+
+invariants:
+  - name: "InstrumentMeta before PoolState"
+    description: "Consumers must receive InstrumentMeta for tokens before PoolStateUpdate"
+    enforced_by: [contract_test]
+    severity: error
+
+  - name: "No 0x-prefixed symbols"
+    description: "Token symbols must not start with '0x' (indicates RPC fetch error)"
+    enforced_by: [validation, contract_test]
+    severity: error
+
+  - name: "Decimals range"
+    description: "Token decimals must be 1-30 (0 invalid, >30 unrealistic)"
+    enforced_by: [validation, contract_test]
+    severity: error
+
+  - name: "Venue ID consistency"
+    description: "venue_id must be consistent across messages and storage"
+    enforced_by: [contract_test]
+    severity: error
+
+  - name: "V2/V3 field exclusivity"
+    description: "V2 pools use reserve0/reserve1, V3 uses liquidity/sqrt_price_x96/tick"
+    enforced_by: [validation]
+    severity: warning
+
+domains:
+  MarketData:
+    type_range: "1-19"
+    description: "Blockchain events, pool states, token metadata"
+    latency_slo_p99_ms: 10
+    error_rate_slo_pct: 0.1
+
+  Signal:
+    type_range: "20-39"
+    description: "Trading signals, arbitrage opportunities"
+    latency_slo_p99_ms: 50
+    error_rate_slo_pct: 0.01
+    security: high_sensitivity
+
+  Execution:
+    type_range: "40-59"
+    description: "Order execution, transaction submission"
+    latency_slo_p99_ms: 100
+    error_rate_slo_pct: 0.001
+    security: critical
+
+types:
+  U256:
+    rust_type: "primitive_types::U256"
+    description: "256-bit unsigned integer"
+    serialization: "rkyv"
+
+  Address:
+    rust_type: "[u8; 20]"
+    description: "Ethereum address (20 bytes)"
+    serialization: "rkyv"

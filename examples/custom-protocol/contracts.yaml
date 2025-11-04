@@ -1,0 +1,106 @@
+# Custom Protocol Messages Example
+#
+# This demonstrates how to define your own protocol messages for Mycelium.
+# Each message is generated as a Rust struct with zerocopy serialization.
+#
+# NOTE: Currently only supports primitive types (u8-u64, i8-i64, f32, f64, bool, U256)
+# String and Vec types require mycelium-protocol's FixedStr/FixedVec types.
+
+messages:
+  # Player authentication message
+  PlayerLogin:
+    tlv_type: 1000
+    domain: Game
+    description: "Player login request with credentials"
+    fields:
+      player_id:
+        type: u64
+        description: "Unique player identifier"
+      session_token:
+        type: u64
+        description: "Authentication session token"
+      timestamp:
+        type: u64
+        description: "Login timestamp (Unix epoch)"
+
+  # Player position update (using f64 for compatibility)
+  PlayerPosition:
+    tlv_type: 1001
+    domain: Game
+    description: "Real-time player position update"
+    fields:
+      player_id:
+        type: u64
+        description: "Player identifier"
+      x:
+        type: f64
+        description: "X coordinate"
+      y:
+        type: f64
+        description: "Y coordinate"
+      z:
+        type: f64
+        description: "Z coordinate"
+      rotation:
+        type: f64
+        description: "Player rotation in radians"
+
+  # Game state snapshot
+  GameState:
+    tlv_type: 1002
+    domain: Game
+    description: "Complete game state snapshot"
+    fields:
+      game_id:
+        type: u64
+        description: "Game session identifier"
+      tick:
+        type: u64
+        description: "Game tick number"
+      player_count:
+        type: u32
+        description: "Number of active players"
+      elapsed_time:
+        type: u32
+        description: "Elapsed time in seconds"
+
+  # Chat message (simplified - no actual text, just metadata)
+  ChatMessage:
+    tlv_type: 1003
+    domain: Game
+    description: "Player chat message metadata"
+    fields:
+      sender_id:
+        type: u64
+        description: "Sender player ID"
+      channel_id:
+        type: u32
+        description: "Chat channel identifier"
+      message_hash:
+        type: u64
+        description: "Hash of message content (for dedup)"
+      timestamp:
+        type: u64
+        description: "Message timestamp"
+
+  # Item transaction
+  ItemTransaction:
+    tlv_type: 1004
+    domain: Game
+    description: "Item transfer between players"
+    fields:
+      transaction_id:
+        type: u64
+        description: "Unique transaction ID"
+      from_player:
+        type: u64
+        description: "Source player ID"
+      to_player:
+        type: u64
+        description: "Destination player ID"
+      item_id:
+        type: u32
+        description: "Item identifier"
+      quantity:
+        type: u32
+        description: "Item quantity"

@@ -1,3 +1,4 @@
+use crate::buffer_pool::BufferPool;
 use crate::codec::write_message;
 use crate::error::Result;
 use crate::stream::{handle_stream_connection, StreamSubscriber};
@@ -26,6 +27,8 @@ pub struct TcpTransport {
     /// Type ID → Topic mapping (for efficient routing)
     type_to_topic: Arc<DashMap<u16, String>>,
     channel_capacity: usize,
+    /// Optional buffer pool for zero-allocation reading
+    buffer_pool: Option<Arc<BufferPool>>,
 }
 
 impl TcpTransport {
@@ -33,6 +36,17 @@ impl TcpTransport {
     ///
     /// Binds to the address and starts accepting connections
     pub async fn bind(addr: SocketAddr) -> Result<Self> {
+        Self::bind_with_buffer_pool(addr, None).await
+    }
+
+    /// Create a new TCP transport with buffer pool (server side)
+    ///
+    /// Binds to the address and starts accepting connections.
+    /// Uses buffer pool for zero-allocation reading (recommended for high throughput).
+    pub async fn bind_with_buffer_pool(
+        addr: SocketAddr,
+        buffer_pool: Option<BufferPool>,
+    ) -> Result<Self> {
         let listener = TcpListener::bind(addr).await?;
         let bind_addr = listener.local_addr()?;
 
@@ -43,6 +57,7 @@ impl TcpTransport {
             channels: Arc::new(DashMap::new()),
             type_to_topic: Arc::new(DashMap::new()),
             channel_capacity: 1000,
+            buffer_pool: buffer_pool.map(Arc::new),
         };
 
         // Spawn accept loop
@@ -64,6 +79,7 @@ impl TcpTransport {
             channels: Arc::new(DashMap::new()),
             type_to_topic: Arc::new(DashMap::new()),
             channel_capacity: 1000,
+            buffer_pool: None,
         })
     }
 
@@ -75,6 +91,7 @@ impl TcpTransport {
 
         let channels = Arc::clone(&self.channels);
         let type_to_topic = Arc::clone(&self.type_to_topic);
+        let buffer_pool = self.buffer_pool.clone();
 
         tokio::spawn(async move {
             loop {
@@ -83,8 +100,10 @@ impl TcpTransport {
                         tracing::debug!("Accepted TCP connection from {}", addr);
                         let channels = Arc::clone(&channels);
                         let type_to_topic = Arc::clone(&type_to_topic);
+                        let buffer_pool = buffer_pool.clone();
                         tokio::spawn(async move {
-                            if let Err(e) = handle_stream_connection(stream, channels, type_to_topic).await {
+                            let pool_ref = buffer_pool.as_ref().map(|p| p.as_ref());
+                            if let Err(e) = handle_stream_connection(stream, channels, type_to_topic, pool_ref).await {
                                 tracing::error!("Connection error from {}: {}", addr, e);
                             }
                         });

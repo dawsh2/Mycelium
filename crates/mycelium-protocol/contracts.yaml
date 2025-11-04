@@ -1,177 +1,92 @@
-# Mycelium Message Contracts
-# Last Updated: 2025-11-02
+# Mycelium Protocol - Generic Message Contracts (Examples)
+#
+# This file contains minimal example messages for testing the protocol.
+# Real applications should define their own contracts.yaml with domain-specific messages.
+#
+# See examples/domain_specific/ for real-world usage examples.
 
-# Type ID Ranges:
-# 1-19:   Market Data domain
-# 20-39:  Signal domain
-# 40-59:  Execution domain
-# 60-79:  State domain
-# 80-99:  Control domain
-# 100-255: Reserved for future use
+# Schema Evolution
+schema:
+  # Unique identifier for this protocol
+  id: 0x4D594345 # "MYCE" in ASCII
+  version: 1
+  min_compatible: 1
 
+# Tag Ranges
+# Reserved ranges prevent conflicts between core framework and application messages
+tag_ranges:
+  core: 1-999 # Reserved for Mycelium framework
+  app: 1000-49999 # Application messages
+  experimental: 50000-65535 # Unstable messages
+
+# Example Messages (for testing/demonstration only)
 messages:
-  InstrumentMeta:
-    tlv_type: 18
-    domain: MarketData
-    description: "Token metadata (symbol, decimals, chain)"
+  # Simple text message - demonstrates basic string handling
+  TextMessage:
+    tlv_type: 1001
+    domain: Examples
+    description: "Simple text message"
     schema_version: "v1"
-    rust_type: "InstrumentMeta"
-    rkyv: true
+    rust_type: "TextMessage"
     fields:
-      token_address:
-        type: "[u8; 20]"
-        description: "ERC-20 token address"
-        validation:
-          - not_zero: true
-      symbol:
+      sender:
         type: "String"
-        description: "Token symbol (e.g., WETH, USDC)"
+        description: "Message sender identifier"
         validation:
           - max_length: 32
           - not_empty: true
-          - no_0x_prefix: true # Indicates RPC error if present
-      decimals:
-        type: "u8"
-        description: "Token decimals (e.g., 18 for WETH, 6 for USDC)"
+      content:
+        type: "String"
+        description: "Message content"
         validation:
-          - min: 1
-          - max: 30 # >30 unrealistic
-      chain_id:
-        type: "u32"
-        description: "Chain ID (e.g., 137 for Polygon)"
-        validation:
-          - known_chain: true
-
-  PoolStateUpdate:
-    tlv_type: 11
-    domain: MarketData
-    description: "DEX pool state update (reserves, liquidity, price)"
-    schema_version: "v3"
-    rust_type: "PoolStateUpdate"
-    rkyv: true
-    required_prior_messages: [InstrumentMeta] # Must know token metadata first
-    fields:
-      pool_address:
-        type: "[u8; 20]"
-        description: "Pool contract address"
-        validation:
-          - not_zero: true
-      venue_id:
-        type: "u16"
-        description: "Protocol identifier (e.g., 1=Uniswap V2, 2=Uniswap V3)"
-        validation:
-          - known_venue: true
-      reserve0:
-        type: "U256"
-        description: "Reserve of token0 (V2 only)"
-        optional: true
-      reserve1:
-        type: "U256"
-        description: "Reserve of token1 (V2 only)"
-        optional: true
-      liquidity:
-        type: "U256"
-        description: "Total liquidity (V3 only)"
-        optional: true
-      sqrt_price_x96:
-        type: "U256"
-        description: "Square root price in Q96 format (V3 only)"
-        optional: true
-      tick:
-        type: "i32"
-        description: "Current tick (V3 only)"
-        optional: true
-      block_number:
+          - max_length: 256
+          - not_empty: true
+      timestamp:
         type: "u64"
-        description: "Block number when state was observed"
-        validation:
-          - monotonic: true # Should only increase
+        description: "Unix timestamp (seconds)"
 
-  ArbitrageSignal:
-    tlv_type: 20
-    domain: Signal
-    description: "Profitable arbitrage opportunity detected"
+  # Counter update - demonstrates numeric types
+  CounterUpdate:
+    tlv_type: 1002
+    domain: Examples
+    description: "Counter increment/decrement"
     schema_version: "v1"
-    rust_type: "ArbitrageSignal"
-    rkyv: true
-    sensitivity: financially_destructive_if_leaked
-    log_payload: false # Never log signal details
+    rust_type: "CounterUpdate"
     fields:
-      opportunity_id:
+      counter_id:
         type: "u64"
-        description: "Unique identifier for this opportunity"
-      path:
+        description: "Counter identifier"
+      value:
+        type: "i32"
+        description: "Current counter value"
+      delta:
+        type: "i32"
+        description: "Change since last update"
+
+  # Batch operation - demonstrates arrays
+  BatchOperation:
+    tlv_type: 1003
+    domain: Examples
+    description: "Batch of operations"
+    schema_version: "v1"
+    rust_type: "BatchOperation"
+    fields:
+      operation_id:
+        type: "u64"
+        description: "Unique operation ID"
+      items:
         type: "Vec<[u8; 20]>"
-        description: "Sequence of pool addresses for arbitrage path"
+        description: "List of item identifiers"
         validation:
-          - min_length: 2
-          - max_length: 4 # Most profitable arbs are 2-3 hops
-      estimated_profit_usd:
-        type: "f64"
-        description: "Estimated profit in USD"
-        validation:
-          - min: 0.0
-      gas_estimate_wei:
-        type: "U256"
-        description: "Estimated gas cost in wei"
-      deadline_block:
-        type: "u64"
-        description: "Block number after which opportunity expires"
-
-invariants:
-  - name: "InstrumentMeta before PoolState"
-    description: "Consumers must receive InstrumentMeta for tokens before PoolStateUpdate"
-    enforced_by: [contract_test]
-    severity: error
-
-  - name: "No 0x-prefixed symbols"
-    description: "Token symbols must not start with '0x' (indicates RPC fetch error)"
-    enforced_by: [validation, contract_test]
-    severity: error
-
-  - name: "Decimals range"
-    description: "Token decimals must be 1-30 (0 invalid, >30 unrealistic)"
-    enforced_by: [validation, contract_test]
-    severity: error
-
-  - name: "Venue ID consistency"
-    description: "venue_id must be consistent across messages and storage"
-    enforced_by: [contract_test]
-    severity: error
-
-  - name: "V2/V3 field exclusivity"
-    description: "V2 pools use reserve0/reserve1, V3 uses liquidity/sqrt_price_x96/tick"
-    enforced_by: [validation]
-    severity: warning
+          - min_length: 1
+          - max_length: 10
+      total_count:
+        type: "u32"
+        description: "Total number of items"
 
 domains:
-  MarketData:
-    type_range: "1-19"
-    description: "Blockchain events, pool states, token metadata"
-    latency_slo_p99_ms: 10
-    error_rate_slo_pct: 0.1
-
-  Signal:
-    type_range: "20-39"
-    description: "Trading signals, arbitrage opportunities"
-    latency_slo_p99_ms: 50
-    error_rate_slo_pct: 0.01
-    security: high_sensitivity
-
-  Execution:
-    type_range: "40-59"
-    description: "Order execution, transaction submission"
+  Examples:
+    type_range: "1-999"
+    description: "Example messages for testing and documentation"
     latency_slo_p99_ms: 100
-    error_rate_slo_pct: 0.001
-    security: critical
-
-types:
-  U256:
-    rust_type: "primitive_types::U256"
-    description: "256-bit unsigned integer"
-    serialization: "rkyv"
-
-  Address:
-    rust_type: "[u8; 20]"
-    description: "Ethereum address (20 bytes)"
-    serialization: "rkyv"
+    error_rate_slo_pct: 1.0

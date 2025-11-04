@@ -1,7 +1,7 @@
 //! TLV Codec - Registry-Free Encoder/Decoder
 //!
 //! Implements bijective wire protocol for TLV messages:
-//! ```
+//! ```text
 //! ┌──────────┬──────────┬─────────────────┐
 //! │ Type ID  │ Length   │ Payload         │
 //! │ (u16 LE) │ (u32 LE) │ (zerocopy)      │
@@ -22,7 +22,7 @@
 //! - Fixed 6-byte header overhead
 
 use crate::Message;
-use crate::{ArbitrageSignal, InstrumentMeta, PoolStateUpdate};
+use crate::{BatchOperation, CounterUpdate, TextMessage};
 use zerocopy::{AsBytes, FromBytes};
 
 /// Header size: 2 bytes (type_id) + 4 bytes (length) = 6 bytes
@@ -30,6 +30,25 @@ pub const HEADER_SIZE: usize = 6;
 
 /// Maximum payload size (16MB - reasonable limit for in-memory messages)
 pub const MAX_PAYLOAD_SIZE: usize = 16 * 1024 * 1024;
+
+/// Policy for handling unknown message types
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum UnknownTypePolicy {
+    /// Skip unknown types (forward compatibility)
+    Skip,
+
+    /// Store unknown types as opaque blobs (for inspection/debugging)
+    Store,
+
+    /// Fail on unknown types (strict mode, default)
+    Fail,
+}
+
+impl Default for UnknownTypePolicy {
+    fn default() -> Self {
+        UnknownTypePolicy::Fail
+    }
+}
 
 /// Codec errors
 #[derive(Debug, Clone, PartialEq, thiserror::Error)]
@@ -59,9 +78,9 @@ pub type CodecResult<T> = Result<T, CodecError>;
 ///
 /// ## Example
 /// ```
-/// use mycelium_protocol::{InstrumentMeta, encode_message};
+/// use mycelium_protocol::{CounterUpdate, encode_message};
 ///
-/// let msg = InstrumentMeta::new([1; 20], "WETH", 18, 137).unwrap();
+/// let msg = CounterUpdate { counter_id: 1, value: 100, delta: 5 };
 /// let bytes = encode_message(&msg).unwrap();
 ///
 /// // bytes = [TYPE_ID(u16), LENGTH(u32), PAYLOAD(zerocopy)]
@@ -131,23 +150,17 @@ pub fn parse_header(bytes: &[u8]) -> CodecResult<(TlvHeader, usize)> {
         });
     }
 
-    Ok((
-        TlvHeader {
-            type_id,
-            length,
-        },
-        HEADER_SIZE,
-    ))
+    Ok((TlvHeader { type_id, length }, HEADER_SIZE))
 }
 
 /// Decode TLV message to specific type (zero-copy)
 ///
 /// ## Example
-/// ```
-/// use mycelium_protocol::{InstrumentMeta, decode_message};
+/// ```no_run
+/// use mycelium_protocol::{CounterUpdate, decode_message};
 ///
 /// let bytes = &[/* TLV bytes */];
-/// let msg: InstrumentMeta = decode_message(bytes).unwrap();
+/// let msg: CounterUpdate = decode_message(bytes).unwrap();
 /// ```
 pub fn decode_message<M: Message + FromBytes>(bytes: &[u8]) -> CodecResult<M> {
     let (header, payload_offset) = parse_header(bytes)?;
@@ -160,10 +173,12 @@ pub fn decode_message<M: Message + FromBytes>(bytes: &[u8]) -> CodecResult<M> {
     let payload = &bytes[payload_offset..payload_offset + header.length as usize];
 
     // Zero-copy deserialize with zerocopy
-    M::read_from(payload)
-        .ok_or_else(|| CodecError::DeserializationFailed(
-            format!("Failed to deserialize {}-byte payload", payload.len())
+    M::read_from(payload).ok_or_else(|| {
+        CodecError::DeserializationFailed(format!(
+            "Failed to deserialize {}-byte payload",
+            payload.len()
         ))
+    })
 }
 
 /// Decode TLV to any supported message type (registry-free!)
@@ -171,48 +186,111 @@ pub fn decode_message<M: Message + FromBytes>(bytes: &[u8]) -> CodecResult<M> {
 /// Uses compile-time match on TYPE_ID - no HashMap, no runtime overhead.
 ///
 /// ## Example
-/// ```
-/// use mycelium_protocol::decode_any_message;
+/// ```no_run
+/// use mycelium_protocol::{decode_any_message, AnyMessage};
 ///
 /// let bytes = &[/* TLV bytes */];
 /// match decode_any_message(bytes).unwrap() {
-///     AnyMessage::InstrumentMeta(msg) => println!("Token: {}", msg.symbol_str()),
-///     AnyMessage::PoolStateUpdate(msg) => println!("Pool state"),
-///     AnyMessage::ArbitrageSignal(msg) => println!("Arb signal"),
+///     AnyMessage::TextMessage(msg) => println!("Text message"),
+///     AnyMessage::CounterUpdate(msg) => println!("Counter: {}", msg.value),
+///     AnyMessage::BatchOperation(msg) => println!("Batch op"),
+///     AnyMessage::Unknown(msg) => println!("Unknown type: {}", msg.type_id),
 /// }
 /// ```
 pub fn decode_any_message(bytes: &[u8]) -> CodecResult<AnyMessage> {
+    decode_any_message_with_policy(bytes, UnknownTypePolicy::default())
+}
+
+/// Decode TLV to any supported message type with custom unknown type handling
+///
+/// ## Example - Skip unknown types
+/// ```no_run
+/// use mycelium_protocol::{decode_any_message_with_policy, UnknownTypePolicy};
+///
+/// let bytes = &[/* TLV bytes */];
+/// let result = decode_any_message_with_policy(bytes, UnknownTypePolicy::Skip);
+/// // Returns Ok with Unknown variant for unknown types
+/// ```
+///
+/// ## Example - Store unknown types
+/// ```no_run
+/// use mycelium_protocol::{decode_any_message_with_policy, UnknownTypePolicy, AnyMessage};
+///
+/// let bytes = &[/* TLV bytes */];
+/// match decode_any_message_with_policy(bytes, UnknownTypePolicy::Store).unwrap() {
+///     AnyMessage::Unknown(msg) => {
+///         println!("Unknown type {}, payload: {:?}", msg.type_id, msg.payload);
+///     }
+///     _ => {}
+/// }
+/// ```
+pub fn decode_any_message_with_policy(
+    bytes: &[u8],
+    policy: UnknownTypePolicy,
+) -> CodecResult<AnyMessage> {
     let (header, payload_offset) = parse_header(bytes)?;
     let payload = &bytes[payload_offset..payload_offset + header.length as usize];
 
     // Direct match - no registry lookup!
     match header.type_id {
-        InstrumentMeta::TYPE_ID => {
-            let msg = InstrumentMeta::read_from(payload)
-                .ok_or_else(|| CodecError::DeserializationFailed(
-                    format!("Failed to deserialize InstrumentMeta from {}-byte payload", payload.len())
-                ))?;
-            Ok(AnyMessage::InstrumentMeta(msg))
+        TextMessage::TYPE_ID => {
+            let msg = TextMessage::read_from(payload).ok_or_else(|| {
+                CodecError::DeserializationFailed(format!(
+                    "Failed to deserialize TextMessage from {}-byte payload",
+                    payload.len()
+                ))
+            })?;
+            Ok(AnyMessage::TextMessage(msg))
         }
 
-        PoolStateUpdate::TYPE_ID => {
-            let msg = PoolStateUpdate::read_from(payload)
-                .ok_or_else(|| CodecError::DeserializationFailed(
-                    format!("Failed to deserialize PoolStateUpdate from {}-byte payload", payload.len())
-                ))?;
-            Ok(AnyMessage::PoolStateUpdate(msg))
+        CounterUpdate::TYPE_ID => {
+            let msg = CounterUpdate::read_from(payload).ok_or_else(|| {
+                CodecError::DeserializationFailed(format!(
+                    "Failed to deserialize CounterUpdate from {}-byte payload",
+                    payload.len()
+                ))
+            })?;
+            Ok(AnyMessage::CounterUpdate(msg))
         }
 
-        ArbitrageSignal::TYPE_ID => {
-            let msg = ArbitrageSignal::read_from(payload)
-                .ok_or_else(|| CodecError::DeserializationFailed(
-                    format!("Failed to deserialize ArbitrageSignal from {}-byte payload", payload.len())
-                ))?;
-            Ok(AnyMessage::ArbitrageSignal(msg))
+        BatchOperation::TYPE_ID => {
+            let msg = BatchOperation::read_from(payload).ok_or_else(|| {
+                CodecError::DeserializationFailed(format!(
+                    "Failed to deserialize BatchOperation from {}-byte payload",
+                    payload.len()
+                ))
+            })?;
+            Ok(AnyMessage::BatchOperation(msg))
         }
 
-        unknown => Err(CodecError::UnknownType(unknown)),
+        unknown => {
+            // Handle unknown type based on policy
+            match policy {
+                UnknownTypePolicy::Fail => Err(CodecError::UnknownType(unknown)),
+
+                UnknownTypePolicy::Skip => {
+                    // For skip, we could return an Option, but to keep the signature simple,
+                    // we'll return Unknown variant and let caller decide
+                    Ok(AnyMessage::Unknown(UnknownMessage {
+                        type_id: unknown,
+                        payload: payload.to_vec(),
+                    }))
+                }
+
+                UnknownTypePolicy::Store => Ok(AnyMessage::Unknown(UnknownMessage {
+                    type_id: unknown,
+                    payload: payload.to_vec(),
+                })),
+            }
+        }
     }
+}
+
+/// Opaque unknown message (stored when using UnknownTypePolicy::Store)
+#[derive(Debug, Clone, PartialEq)]
+pub struct UnknownMessage {
+    pub type_id: u16,
+    pub payload: Vec<u8>,
 }
 
 /// Enum of all supported message types
@@ -220,97 +298,121 @@ pub fn decode_any_message(bytes: &[u8]) -> CodecResult<AnyMessage> {
 /// Used by `decode_any_message()` for type-safe dynamic dispatch.
 #[derive(Debug, Clone, PartialEq)]
 pub enum AnyMessage {
-    InstrumentMeta(InstrumentMeta),
-    PoolStateUpdate(PoolStateUpdate),
-    ArbitrageSignal(ArbitrageSignal),
+    TextMessage(TextMessage),
+    CounterUpdate(CounterUpdate),
+    BatchOperation(BatchOperation),
+    Unknown(UnknownMessage),
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::U256;
 
     #[test]
-    fn test_encode_decode_instrument_meta() {
-        let original = InstrumentMeta::new([1; 20], "WETH", 18, 137).unwrap();
+    fn test_encode_decode_text_message() {
+        use crate::fixed_vec::FixedStr;
+
+        // Create a TextMessage manually since we removed constructors
+        let original = TextMessage {
+            sender: FixedStr::from_str("alice").unwrap(),
+            content: FixedStr::from_str("Hello, World!").unwrap(),
+            timestamp: 1234567890,
+        };
 
         // Encode
         let bytes = encode_message(&original).unwrap();
 
         // Verify header
-        assert_eq!(&bytes[0..2], &InstrumentMeta::TYPE_ID.to_le_bytes());
+        assert_eq!(&bytes[0..2], &TextMessage::TYPE_ID.to_le_bytes());
         assert!(bytes.len() > HEADER_SIZE);
 
         // Decode
-        let decoded: InstrumentMeta = decode_message(&bytes).unwrap();
+        let decoded: TextMessage = decode_message(&bytes).unwrap();
 
-        assert_eq!(decoded.symbol_str(), "WETH");
-        assert_eq!(decoded.decimals, 18);
-        assert_eq!(decoded.chain_id, 137);
+        assert_eq!(decoded.sender.as_str().unwrap(), "alice");
+        assert_eq!(decoded.content.as_str().unwrap(), "Hello, World!");
+        assert_eq!(decoded.timestamp, 1234567890);
     }
 
     #[test]
-    fn test_encode_decode_pool_state() {
-        let original = PoolStateUpdate::new_v2(
-            [5; 20],
-            1,
-            U256::from(1000000),
-            U256::from(2000000),
-            54321,
-        )
-        .unwrap();
+    fn test_encode_decode_counter_update() {
+        let original = CounterUpdate {
+            counter_id: 42,
+            value: 100,
+            delta: 5,
+        };
 
         let bytes = encode_message(&original).unwrap();
-        let decoded: PoolStateUpdate = decode_message(&bytes).unwrap();
+        let decoded: CounterUpdate = decode_message(&bytes).unwrap();
 
-        assert_eq!(decoded.reserve0(), U256::from(1000000));
-        assert_eq!(decoded.reserve1(), U256::from(2000000));
-        assert_eq!(decoded.block_number, 54321);
+        assert_eq!(decoded.counter_id, 42);
+        assert_eq!(decoded.value, 100);
+        assert_eq!(decoded.delta, 5);
     }
 
     #[test]
-    fn test_encode_decode_arbitrage_signal() {
-        let path = [[1; 20], [2; 20], [3; 20]];
-        let original =
-            ArbitrageSignal::new(999, &path, 250.75, U256::from(42000), 99999).unwrap();
+    fn test_encode_decode_batch_operation() {
+        use crate::fixed_vec::FixedVec;
+
+        let items = vec![[1; 20], [2; 20], [3; 20]];
+        let original = BatchOperation {
+            operation_id: 999,
+            items: FixedVec::from_slice(&items).unwrap(),
+            total_count: 3,
+        };
 
         let bytes = encode_message(&original).unwrap();
-        let decoded: ArbitrageSignal = decode_message(&bytes).unwrap();
+        let decoded: BatchOperation = decode_message(&bytes).unwrap();
 
-        assert_eq!(decoded.opportunity_id, 999);
-        assert_eq!(decoded.hop_count(), 3);
-        assert_eq!(decoded.estimated_profit_usd, 250.75);
+        assert_eq!(decoded.operation_id, 999);
+        assert_eq!(decoded.items.len(), 3);
+        assert_eq!(decoded.total_count, 3);
     }
 
     #[test]
     fn test_decode_any_message() {
-        // Test InstrumentMeta
-        let meta = InstrumentMeta::new([1; 20], "USDC", 6, 137).unwrap();
-        let bytes = encode_message(&meta).unwrap();
+        use crate::fixed_vec::FixedStr;
+
+        // Test TextMessage
+        let msg = TextMessage {
+            sender: FixedStr::from_str("bob").unwrap(),
+            content: FixedStr::from_str("test").unwrap(),
+            timestamp: 999,
+        };
+        let bytes = encode_message(&msg).unwrap();
 
         match decode_any_message(&bytes).unwrap() {
-            AnyMessage::InstrumentMeta(msg) => assert_eq!(msg.symbol_str(), "USDC"),
-            _ => panic!("Expected InstrumentMeta"),
+            AnyMessage::TextMessage(decoded) => {
+                assert_eq!(decoded.sender.as_str().unwrap(), "bob");
+            }
+            _ => panic!("Expected TextMessage"),
         }
 
-        // Test PoolStateUpdate
-        let pool = PoolStateUpdate::new_v2([2; 20], 1, U256::from(100), U256::from(200), 123)
-            .unwrap();
-        let bytes = encode_message(&pool).unwrap();
+        // Test CounterUpdate
+        let counter = CounterUpdate {
+            counter_id: 5,
+            value: 10,
+            delta: 1,
+        };
+        let bytes = encode_message(&counter).unwrap();
 
         match decode_any_message(&bytes).unwrap() {
-            AnyMessage::PoolStateUpdate(msg) => assert_eq!(msg.block_number, 123),
-            _ => panic!("Expected PoolStateUpdate"),
+            AnyMessage::CounterUpdate(msg) => assert_eq!(msg.counter_id, 5),
+            _ => panic!("Expected CounterUpdate"),
         }
     }
 
     #[test]
     fn test_bijection_property() {
         // Encode → Decode → Encode should produce same bytes
-        let original = InstrumentMeta::new([1; 20], "WETH", 18, 137).unwrap();
+        let original = CounterUpdate {
+            counter_id: 1,
+            value: 50,
+            delta: 10,
+        };
 
         let bytes1 = encode_message(&original).unwrap();
-        let decoded: InstrumentMeta = decode_message(&bytes1).unwrap();
+        let decoded: CounterUpdate = decode_message(&bytes1).unwrap();
         let bytes2 = encode_message(&decoded).unwrap();
 
         assert_eq!(bytes1, bytes2); // Perfect bijection!
@@ -318,12 +420,18 @@ mod tests {
 
     #[test]
     fn test_parse_header() {
-        let msg = InstrumentMeta::new([1; 20], "WETH", 18, 137).unwrap();
+        use crate::fixed_vec::FixedStr;
+
+        let msg = TextMessage {
+            sender: FixedStr::from_str("test").unwrap(),
+            content: FixedStr::from_str("header test").unwrap(),
+            timestamp: 0,
+        };
         let bytes = encode_message(&msg).unwrap();
 
         let (header, offset) = parse_header(&bytes).unwrap();
 
-        assert_eq!(header.type_id, InstrumentMeta::TYPE_ID);
+        assert_eq!(header.type_id, TextMessage::TYPE_ID);
         assert_eq!(offset, HEADER_SIZE);
         assert!(header.length > 0);
     }
@@ -349,38 +457,137 @@ mod tests {
 
     #[test]
     fn test_roundtrip_all_types() {
-        // InstrumentMeta
-        let meta = InstrumentMeta::new([1; 20], "DAI", 18, 137).unwrap();
-        let bytes = encode_message(&meta).unwrap();
-        let decoded: InstrumentMeta = decode_message(&bytes).unwrap();
-        assert_eq!(meta.symbol_str(), decoded.symbol_str());
+        use crate::fixed_vec::{FixedStr, FixedVec};
 
-        // PoolStateUpdate V2
-        let pool = PoolStateUpdate::new_v2([2; 20], 1, U256::from(1000), U256::from(2000), 100)
-            .unwrap();
-        let bytes = encode_message(&pool).unwrap();
-        let decoded: PoolStateUpdate = decode_message(&bytes).unwrap();
-        assert_eq!(pool.reserve0(), decoded.reserve0());
+        // TextMessage
+        let msg = TextMessage {
+            sender: FixedStr::from_str("alice").unwrap(),
+            content: FixedStr::from_str("test").unwrap(),
+            timestamp: 123,
+        };
+        let bytes = encode_message(&msg).unwrap();
+        let decoded: TextMessage = decode_message(&bytes).unwrap();
+        assert_eq!(
+            msg.sender.as_str().unwrap(),
+            decoded.sender.as_str().unwrap()
+        );
 
-        // PoolStateUpdate V3
-        let pool = PoolStateUpdate::new_v3(
-            [3; 20],
-            2,
-            U256::from(5000),
-            U256::from(123456),
-            -100,
-            200,
-        )
-        .unwrap();
-        let bytes = encode_message(&pool).unwrap();
-        let decoded: PoolStateUpdate = decode_message(&bytes).unwrap();
-        assert_eq!(pool.liquidity(), decoded.liquidity());
+        // CounterUpdate
+        let counter = CounterUpdate {
+            counter_id: 42,
+            value: 100,
+            delta: 5,
+        };
+        let bytes = encode_message(&counter).unwrap();
+        let decoded: CounterUpdate = decode_message(&bytes).unwrap();
+        assert_eq!(counter.counter_id, decoded.counter_id);
 
-        // ArbitrageSignal
-        let path = [[1; 20], [2; 20]];
-        let signal = ArbitrageSignal::new(123, &path, 50.0, U256::from(1000), 500).unwrap();
-        let bytes = encode_message(&signal).unwrap();
-        let decoded: ArbitrageSignal = decode_message(&bytes).unwrap();
-        assert_eq!(signal.opportunity_id, decoded.opportunity_id);
+        // BatchOperation
+        let items = vec![[1; 20], [2; 20]];
+        let batch = BatchOperation {
+            operation_id: 999,
+            items: FixedVec::from_slice(&items).unwrap(),
+            total_count: 2,
+        };
+        let bytes = encode_message(&batch).unwrap();
+        let decoded: BatchOperation = decode_message(&bytes).unwrap();
+        assert_eq!(batch.operation_id, decoded.operation_id);
+    }
+
+    #[test]
+    fn test_unknown_type_fail_policy() {
+        // Create a fake message with unknown type_id
+        let unknown_type_id: u16 = 9999; // Not in our schema
+        let payload = vec![1, 2, 3, 4];
+
+        // Build TLV manually
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(&unknown_type_id.to_le_bytes());
+        bytes.extend_from_slice(&(payload.len() as u32).to_le_bytes());
+        bytes.extend_from_slice(&payload);
+
+        // Default policy (Fail) should return error
+        let result = decode_any_message(&bytes);
+        assert!(matches!(result, Err(CodecError::UnknownType(9999))));
+    }
+
+    #[test]
+    fn test_unknown_type_skip_policy() {
+        // Create a fake message with unknown type_id
+        let unknown_type_id: u16 = 9999;
+        let payload = vec![1, 2, 3, 4];
+
+        // Build TLV manually
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(&unknown_type_id.to_le_bytes());
+        bytes.extend_from_slice(&(payload.len() as u32).to_le_bytes());
+        bytes.extend_from_slice(&payload);
+
+        // Skip policy should return Unknown variant
+        let result = decode_any_message_with_policy(&bytes, UnknownTypePolicy::Skip);
+        assert!(result.is_ok());
+
+        match result.unwrap() {
+            AnyMessage::Unknown(msg) => {
+                assert_eq!(msg.type_id, 9999);
+                assert_eq!(msg.payload, vec![1, 2, 3, 4]);
+            }
+            _ => panic!("Expected Unknown variant"),
+        }
+    }
+
+    #[test]
+    fn test_unknown_type_store_policy() {
+        // Create a fake message with unknown type_id
+        let unknown_type_id: u16 = 8888;
+        let payload = vec![0xDE, 0xAD, 0xBE, 0xEF];
+
+        // Build TLV manually
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(&unknown_type_id.to_le_bytes());
+        bytes.extend_from_slice(&(payload.len() as u32).to_le_bytes());
+        bytes.extend_from_slice(&payload);
+
+        // Store policy should return Unknown variant with payload
+        let result = decode_any_message_with_policy(&bytes, UnknownTypePolicy::Store);
+        assert!(result.is_ok());
+
+        match result.unwrap() {
+            AnyMessage::Unknown(msg) => {
+                assert_eq!(msg.type_id, 8888);
+                assert_eq!(msg.payload, vec![0xDE, 0xAD, 0xBE, 0xEF]);
+            }
+            _ => panic!("Expected Unknown variant"),
+        }
+    }
+
+    #[test]
+    fn test_known_type_with_policy() {
+        use crate::fixed_vec::FixedStr;
+
+        // Known type should decode normally regardless of policy
+        let msg = TextMessage {
+            sender: FixedStr::from_str("test").unwrap(),
+            content: FixedStr::from_str("content").unwrap(),
+            timestamp: 999,
+        };
+        let bytes = encode_message(&msg).unwrap();
+
+        // Should work with all policies
+        for policy in [
+            UnknownTypePolicy::Fail,
+            UnknownTypePolicy::Skip,
+            UnknownTypePolicy::Store,
+        ] {
+            let result = decode_any_message_with_policy(&bytes, policy);
+            assert!(result.is_ok());
+
+            match result.unwrap() {
+                AnyMessage::TextMessage(decoded) => {
+                    assert_eq!(decoded.sender.as_str().unwrap(), "test");
+                }
+                _ => panic!("Expected TextMessage"),
+            }
+        }
     }
 }

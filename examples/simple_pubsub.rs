@@ -1,47 +1,52 @@
 /// Simple pub/sub example demonstrating zero-copy message passing
 ///
+/// This is a generic example that works for any domain.
+/// For domain-specific examples, see:
+/// - examples/generic/ (IoT, gaming, etc.)
+/// - examples/domain_specific/ (DeFi, crypto trading)
+///
 /// Run with: cargo run --example simple_pubsub
 use mycelium_protocol::{impl_message, Message};
 use mycelium_transport::MessageBus;
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
-// Define a message type (C layout for zerocopy)
+// Define a generic event message (C layout for zerocopy)
 #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
 #[repr(C)]
-struct SwapEvent {
-    pool_address: u64,
-    amount_in: u64,
-    amount_out: u64,
-    block_number: u64,
+struct DataEvent {
+    source_id: u64,
+    value_a: u64,
+    value_b: u64,
+    timestamp: u64,
 }
 
 // Implement Message trait
-impl_message!(SwapEvent, 11, "market-data");
+impl_message!(DataEvent, 1, "events");
 
 #[tokio::main]
 async fn main() {
-    println!("=== Mycelium Message Bus Example ===\n");
+    println!("=== Mycelium: Simple Pub/Sub Example ===\n");
 
     // Create message bus (local transport with Arc<T>)
     let bus = MessageBus::new();
 
     // Create publisher
-    let publisher = bus.publisher::<SwapEvent>();
+    let publisher = bus.publisher::<DataEvent>();
 
     // Create multiple subscribers
-    let mut subscriber1 = bus.subscriber::<SwapEvent>();
-    let mut subscriber2 = bus.subscriber::<SwapEvent>();
+    let mut subscriber1 = bus.subscriber::<DataEvent>();
+    let mut subscriber2 = bus.subscriber::<DataEvent>();
 
     println!("Created 1 publisher and 2 subscribers");
-    println!("Subscriber count: {}\n", bus.subscriber_count::<SwapEvent>());
+    println!("Subscriber count: {}\n", bus.subscriber_count::<DataEvent>());
 
     // Spawn subscriber tasks
     let sub1_handle = tokio::spawn(async move {
         println!("[Subscriber 1] Waiting for events...");
         while let Some(event) = subscriber1.recv().await {
             println!(
-                "[Subscriber 1] Received: pool={}, amount_in={}, block={}",
-                event.pool_address, event.amount_in, event.block_number
+                "[Subscriber 1] Received: source={}, value_a={}, timestamp={}",
+                event.source_id, event.value_a, event.timestamp
             );
         }
     });
@@ -50,8 +55,8 @@ async fn main() {
         println!("[Subscriber 2] Waiting for events...");
         while let Some(event) = subscriber2.recv().await {
             println!(
-                "[Subscriber 2] Received: pool={}, amount_out={}, block={}",
-                event.pool_address, event.amount_out, event.block_number
+                "[Subscriber 2] Received: source={}, value_b={}, timestamp={}",
+                event.source_id, event.value_b, event.timestamp
             );
         }
     });
@@ -63,11 +68,11 @@ async fn main() {
     println!("\n[Publisher] Publishing events...\n");
 
     for i in 1..=3 {
-        let event = SwapEvent {
-            pool_address: i,
-            amount_in: 1000 * i as u64,
-            amount_out: 900 * i as u64,
-            block_number: 10000 + i,
+        let event = DataEvent {
+            source_id: i,
+            value_a: 1000 * i as u64,
+            value_b: 900 * i as u64,
+            timestamp: 10000 + i,
         };
 
         publisher.publish(event).await.unwrap();

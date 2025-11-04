@@ -1,11 +1,10 @@
 use crate::any::{AnyPublisher, AnySubscriber};
 use crate::bounded::{BoundedPublisher, BoundedSubscriber};
-use crate::config::TransportConfig;
+use crate::config::{Topology, TransportConfig, TransportType};
 use crate::local::LocalTransport;
 use crate::tcp::{TcpPublisher, TcpSubscriber, TcpTransport};
 use crate::unix::{UnixPublisher, UnixSubscriber, UnixTransport};
 use crate::{Publisher, Result, Subscriber, TransportError};
-use mycelium_config::{Topology, TransportType};
 use mycelium_protocol::Message;
 use std::collections::HashMap;
 use std::net::SocketAddr;
@@ -20,6 +19,7 @@ use tokio::sync::RwLock;
 /// - TCP transport for distributed communication (cross-machine)
 /// - Topology-aware transport selection
 /// - Configurable performance parameters
+#[derive(Clone)]
 pub struct MessageBus {
     /// Local transport for in-node communication
     local: LocalTransport,
@@ -79,7 +79,11 @@ impl MessageBus {
     }
 
     /// Create a message bus from topology configuration with custom transport config
-    pub fn from_topology_with_config(topology: Topology, node_name: impl Into<String>, config: TransportConfig) -> Self {
+    pub fn from_topology_with_config(
+        topology: Topology,
+        node_name: impl Into<String>,
+        config: TransportConfig,
+    ) -> Self {
         Self {
             local: LocalTransport::with_config(config.clone()),
             config,
@@ -146,7 +150,7 @@ impl MessageBus {
     ///
     /// # Example
     /// ```
-    /// use mycelium_transport::MessageBus;
+    /// use crate::MessageBus;
     /// use mycelium_protocol::routing::ActorId;
     ///
     /// let bus = MessageBus::new();
@@ -164,7 +168,7 @@ impl MessageBus {
     ///
     /// # Example
     /// ```
-    /// use mycelium_transport::MessageBus;
+    /// use crate::MessageBus;
     /// use mycelium_protocol::routing::ActorId;
     ///
     /// let bus = MessageBus::new();
@@ -179,10 +183,7 @@ impl MessageBus {
     /// Get a Unix publisher to a specific node
     ///
     /// Returns None if no topology is configured or node not found.
-    pub async fn unix_publisher<M: Message>(
-        &self,
-        target_node: &str,
-    ) -> Option<UnixPublisher<M>> {
+    pub async fn unix_publisher<M: Message>(&self, target_node: &str) -> Option<UnixPublisher<M>> {
         let topology = self.topology.as_ref()?;
         let socket_path = topology.socket_path(target_node);
 
@@ -238,10 +239,7 @@ impl MessageBus {
     /// Get a TCP subscriber from a specific remote node
     ///
     /// Returns None if no topology is configured or node address not found.
-    pub async fn tcp_subscriber<M: Message>(
-        &self,
-        source_node: &str,
-    ) -> Option<TcpSubscriber<M>> {
+    pub async fn tcp_subscriber<M: Message>(&self, source_node: &str) -> Option<TcpSubscriber<M>> {
         let topology = self.topology.as_ref()?;
 
         // Find node by name and build socket address
@@ -298,14 +296,18 @@ impl MessageBus {
             TransportType::Local
         } else {
             // Get first service from each node for transport determination
-            let my_service = topology.nodes
+            let my_service = topology
+                .nodes
                 .iter()
                 .find(|n| &n.name == my_node)
                 .and_then(|n| n.services.first())
-                .ok_or_else(|| TransportError::ServiceNotFound("No services in my node".to_string()))?;
+                .ok_or_else(|| {
+                    TransportError::ServiceNotFound("No services in my node".to_string())
+                })?;
 
-            let target_service_name = target_node.services.first()
-                .ok_or_else(|| TransportError::ServiceNotFound("No services in target node".to_string()))?;
+            let target_service_name = target_node.services.first().ok_or_else(|| {
+                TransportError::ServiceNotFound("No services in target node".to_string())
+            })?;
 
             topology.transport_between(my_service, target_service_name)
         };
@@ -330,15 +332,12 @@ impl MessageBus {
             }
             TransportType::Tcp => {
                 // Different machine
-                let pub_ = self
-                    .tcp_publisher(&target_node.name)
-                    .await
-                    .ok_or_else(|| {
-                        TransportError::ServiceNotFound(format!(
-                            "Failed to create TCP publisher to '{}'",
-                            target_node.name
-                        ))
-                    })?;
+                let pub_ = self.tcp_publisher(&target_node.name).await.ok_or_else(|| {
+                    TransportError::ServiceNotFound(format!(
+                        "Failed to create TCP publisher to '{}'",
+                        target_node.name
+                    ))
+                })?;
                 Ok(AnyPublisher::Tcp(pub_))
             }
         }
@@ -358,7 +357,7 @@ impl MessageBus {
     /// - Transport initialization fails
     pub async fn subscriber_from<M>(&self, source_service: &str) -> Result<AnySubscriber<M>>
     where
-M: Message + Clone,
+        M: Message + Clone,
     {
         let topology = self.topology.as_ref().ok_or_else(|| {
             TransportError::ServiceNotFound(
@@ -383,14 +382,18 @@ M: Message + Clone,
             TransportType::Local
         } else {
             // Get first service from each node for transport determination
-            let my_service = topology.nodes
+            let my_service = topology
+                .nodes
                 .iter()
                 .find(|n| &n.name == my_node)
                 .and_then(|n| n.services.first())
-                .ok_or_else(|| TransportError::ServiceNotFound("No services in my node".to_string()))?;
+                .ok_or_else(|| {
+                    TransportError::ServiceNotFound("No services in my node".to_string())
+                })?;
 
-            let source_service_name = source_node.services.first()
-                .ok_or_else(|| TransportError::ServiceNotFound("No services in source node".to_string()))?;
+            let source_service_name = source_node.services.first().ok_or_else(|| {
+                TransportError::ServiceNotFound("No services in source node".to_string())
+            })?;
 
             topology.transport_between(my_service, source_service_name)
         };
@@ -460,19 +463,22 @@ M: Message + Clone,
     /// # Example
     ///
     /// ```rust
-    /// # use mycelium_transport::MessageBus;
-    /// # use mycelium_protocol::PoolStateUpdate;
+    /// # use crate::MessageBus;
+    /// # use mycelium_protocol::DataEvent;
     /// # async fn example() {
     /// let bus = MessageBus::new();
     ///
     /// // Create bounded channel with capacity 100
-    /// let (pub_, mut sub) = bus.bounded_pair::<PoolStateUpdate>(100);
+    /// let (pub_, mut sub) = bus.bounded_pair::<DataEvent>(100);
     ///
-    /// pub_.publish(PoolStateUpdate::default()).await.unwrap();
+    /// pub_.publish(DataEvent::default()).await.unwrap();
     /// let msg = sub.recv().await.unwrap();
     /// # }
     /// ```
-    pub fn bounded_pair<M: Message>(&self, capacity: usize) -> (BoundedPublisher<M>, BoundedSubscriber<M>) {
+    pub fn bounded_pair<M: Message>(
+        &self,
+        capacity: usize,
+    ) -> (BoundedPublisher<M>, BoundedSubscriber<M>) {
         BoundedPublisher::new(capacity)
     }
 }
@@ -489,52 +495,53 @@ mod tests {
     use mycelium_protocol::impl_message;
     use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
+    // Generic test message (domain-agnostic)
     #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
     #[repr(C)]
-    struct SwapEvent {
-        pool: u64,
-        amount: u64,  // Simplified to u64 to avoid padding
+    struct TestEvent {
+        entity_id: u64,
+        value: u64,
     }
 
-    impl_message!(SwapEvent, 11, "market-data");
+    impl_message!(TestEvent, 1, "test.events");
 
     #[tokio::test]
     async fn test_message_bus_basic() {
         let bus = MessageBus::new();
 
-        let pub_ = bus.publisher::<SwapEvent>();
-        let mut sub = bus.subscriber::<SwapEvent>();
+        let pub_ = bus.publisher::<TestEvent>();
+        let mut sub = bus.subscriber::<TestEvent>();
 
-        pub_.publish(SwapEvent {
-            pool: 1,
-            amount: 1000,
+        pub_.publish(TestEvent {
+            entity_id: 1,
+            value: 1000,
         })
         .await
         .unwrap();
 
         let event = sub.recv().await.unwrap();
-        assert_eq!(event.pool, 1);
-        assert_eq!(event.amount, 1000);
+        assert_eq!(event.entity_id, 1);
+        assert_eq!(event.value, 1000);
     }
 
     #[tokio::test]
     async fn test_multiple_publishers() {
         let bus = MessageBus::new();
 
-        let pub1 = bus.publisher::<SwapEvent>();
-        let pub2 = bus.publisher::<SwapEvent>();
-        let mut sub = bus.subscriber::<SwapEvent>();
+        let pub1 = bus.publisher::<TestEvent>();
+        let pub2 = bus.publisher::<TestEvent>();
+        let mut sub = bus.subscriber::<TestEvent>();
 
-        pub1.publish(SwapEvent {
-            pool: 1,
-            amount: 1000,
+        pub1.publish(TestEvent {
+            entity_id: 1,
+            value: 1000,
         })
         .await
         .unwrap();
 
-        pub2.publish(SwapEvent {
-            pool: 2,
-            amount: 2000,
+        pub2.publish(TestEvent {
+            entity_id: 2,
+            value: 2000,
         })
         .await
         .unwrap();
@@ -542,55 +549,55 @@ mod tests {
         let event1 = sub.recv().await.unwrap();
         let event2 = sub.recv().await.unwrap();
 
-        assert_eq!(event1.pool, 1);
-        assert_eq!(event2.pool, 2);
+        assert_eq!(event1.entity_id, 1);
+        assert_eq!(event2.entity_id, 2);
     }
 
     #[tokio::test]
     async fn test_subscriber_count() {
         let bus = MessageBus::new();
 
-        let _sub1 = bus.subscriber::<SwapEvent>();
-        let _sub2 = bus.subscriber::<SwapEvent>();
+        let _sub1 = bus.subscriber::<TestEvent>();
+        let _sub2 = bus.subscriber::<TestEvent>();
 
-        assert_eq!(bus.subscriber_count::<SwapEvent>(), 2);
+        assert_eq!(bus.subscriber_count::<TestEvent>(), 2);
     }
 
     #[tokio::test]
     async fn test_custom_capacity() {
         let bus = MessageBus::with_capacity(5);
 
-        let pub_ = bus.publisher::<SwapEvent>();
-        let mut sub = bus.subscriber::<SwapEvent>();
+        let pub_ = bus.publisher::<TestEvent>();
+        let mut sub = bus.subscriber::<TestEvent>();
 
-        pub_.publish(SwapEvent {
-            pool: 1,
-            amount: 1000,
+        pub_.publish(TestEvent {
+            entity_id: 1,
+            value: 1000,
         })
         .await
         .unwrap();
 
         let event = sub.recv().await.unwrap();
-        assert_eq!(event.pool, 1);
+        assert_eq!(event.entity_id, 1);
     }
 
     #[tokio::test]
     async fn test_bundled_deployment() {
-        use mycelium_config::{Node, Topology};
+        use crate::config::{Node, Topology};
 
         // Create topology with 2 nodes
         let dir = tempfile::tempdir().unwrap();
         let topology = Topology {
             nodes: vec![
                 Node {
-                    name: "adapters".to_string(),
-                    services: vec!["polygon-adapter".to_string()],
+                    name: "collectors".to_string(),
+                    services: vec!["data-collector".to_string()],
                     host: None,
                     port: None,
                 },
                 Node {
-                    name: "strategies".to_string(),
-                    services: vec!["flash-arbitrage".to_string()],
+                    name: "processors".to_string(),
+                    services: vec!["processor".to_string()],
                     host: None,
                     port: None,
                 },
@@ -598,8 +605,8 @@ mod tests {
             socket_dir: dir.path().to_path_buf(),
         };
 
-        // Node 1: adapters (server side - binds socket)
-        let socket_path = topology.socket_path("adapters");
+        // Node 1: collectors (server side - binds socket)
+        let socket_path = topology.socket_path("collectors");
         let _adapter_transport = crate::unix::UnixTransport::bind(&socket_path)
             .await
             .unwrap();
@@ -607,46 +614,49 @@ mod tests {
         // Give server time to start
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-        // Node 1: Create message bus for adapters
-        let adapters_bus = MessageBus::from_topology(topology.clone(), "adapters");
+        // Node 1: Create message bus for collectors
+        let collectors_bus = MessageBus::from_topology(topology.clone(), "collectors");
+
+        // Node 1: Create subscriber first (so publish doesn't fail)
+        let _sub = collectors_bus.subscriber::<TestEvent>();
 
         // Node 1: Publish locally and listen for external subscriptions
-        let adapter_pub = adapters_bus.publisher::<SwapEvent>();
+        let adapter_pub = collectors_bus.publisher::<TestEvent>();
         adapter_pub
-            .publish(SwapEvent {
-                pool: 100,
-                amount: 5000,
+            .publish(TestEvent {
+                entity_id: 100,
+                value: 5000,
             })
             .await
             .unwrap();
 
-        // Node 2: Create message bus for strategies
-        let strategies_bus = MessageBus::from_topology(topology, "strategies");
+        // Node 2: Create message bus for processors
+        let processors_bus = MessageBus::from_topology(topology, "processors");
 
-        // Node 2: Get Unix publisher to send to adapters node
-        let unix_pub = strategies_bus
-            .unix_publisher::<SwapEvent>("adapters")
+        // Node 2: Get Unix publisher to send to collectors node
+        let unix_pub = processors_bus
+            .unix_publisher::<TestEvent>("collectors")
             .await
             .expect("Failed to create Unix publisher");
 
-        // Node 2: Publish message to adapters node
+        // Node 2: Publish message to collectors node
         unix_pub
-            .publish(SwapEvent {
-                pool: 200,
-                amount: 10000,
+            .publish(TestEvent {
+                entity_id: 200,
+                value: 10000,
             })
             .await
             .unwrap();
 
         // Verify metadata
-        assert_eq!(adapters_bus.node_name(), Some("adapters"));
-        assert_eq!(strategies_bus.node_name(), Some("strategies"));
-        assert!(adapters_bus.topology().is_some());
+        assert_eq!(collectors_bus.node_name(), Some("collectors"));
+        assert_eq!(processors_bus.node_name(), Some("processors"));
+        assert!(collectors_bus.topology().is_some());
     }
 
     #[tokio::test]
     async fn test_from_topology() {
-        use mycelium_config::{Topology};
+        use crate::config::Topology;
 
         let dir = tempfile::tempdir().unwrap();
         let topology = Topology {
@@ -662,21 +672,21 @@ mod tests {
 
     #[tokio::test]
     async fn test_distributed_deployment() {
-        use mycelium_config::{Node, Topology};
+        use crate::config::{Node, Topology};
 
         // Create topology with 2 nodes on different hosts
         let dir = tempfile::tempdir().unwrap();
         let topology = Topology {
             nodes: vec![
                 Node {
-                    name: "adapters".to_string(),
-                    services: vec!["polygon-adapter".to_string()],
+                    name: "collectors".to_string(),
+                    services: vec!["data-collector".to_string()],
                     host: Some("127.0.0.1".to_string()),
                     port: Some(0), // Will be replaced with actual port
                 },
                 Node {
-                    name: "strategies".to_string(),
-                    services: vec!["flash-arbitrage".to_string()],
+                    name: "processors".to_string(),
+                    services: vec!["processor".to_string()],
                     host: Some("127.0.0.1".to_string()),
                     port: Some(0),
                 },
@@ -684,7 +694,7 @@ mod tests {
             socket_dir: dir.path().to_path_buf(),
         };
 
-        // Node 1: adapters (server side - binds socket)
+        // Node 1: collectors (server side - binds socket)
         let adapter_addr = "127.0.0.1:0".parse().unwrap();
         let adapter_transport = crate::tcp::TcpTransport::bind(adapter_addr).await.unwrap();
         let adapter_bind_addr = adapter_transport.local_addr();
@@ -696,53 +706,56 @@ mod tests {
         // Give server time to start
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-        // Node 1: Create message bus for adapters
-        let adapters_bus = MessageBus::from_topology(updated_topology.clone(), "adapters");
+        // Node 1: Create message bus for collectors
+        let collectors_bus = MessageBus::from_topology(updated_topology.clone(), "collectors");
+
+        // Node 1: Create subscriber first (so publish doesn't fail)
+        let _sub = collectors_bus.subscriber::<TestEvent>();
 
         // Node 1: Publish locally
-        let adapter_pub = adapters_bus.publisher::<SwapEvent>();
+        let adapter_pub = collectors_bus.publisher::<TestEvent>();
         adapter_pub
-            .publish(SwapEvent {
-                pool: 100,
-                amount: 5000,
+            .publish(TestEvent {
+                entity_id: 100,
+                value: 5000,
             })
             .await
             .unwrap();
 
-        // Node 2: Create message bus for strategies
-        let strategies_bus = MessageBus::from_topology(updated_topology, "strategies");
+        // Node 2: Create message bus for processors
+        let processors_bus = MessageBus::from_topology(updated_topology, "processors");
 
-        // Node 2: Get TCP publisher to send to adapters node
-        let tcp_pub = strategies_bus
-            .tcp_publisher::<SwapEvent>("adapters")
+        // Node 2: Get TCP publisher to send to collectors node
+        let tcp_pub = processors_bus
+            .tcp_publisher::<TestEvent>("collectors")
             .await
             .expect("Failed to create TCP publisher");
 
-        // Node 2: Publish message to adapters node
+        // Node 2: Publish message to collectors node
         tcp_pub
-            .publish(SwapEvent {
-                pool: 200,
-                amount: 10000,
+            .publish(TestEvent {
+                entity_id: 200,
+                value: 10000,
             })
             .await
             .unwrap();
 
         // Verify metadata
-        assert_eq!(adapters_bus.node_name(), Some("adapters"));
-        assert_eq!(strategies_bus.node_name(), Some("strategies"));
-        assert!(adapters_bus.topology().is_some());
+        assert_eq!(collectors_bus.node_name(), Some("collectors"));
+        assert_eq!(processors_bus.node_name(), Some("processors"));
+        assert!(collectors_bus.topology().is_some());
     }
 
     #[tokio::test]
     async fn test_publisher_to_same_node() {
-        use mycelium_config::{Node, Topology};
+        use crate::config::{Node, Topology};
 
         // Create topology with services in same node
         let dir = tempfile::tempdir().unwrap();
         let topology = Topology {
             nodes: vec![Node {
                 name: "trading".to_string(),
-                services: vec!["portfolio-state".to_string(), "order-executor".to_string()],
+                services: vec!["state-manager".to_string(), "executor".to_string()],
                 host: None,
                 port: None,
             }],
@@ -752,43 +765,40 @@ mod tests {
         let bus = MessageBus::from_topology(topology, "trading");
 
         // Get publisher to service in same node
-        let pub_ = bus
-            .publisher_to::<SwapEvent>("order-executor")
-            .await
-            .unwrap();
+        let pub_ = bus.publisher_to::<TestEvent>("executor").await.unwrap();
 
         // Should use local transport
         assert_eq!(pub_.transport_type(), "local");
 
         // Verify it works
-        let mut sub = bus.subscriber::<SwapEvent>();
-        pub_.publish(SwapEvent {
-            pool: 1,
-            amount: 100,
+        let mut sub = bus.subscriber::<TestEvent>();
+        pub_.publish(TestEvent {
+            entity_id: 1,
+            value: 100,
         })
         .await
         .unwrap();
 
         let event = sub.recv().await.unwrap();
-        assert_eq!(event.pool, 1);
+        assert_eq!(event.entity_id, 1);
     }
 
     #[tokio::test]
     async fn test_publisher_to_different_node_unix() {
-        use mycelium_config::{Node, Topology};
+        use crate::config::{Node, Topology};
 
         let dir = tempfile::tempdir().unwrap();
         let topology = Topology {
             nodes: vec![
                 Node {
-                    name: "portfolio".to_string(),
-                    services: vec!["portfolio-state".to_string()],
+                    name: "manager".to_string(),
+                    services: vec!["state-manager".to_string()],
                     host: None,
                     port: None,
                 },
                 Node {
                     name: "executor".to_string(),
-                    services: vec!["order-executor".to_string()],
+                    services: vec!["executor".to_string()],
                     host: None,
                     port: None,
                 },
@@ -804,11 +814,11 @@ mod tests {
 
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-        let portfolio_bus = MessageBus::from_topology(topology, "portfolio");
+        let manager_bus = MessageBus::from_topology(topology, "manager");
 
         // Get publisher to different node
-        let pub_ = portfolio_bus
-            .publisher_to::<SwapEvent>("order-executor")
+        let pub_ = manager_bus
+            .publisher_to::<TestEvent>("executor")
             .await
             .unwrap();
 
@@ -818,7 +828,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_publisher_to_distributed_tcp() {
-        use mycelium_config::{Node, Topology};
+        use crate::config::{Node, Topology};
 
         // Bind a real TCP server for executor node
         let executor_server = crate::tcp::TcpTransport::bind("127.0.0.1:0".parse().unwrap())
@@ -830,26 +840,26 @@ mod tests {
         let topology = Topology {
             nodes: vec![
                 Node {
-                    name: "portfolio".to_string(),
-                    services: vec!["portfolio-state".to_string()],
-                    host: Some("192.168.1.10".to_string()),  // Different host
+                    name: "manager".to_string(),
+                    services: vec!["state-manager".to_string()],
+                    host: Some("192.168.1.10".to_string()), // Different host
                     port: Some(9001),
                 },
                 Node {
                     name: "executor".to_string(),
-                    services: vec!["order-executor".to_string()],
-                    host: Some(executor_addr.ip().to_string()),  // 127.0.0.1
+                    services: vec!["executor".to_string()],
+                    host: Some(executor_addr.ip().to_string()), // 127.0.0.1
                     port: Some(executor_addr.port()),
                 },
             ],
             socket_dir: dir.path().to_path_buf(),
         };
 
-        let portfolio_bus = MessageBus::from_topology(topology, "portfolio");
+        let manager_bus = MessageBus::from_topology(topology, "manager");
 
         // Get publisher to different host
-        let pub_ = portfolio_bus
-            .publisher_to::<SwapEvent>("order-executor")
+        let pub_ = manager_bus
+            .publisher_to::<TestEvent>("executor")
             .await
             .unwrap();
 
@@ -859,13 +869,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_subscriber_from_same_node() {
-        use mycelium_config::{Node, Topology};
+        use crate::config::{Node, Topology};
 
         let dir = tempfile::tempdir().unwrap();
         let topology = Topology {
             nodes: vec![Node {
                 name: "trading".to_string(),
-                services: vec!["portfolio-state".to_string(), "order-executor".to_string()],
+                services: vec!["state-manager".to_string(), "executor".to_string()],
                 host: None,
                 port: None,
             }],
@@ -875,25 +885,22 @@ mod tests {
         let bus = MessageBus::from_topology(topology, "trading");
 
         // Get subscriber from service in same node
-        let mut sub = bus
-            .subscriber_from::<SwapEvent>("order-executor")
-            .await
-            .unwrap();
+        let mut sub = bus.subscriber_from::<TestEvent>("executor").await.unwrap();
 
         // Should use local transport
         assert_eq!(sub.transport_type(), "local");
 
         // Verify it works
-        let pub_ = bus.publisher::<SwapEvent>();
-        pub_.publish(SwapEvent {
-            pool: 2,
-            amount: 200,
+        let pub_ = bus.publisher::<TestEvent>();
+        pub_.publish(TestEvent {
+            entity_id: 2,
+            value: 200,
         })
         .await
         .unwrap();
 
         let event = sub.recv().await.unwrap();
-        assert_eq!(event.pool, 2);
+        assert_eq!(event.entity_id, 2);
     }
 
     #[tokio::test]
@@ -901,19 +908,19 @@ mod tests {
         let bus = MessageBus::new();
 
         // Should fail with no topology
-        let result = bus.publisher_to::<SwapEvent>("some-service").await;
+        let result = bus.publisher_to::<TestEvent>("some-service").await;
         assert!(result.is_err());
     }
 
     #[tokio::test]
     async fn test_smart_routing_error_service_not_found() {
-        use mycelium_config::{Node, Topology};
+        use crate::config::{Node, Topology};
 
         let dir = tempfile::tempdir().unwrap();
         let topology = Topology {
             nodes: vec![Node {
                 name: "trading".to_string(),
-                services: vec!["portfolio-state".to_string()],
+                services: vec!["state-manager".to_string()],
                 host: None,
                 port: None,
             }],
@@ -923,7 +930,7 @@ mod tests {
         let bus = MessageBus::from_topology(topology, "trading");
 
         // Should fail with service not found
-        let result = bus.publisher_to::<SwapEvent>("nonexistent-service").await;
+        let result = bus.publisher_to::<TestEvent>("nonexistent-service").await;
         assert!(result.is_err());
     }
 }

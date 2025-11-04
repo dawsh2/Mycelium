@@ -2,7 +2,9 @@
 
 **Purpose**: Document how Mycelium can grow from pure pub/sub to full actor system without breaking changes.
 
-**Status**: Phase 1 complete. Phase 2 deferred until concrete use case emerges.
+**Status**: ✅ Phase 1 Complete | ✅ Phase 2 Complete
+
+Phase 1 (Actor-ready foundation) and Phase 2 (full actor system) are both implemented and working!
 
 ---
 
@@ -54,7 +56,94 @@
 
 ---
 
-## When to Implement Phase 2
+## Phase 2 Complete - Full Actor System ✅
+
+### What's Implemented
+
+**Full actor system with supervision and lifecycle management**:
+
+1. **Actor trait** (`mycelium-transport/src/actor/handle.rs`):
+   - `handle(&mut self, msg, ctx)` - message handler
+   - `started(&mut self, ctx)` - initialization hook
+   - `stopped(&mut self, ctx)` - cleanup hook
+   - `on_error(&mut self, error, ctx)` - error handling hook
+
+2. **ActorContext** (`mycelium-transport/src/actor/context.rs`):
+   - `send_to(actor_id, msg)` - send to specific actor
+   - `broadcast(msg)` - pub/sub broadcast
+   - `request(actor_id, req)` - request/reply (TODO: correlation)
+   - `stop()` - graceful shutdown
+   - `actor_id()` - get own ID
+
+3. **ActorRuntime** (`mycelium-transport/src/actor/runtime.rs`):
+   - `spawn(actor)` - spawn with auto-generated ID
+   - `spawn_with_id(id, actor)` - spawn with specific ID
+   - `spawn_supervised(actor, strategy)` - with supervision
+   - `shutdown()` - graceful shutdown of all actors
+   - `actor_count()` - runtime metrics
+
+4. **ActorRef** - Lightweight handle for sending messages:
+   - `send(msg)` - async message sending
+   - `send_with_correlation(msg, id)` - for request/reply
+   - `actor_id()` - get target actor ID
+
+5. **Supervision strategies** (`mycelium-transport/src/actor/supervisor.rs`):
+   - `Stop` - terminate on error
+   - `Restart { max_retries }` - restart with limits
+   - `Resume` - continue processing
+   - `Escalate` - escalate to parent
+   - Restart strategies: Immediate, FixedDelay, ExponentialBackoff
+
+### Example Usage
+
+See `examples/actor_demo.rs` for a working demonstration:
+
+```rust
+use mycelium_transport::{Actor, ActorContext, ActorRuntime, MessageBus};
+
+struct CounterActor {
+    count: u64,
+}
+
+#[async_trait::async_trait]
+impl Actor for CounterActor {
+    type Message = Increment;
+
+    async fn handle(&mut self, msg: Self::Message, _ctx: &mut ActorContext<Self>) {
+        self.count += msg.amount;
+        println!("Count: {}", self.count);
+    }
+}
+
+#[tokio::main]
+async fn main() {
+    let bus = MessageBus::new();
+    let runtime = ActorRuntime::new(bus);
+
+    // Spawn actors
+    let counter = runtime.spawn(CounterActor { count: 0 }).await;
+
+    // Send messages
+    counter.send(Increment { amount: 42 }).await.unwrap();
+
+    // Graceful shutdown
+    runtime.shutdown().await;
+}
+```
+
+Run it with: `cargo run --example actor_demo`
+
+### Implementation Stats
+
+- **Lines of code**: ~500 LOC (close to estimated 300-400 LOC)
+- **New files**: 4 modules (handle, context, runtime, supervisor)
+- **Breaking changes**: None - fully backwards compatible
+- **Performance impact**: Zero when not using actors
+- **Test coverage**: 3 actor runtime tests + supervisor tests
+
+---
+
+## When to Use Actors
 
 ### Trigger Scenarios
 

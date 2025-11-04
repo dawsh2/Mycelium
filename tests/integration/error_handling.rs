@@ -3,7 +3,7 @@
 //! Tests for various error conditions and recovery scenarios.
 
 use crate::integration::{MessageBus, SwapEvent};
-use mycelium_config::{Node, Topology};
+use mycelium_transport::config::{Node, Topology};
 use mycelium_transport::{TransportError, UnixTransport};
 
 #[tokio::test]
