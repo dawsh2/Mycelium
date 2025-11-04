@@ -46,6 +46,24 @@ pub fn generate_from_yaml<P: AsRef<Path>>(
     yaml_path: P,
     output_path: P,
 ) -> Result<(), CodegenError> {
+    generate_from_yaml_with_imports(yaml_path, output_path, false)
+}
+
+/// Generate Rust code from a YAML contract file with external imports
+///
+/// Use this when generating code for external crates that depend on mycelium-protocol.
+pub fn generate_from_yaml_external<P: AsRef<Path>>(
+    yaml_path: P,
+    output_path: P,
+) -> Result<(), CodegenError> {
+    generate_from_yaml_with_imports(yaml_path, output_path, true)
+}
+
+fn generate_from_yaml_with_imports<P: AsRef<Path>>(
+    yaml_path: P,
+    output_path: P,
+    use_external_imports: bool,
+) -> Result<(), CodegenError> {
     // Read and parse YAML
     let yaml_content = fs::read_to_string(yaml_path.as_ref())?;
     let contracts: Contracts = serde_yaml::from_str(&yaml_content)?;
@@ -53,8 +71,8 @@ pub fn generate_from_yaml<P: AsRef<Path>>(
     // Validate tag ranges
     validate_tag_ranges(&contracts)?;
 
-    // Generate code (always use crate:: prefix since this is internal)
-    let generated_code = generate_messages(&contracts);
+    // Generate code
+    let generated_code = generate_messages(&contracts, use_external_imports);
 
     // Write output
     fs::write(output_path.as_ref(), generated_code)?;
@@ -244,7 +262,7 @@ struct FieldContract {
     validation: Vec<HashMap<String, serde_yaml::Value>>,
 }
 
-fn generate_messages(contracts: &Contracts) -> String {
+fn generate_messages(contracts: &Contracts, use_external_imports: bool) -> String {
     let mut code = String::new();
 
     // Add header
@@ -253,8 +271,14 @@ fn generate_messages(contracts: &Contracts) -> String {
     code.push_str("// This file is generated at build time by build.rs\n");
     code.push_str("// To modify, edit contracts.yaml and rebuild\n\n");
 
-    code.push_str("use crate::fixed_vec::{FixedStr, FixedVec};\n");
-    code.push_str("use crate::Message;\n\n");
+    // Use appropriate import paths
+    if use_external_imports {
+        code.push_str("use mycelium_protocol::fixed_vec::{FixedStr, FixedVec};\n");
+        code.push_str("use mycelium_protocol::Message;\n\n");
+    } else {
+        code.push_str("use crate::fixed_vec::{FixedStr, FixedVec};\n");
+        code.push_str("use crate::Message;\n\n");
+    }
     code.push_str("pub use primitive_types::U256;\n\n");
 
     // Generate validation error enum
@@ -417,16 +441,7 @@ fn generate_message_struct(name: &str, contract: &MessageContract) -> String {
         code.push_str(&format!("    /// {}\n", field_contract.description));
 
         let rust_type = map_contract_type_to_rust(&field_contract.field_type, field_contract);
-        let visibility = if rust_type.contains("[u8; 32]") {
-            ""
-        } else {
-            "pub "
-        };
-
-        code.push_str(&format!(
-            "    {}{}: {},\n",
-            visibility, field_name, rust_type
-        ));
+        code.push_str(&format!("    pub {}: {},\n", field_name, rust_type));
     }
 
     code.push_str("}\n\n");
@@ -531,10 +546,13 @@ fn calculate_message_size(contract: &MessageContract) -> usize {
             "u64" => 8,
             "i32" => 4,
             "f64" => 8,
+            "[u8; 16]" => 16,
             "[u8; 20]" => 20,
+            "[u8; 32]" => 32,
             "U256" => 32,                        // Stored as [u8; 32]
             "String" => 2 + 6 + 32, // FixedStr<32>: [count: u16][_padding: [u8; 6]][chars: [u8; 32]]
             "Vec<[u8; 20]>" => 2 + 6 + (20 * 4), // FixedVec<[u8; 20], 4>: [count: u16][_padding: [u8; 6]][elements: [[u8; 20]; 4]]
+            "[[u8; 32]; 256]" => 32 * 256,       // Fixed array: 256 elements of 32 bytes each
             _ => panic!("Unknown field type for size calculation: {}", field_type),
         };
 
@@ -668,8 +686,10 @@ fn map_contract_type_to_rust(contract_type: &str, field: &FieldContract) -> Stri
         "u64" => "u64".to_string(),
         "i32" => "i32".to_string(),
         "f64" => "f64".to_string(),
+        "[u8; 16]" => "[u8; 16]".to_string(), // For u128 values
         "[u8; 20]" => "[u8; 20]".to_string(),
-        "U256" => "[u8; 32]".to_string(), // U256 stored as bytes for zerocopy
+        "[u8; 32]" => "[u8; 32]".to_string(), // For hashes and raw bytes
+        "U256" => "[u8; 32]".to_string(),     // U256 stored as bytes for zerocopy
         "String" => {
             let max_len = get_max_length_from_validation(field).unwrap_or(32);
             format!("FixedStr<{}>", max_len)
@@ -678,6 +698,8 @@ fn map_contract_type_to_rust(contract_type: &str, field: &FieldContract) -> Stri
             let max_len = get_max_length_from_validation(field).unwrap_or(4);
             format!("FixedVec<[u8; 20], {}>", max_len)
         }
+        // Support for fixed-size arrays of byte arrays
+        s if s.starts_with("[[u8;") && s.ends_with("]") => contract_type.to_string(),
         _ => panic!("Unknown contract type: {}", contract_type),
     }
 }
