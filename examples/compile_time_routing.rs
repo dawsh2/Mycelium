@@ -59,11 +59,11 @@ impl MessageHandler<TextMessage> for Logger {
 }
 
 struct CounterValidator {
-    max_value: u64,
+    max_value: i32,
 }
 
 impl CounterValidator {
-    fn new(max_value: u64) -> Self {
+    fn new(max_value: i32) -> Self {
         Self { max_value }
     }
 }
@@ -102,23 +102,43 @@ fn main() {
 
     println!("Processing TextMessages...\n");
 
-    // Create and route TextMessages
-    let msg1 = TextMessage::new("Alice", "Hello, world!", 1000);
+    // Create and route TextMessages (using struct literals since no constructor)
+    let msg1 = TextMessage {
+        sender: "Alice".try_into().unwrap(),
+        content: "Hello, world!".try_into().unwrap(),
+        timestamp: 1000,
+    };
     services.route_text_message(&msg1);
 
-    let msg2 = TextMessage::new("Bob", "Rust is awesome!", 2000);
+    let msg2 = TextMessage {
+        sender: "Bob".try_into().unwrap(),
+        content: "Rust is awesome!".try_into().unwrap(),
+        timestamp: 2000,
+    };
     services.route_text_message(&msg2);
 
     println!("\nProcessing CounterUpdates...\n");
 
     // Create and route CounterUpdates
-    let counter1 = CounterUpdate::new("counter_1", 50, 10);
+    let counter1 = CounterUpdate {
+        counter_id: 1,
+        value: 50,
+        delta: 10,
+    };
     services.route_counter_update(&counter1);
 
-    let counter2 = CounterUpdate::new("counter_2", 150, 50); // Exceeds max
-    services.route_counter_update(&counter2);
+    let counter2 = CounterUpdate {
+        counter_id: 2,
+        value: 150,
+        delta: 50,
+    };
+    services.route_counter_update(&counter2); // Exceeds max
 
-    let counter3 = CounterUpdate::new("counter_3", 75, 25);
+    let counter3 = CounterUpdate {
+        counter_id: 3,
+        value: 75,
+        delta: 25,
+    };
     services.route_counter_update(&counter3);
 
     println!("\n=== Performance Notes ===");

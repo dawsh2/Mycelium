@@ -3,9 +3,9 @@
 use criterion::{black_box, criterion_group, criterion_main, BenchmarkId, Criterion};
 use mycelium_protocol::impl_message;
 use mycelium_transport::{MessageBus, Publisher};
-use zerocopy::{IntoBytes, FromBytes, FromZeros, Immutable};
+use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
-#[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros, Immutable)]
+#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
 #[repr(C)]
 struct BenchMsg {
     value: u64,

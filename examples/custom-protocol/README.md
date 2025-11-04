@@ -94,7 +94,7 @@ For each message in `contracts.yaml`, the codegen creates:
 Example generated code:
 
 ```rust
-#[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros)]
+#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
 #[repr(C)]
 pub struct PlayerLogin {
     pub player_id: u64,

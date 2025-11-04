@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-zerocopy = { workspace = true }
+zerocopy = { version = "0.7", features = ["derive"] }
 rkyv = { workspace = true }
 thiserror = { workspace = true }
 primitive-types = { version = "0.12", default-features = false }  # For U256 support, disable zerocopy to avoid version conflict

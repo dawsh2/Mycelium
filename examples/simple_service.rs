@@ -11,10 +11,10 @@ use mycelium_protocol::impl_message;
 use mycelium_transport::{service, ServiceContext, ServiceRuntime};
 use mycelium_transport::MessageBus;
 use std::time::Duration;
-use zerocopy::{IntoBytes, FromBytes, FromZeros, Immutable};
+use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 /// Example message type - tick events
-#[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros, Immutable)]
+#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
 #[repr(C)]
 struct TickEvent {
     count: u64,

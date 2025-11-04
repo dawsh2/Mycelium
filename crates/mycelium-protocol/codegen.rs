@@ -357,10 +357,8 @@ fn generate_message_struct(name: &str, contract: &MessageContract) -> String {
 
     code.push_str("}\n\n");
 
-    // Manual TryFromBytes/IntoBytes impls (unsafe but simple)
-    code.push_str(&format!("unsafe impl zerocopy::TryFromBytes for {} {{}}\n", name));
-
-    code.push_str(&format!("unsafe impl zerocopy::IntoBytes for {} {{\n", name));
+    // Manual AsBytes impl (unsafe but simple)
+    code.push_str(&format!("unsafe impl zerocopy::AsBytes for {} {{\n", name));
     code.push_str("    fn only_derive_is_allowed_to_implement_this_trait() {}\n");
     code.push_str("}\n\n");
 
@@ -372,16 +370,13 @@ fn generate_message_struct(name: &str, contract: &MessageContract) -> String {
     code.push_str("    fn only_derive_is_allowed_to_implement_this_trait() {}\n");
     code.push_str("}\n\n");
 
-    // Manual FromZeros impl
+    // Manual FromZeroes impl
     code.push_str(&format!(
-        "unsafe impl zerocopy::FromZeros for {} {{\n",
+        "unsafe impl zerocopy::FromZeroes for {} {{\n",
         name
     ));
     code.push_str("    fn only_derive_is_allowed_to_implement_this_trait() {}\n");
     code.push_str("}\n\n");
-
-    // Manual Immutable impl (struct contains only Copy fields)
-    code.push_str(&format!("unsafe impl zerocopy::Immutable for {} {{}}\n\n", name));
 
     code
 }
@@ -681,7 +676,7 @@ fn generate_instrument_meta_tests() -> String {
     // Test zerocopy roundtrip
     code.push_str("    #[test]\n");
     code.push_str("    fn test_instrument_meta_zerocopy() {\n");
-    code.push_str("        use zerocopy::{IntoBytes, FromBytes, Immutable};\n");
+    code.push_str("        use zerocopy::{AsBytes, FromBytes};\n");
     code.push_str(
         "        let original = InstrumentMeta::new([1; 20], \"USDC\", 6, 137).unwrap();\n",
     );
@@ -720,7 +715,7 @@ fn generate_pool_state_tests() -> String {
     // Test zerocopy roundtrip
     code.push_str("    #[test]\n");
     code.push_str("    fn test_pool_state_zerocopy() {\n");
-    code.push_str("        use zerocopy::{IntoBytes, FromBytes, Immutable};\n");
+    code.push_str("        use zerocopy::{AsBytes, FromBytes};\n");
     code.push_str("        let original = PoolStateUpdate::new_v2([5; 20], 1, U256::from(1000000), U256::from(2000000), 54321).unwrap();\n");
     code.push_str("        let bytes = original.as_bytes();\n");
     code.push_str("        let deserialized = PoolStateUpdate::ref_from(bytes).unwrap();\n");
@@ -758,7 +753,7 @@ fn generate_arbitrage_signal_tests() -> String {
     // Test zerocopy roundtrip
     code.push_str("    #[test]\n");
     code.push_str("    fn test_arbitrage_signal_zerocopy() {\n");
-    code.push_str("        use zerocopy::{IntoBytes, FromBytes, Immutable};\n");
+    code.push_str("        use zerocopy::{AsBytes, FromBytes};\n");
     code.push_str("        let path = [[1; 20], [2; 20], [3; 20]];\n");
     code.push_str("        let original = ArbitrageSignal::new(999, &path, 250.75, U256::from(42000), 99999).unwrap();\n");
     code.push_str("        let bytes = original.as_bytes();\n");

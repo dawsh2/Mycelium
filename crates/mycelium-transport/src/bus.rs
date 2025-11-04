@@ -271,7 +271,7 @@ impl MessageBus {
     /// - Transport initialization fails
     pub async fn publisher_to<M>(&self, target_service: &str) -> Result<AnyPublisher<M>>
     where
-        M: Message + zerocopy::IntoBytes,
+        M: Message + zerocopy::AsBytes,
     {
         let topology = self.topology.as_ref().ok_or_else(|| {
             TransportError::ServiceNotFound(
@@ -493,10 +493,10 @@ impl Default for MessageBus {
 mod tests {
     use super::*;
     use mycelium_protocol::impl_message;
-    use zerocopy::{IntoBytes, FromBytes, FromZeros, Immutable};
+    use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
     // Generic test message (domain-agnostic)
-    #[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros, Immutable)]
+    #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
     #[repr(C)]
     struct TestEvent {
         entity_id: u64,

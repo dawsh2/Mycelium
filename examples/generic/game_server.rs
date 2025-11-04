@@ -6,10 +6,10 @@
 /// Run with: cargo run --example game_server
 use mycelium_protocol::{impl_message, Message};
 use mycelium_transport::{BoundedPublisher, BoundedSubscriber, MessageBus};
-use zerocopy::{IntoBytes, FromBytes, FromZeros, Immutable};
+use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 /// Player action (movement, attack, etc.)
-#[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros, Immutable)]
+#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
 #[repr(C)]
 struct PlayerAction {
     player_id: u64,
@@ -22,7 +22,7 @@ struct PlayerAction {
 impl_message!(PlayerAction, 10, "game.actions");
 
 /// Game state update (broadcast to all players)
-#[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros, Immutable)]
+#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
 #[repr(C)]
 struct StateUpdate {
     player_id: u64,
@@ -35,7 +35,7 @@ struct StateUpdate {
 impl_message!(StateUpdate, 11, "game.state");
 
 /// Chat message
-#[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros, Immutable)]
+#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
 #[repr(C)]
 struct ChatMessage {
     player_id: u64,

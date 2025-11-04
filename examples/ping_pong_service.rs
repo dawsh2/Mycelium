@@ -7,10 +7,10 @@ use anyhow::Result;
 use mycelium_protocol::impl_message;
 use mycelium_transport::{service, MessageBus, ServiceContext, ServiceRuntime};
 use std::time::Duration;
-use zerocopy::{IntoBytes, FromBytes, FromZeros, Immutable};
+use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 /// Ping message
-#[derive(Debug, Clone, Copy, IntoBytes, FromBytes, FromZeros, Immutable)]
+#[derive(Debug, Clone, Copy, AsBytes, FromBytes, FromZeroes)]
 #[repr(C)]
 struct PingMessage {
     id: u64,
@@ -19,7 +19,7 @@ struct PingMessage {
 impl_message!(PingMessage, 100, "ping");
 
 /// Pong message
-#[derive(Debug, Clone, Copy, IntoBytes, FromBytes, FromZeros, Immutable)]
+#[derive(Debug, Clone, Copy, AsBytes, FromBytes, FromZeroes)]
 #[repr(C)]
 struct PongMessage {
     id: u64,

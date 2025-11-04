@@ -168,12 +168,12 @@ async fn test_local_subscriber_lifecycle() {
 #[tokio::test]
 async fn test_local_memory_efficiency() {
     use mycelium_protocol::impl_message;
-    use zerocopy::{IntoBytes, FromBytes, FromZeros, Immutable};
+    use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
     let bus = MessageBus::new();
 
     // Create large message to test memory sharing
-    #[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros, Immutable)]
+    #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
     #[repr(C)]
     struct LargeMessage {
         data: [u64; 1000], // ~8KB per message

@@ -14,10 +14,10 @@ pub mod error_handling;
 // Common test utilities
 pub use mycelium_protocol::impl_message;
 pub use mycelium_transport::MessageBus;
-pub use zerocopy::{IntoBytes, FromBytes, FromZeros, Immutable};
+pub use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 // Test message types
-#[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros, Immutable)]
+#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
 #[repr(C)]
 pub struct SwapEvent {
     pub pool_id: u64,
@@ -28,7 +28,7 @@ pub struct SwapEvent {
 
 impl_message!(SwapEvent, 1, "market-data");
 
-#[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros, Immutable)]
+#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
 #[repr(C)]
 pub struct ArbitrageSignal {
     pub opportunity_id: u64,
@@ -38,7 +38,7 @@ pub struct ArbitrageSignal {
 
 impl_message!(ArbitrageSignal, 2, "arbitrage");
 
-#[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros, Immutable)]
+#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
 #[repr(C)]
 pub struct OrderExecution {
     pub order_id: u64,

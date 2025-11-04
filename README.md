@@ -4,6 +4,7 @@ Mycelium is a **type-safe pub/sub messaging system** with topology-based transpo
 
 **Key features:** 
 - **Compile-time code generation** - Message types, validation, and buffer pool configuration generated from `contracts.yaml` during build
+- **Compile-time routing** - Optional direct function call routing (2-3ns overhead) for ultra-low latency, 30x faster than Arc-based routing
 - **Zero-cost abstractions** - Type-safe `Publisher<M>` and `Subscriber<M>` with no runtime overhead
 - **Bijective zerocopy serialization** - Direct memory casting with no allocation or copying
 - **Flexible transport** - Same code runs with Arc (single-process), Unix sockets (multi-process), or TCP (distributed)
@@ -125,10 +126,14 @@ cargo run --bin polygon_adapter
 ./target/release/polygon_adapter
 ```
 
-### 4. Choose Your Transport
+### 4. Choose Your Deployment Mode
+
+Mycelium supports two routing approaches depending on your performance requirements:
+
+#### Runtime Routing (Default - Maximum Flexibility)
 
 ```rust
-// Single process (Arc transport - zero-copy message sharing)
+// Single process (Arc transport - 65ns overhead per message)
 let bus = MessageBus::new();
 
 // Multi-process, same host (Unix domain sockets)
@@ -140,7 +145,43 @@ let bus = MessageBus::with_tcp_transport("10.0.1.10:9000")?;
 
 **Same service code works with any transport.** Change one line, redeploy.
 
-**Performance:** Arc-based routing provides ~65ns overhead per message. For applications requiring sub-microsecond latency, see [docs/implementation/MYCELIUM_MONOMORPHIZATION.md](docs/implementation/MYCELIUM_MONOMORPHIZATION.md) for a future compile-time routing optimization (Phase 4) that reduces overhead to 2-3ns via direct function calls.
+#### Compile-Time Routing (Optional - Maximum Performance)
+
+For single-process deployments requiring ultra-low latency (<1μs budget):
+
+```rust
+use mycelium_transport::{routing_config, MessageHandler};
+
+// Implement handlers for your services
+impl MessageHandler<V2Swap> for RiskManager {
+    fn handle(&mut self, swap: &V2Swap) {
+        // Your logic here - runs in 2-3ns
+    }
+}
+
+// Generate routing struct at compile time
+routing_config! {
+    name: TradingServices,
+    routes: {
+        V2Swap => [RiskManager, ArbitrageDetector, MetricsCollector],
+    }
+}
+
+// Direct function calls - 2-3ns overhead (30x faster than Arc)
+let mut services = TradingServices::new(
+    RiskManager::new(),
+    ArbitrageDetector::new(),
+    MetricsCollector::new(),
+);
+services.route_v2_swap(&swap);  // Inlined to direct calls
+```
+
+**Performance comparison:**
+- **Compile-time routing**: 2-3ns per handler (direct function calls)
+- **Runtime Arc routing**: 65ns per message (Arc + channel overhead)
+- **Speedup**: 30x for single-process deployments
+
+See [`examples/compile_time_routing.rs`](examples/compile_time_routing.rs) for a complete working example.
 
 ---
 

@@ -5,10 +5,10 @@
 
 use mycelium_protocol::impl_message;
 use mycelium_transport::{Actor, ActorContext, ActorRuntime, MessageBus};
-use zerocopy::{IntoBytes, FromBytes, FromZeros, Immutable};
+use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 // Define message types
-#[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros, Immutable)]
+#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
 #[repr(C)]
 struct Increment {
     amount: u64,
@@ -16,7 +16,7 @@ struct Increment {
 
 impl_message!(Increment, 100, "counter");
 
-#[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros, Immutable)]
+#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
 #[repr(C)]
 struct GetCount {
     _dummy: u8, // Empty structs not supported by zerocopy

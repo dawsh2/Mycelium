@@ -8,10 +8,10 @@
 /// Run with: cargo run --example simple_pubsub
 use mycelium_protocol::{impl_message, Message};
 use mycelium_transport::MessageBus;
-use zerocopy::{IntoBytes, FromBytes, FromZeros, Immutable};
+use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 // Define a generic event message (C layout for zerocopy)
-#[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros, Immutable)]
+#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
 #[repr(C)]
 struct DataEvent {
     source_id: u64,

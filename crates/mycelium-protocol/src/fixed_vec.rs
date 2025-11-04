@@ -22,12 +22,11 @@
 //! - Manual zerocopy trait impls (can't derive generically)
 
 use std::convert::TryFrom;
-use zerocopy::{FromBytes, FromZeros, Immutable, IntoBytes, KnownLayout, TryFromBytes};
+use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
-// FixedVec and FixedStr are fully generic - applications define their own size constants
-// Example usage:
-//   const MAX_ITEMS: usize = 4;
-//   let vec: FixedVec<[u8; 20], MAX_ITEMS> = FixedVec::new();
+/// Compile-time constants for array sizing
+pub const MAX_POOL_ADDRESSES: usize = 4; // Max pools in arbitrage path
+pub const MAX_SYMBOL_LENGTH: usize = 32; // Max token symbol length
 
 /// Error type for fixed collection operations
 #[derive(Debug, Clone, PartialEq)]
@@ -89,10 +88,9 @@ impl std::error::Error for FixedVecError {}
 /// All data is stored inline (no heap allocation), enabling direct memory mapping
 /// for zero-copy serialization/deserialization with zerocopy.
 ///
-/// **Note**: IntoBytes/FromBytes cannot be derived generically - manual impls required
+/// **Note**: AsBytes/FromBytes cannot be derived generically - manual impls required
 /// for each concrete instantiation. See bottom of file for trait implementations.
 #[derive(Debug, Clone, Copy, PartialEq)]
-#[derive(zerocopy::KnownLayout, zerocopy::Immutable, zerocopy::TryFromBytes, zerocopy::FromZeros, zerocopy::FromBytes, zerocopy::IntoBytes)]
 #[repr(C)]
 pub struct FixedVec<T, const N: usize>
 where
@@ -265,9 +263,8 @@ where
 /// Stores UTF-8 string data in fixed-size array with length prefix.
 /// Unused bytes are zeroed for deterministic serialization.
 ///
-/// **Note**: Zerocopy traits are derived generically for all const sizes.
+/// **Note**: AsBytes/FromBytes manually implemented for MAX_SYMBOL_LENGTH.
 #[derive(Debug, Clone, Copy, PartialEq)]
-#[derive(zerocopy::KnownLayout, zerocopy::Immutable, zerocopy::TryFromBytes, zerocopy::FromZeros, zerocopy::FromBytes, zerocopy::IntoBytes)]
 #[repr(C)]
 pub struct FixedStr<const N: usize> {
     /// Length of valid UTF-8 data
@@ -434,9 +431,9 @@ mod tests {
 
     #[test]
     fn test_zerocopy_roundtrip_fixed_vec() {
-        use zerocopy::IntoBytes;
+        use zerocopy::AsBytes;
 
-        let mut vec: FixedVec<[u8; 20], 4> = FixedVec::new();
+        let mut vec: FixedVec<[u8; 20], MAX_POOL_ADDRESSES> = FixedVec::new();
         vec.try_push([1; 20]).unwrap();
         vec.try_push([2; 20]).unwrap();
 
@@ -444,7 +441,7 @@ mod tests {
         let bytes = vec.as_bytes();
 
         // Deserialize with zerocopy (zero-copy cast)
-        let deserialized: &FixedVec<[u8; 20], 4> =
+        let deserialized: &FixedVec<[u8; 20], MAX_POOL_ADDRESSES> =
             FixedVec::ref_from(bytes).unwrap();
 
         assert_eq!(deserialized.len(), 2);
@@ -454,16 +451,49 @@ mod tests {
 
     #[test]
     fn test_zerocopy_roundtrip_fixed_str() {
-        use zerocopy::IntoBytes;
+        use zerocopy::AsBytes;
 
-        let s = FixedStr::<32>::from_str("Hello").unwrap();
+        let s = FixedStr::<MAX_SYMBOL_LENGTH>::from_str("Hello").unwrap();
 
         // Serialize with zerocopy
         let bytes = s.as_bytes();
 
         // Deserialize with zerocopy (zero-copy cast)
-        let deserialized: &FixedStr<32> = FixedStr::ref_from(bytes).unwrap();
+        let deserialized: &FixedStr<MAX_SYMBOL_LENGTH> = FixedStr::ref_from(bytes).unwrap();
 
         assert_eq!(deserialized.as_str().unwrap(), "Hello");
     }
+}
+
+// ============================================================================
+// Manual zerocopy trait implementations for concrete types
+// ============================================================================
+//
+// NOTE: zerocopy cannot derive AsBytes/FromBytes generically for FixedVec<T, N>
+// Must manually implement for each concrete instantiation used in messages.
+
+/// Manual AsBytes/FromBytes for FixedVec<[u8; 20], 4> (arbitrage paths)
+unsafe impl AsBytes for FixedVec<[u8; 20], MAX_POOL_ADDRESSES> {
+    fn only_derive_is_allowed_to_implement_this_trait() {}
+}
+
+unsafe impl FromBytes for FixedVec<[u8; 20], MAX_POOL_ADDRESSES> {
+    fn only_derive_is_allowed_to_implement_this_trait() {}
+}
+
+unsafe impl FromZeroes for FixedVec<[u8; 20], MAX_POOL_ADDRESSES> {
+    fn only_derive_is_allowed_to_implement_this_trait() {}
+}
+
+/// Manual AsBytes/FromBytes for FixedStr<32> (token symbols)
+unsafe impl AsBytes for FixedStr<MAX_SYMBOL_LENGTH> {
+    fn only_derive_is_allowed_to_implement_this_trait() {}
+}
+
+unsafe impl FromBytes for FixedStr<MAX_SYMBOL_LENGTH> {
+    fn only_derive_is_allowed_to_implement_this_trait() {}
+}
+
+unsafe impl FromZeroes for FixedStr<MAX_SYMBOL_LENGTH> {
+    fn only_derive_is_allowed_to_implement_this_trait() {}
 }
