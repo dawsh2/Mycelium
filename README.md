@@ -2,7 +2,12 @@
 
 Mycelium is a **type-safe pub/sub messaging system** with topology-based transport selection. Define messages once in YAML, write pub/sub code once, deploy anywhere - transport is inferred from configuration. Same binary runs as single-process (Arc), multi-process (Unix sockets), or distributed (TCP). Built for low-latency systems like high-frequency trading, multiplayer game servers, and real-time analytics.
 
-**Key features:** Schema-driven code generation, bijective zerocopy serialization, automatic observability, actor-based supervision with exponential backoff.
+**Key features:** 
+- **Compile-time code generation** - Message types, validation, and buffer pool configuration generated from `contracts.yaml` during build
+- **Zero-cost abstractions** - Type-safe `Publisher<M>` and `Subscriber<M>` with no runtime overhead
+- **Bijective zerocopy serialization** - Direct memory casting with no allocation or copying
+- **Automatic observability** - Built-in tracing, metrics, and structured logging
+- **Actor-based supervision** - Exponential backoff retry for resilient services
 
 ---
 
@@ -191,11 +196,10 @@ Messages use [zerocopy](https://github.com/google/zerocopy) for **true zero-copy
 
 ## Documentation
 
-- **[docs/implementation/SERVICE-API-DESIGN.md](docs/implementation/SERVICE-API-DESIGN.md)** - Complete service API specification
-- **[docs/implementation/LIBRARY-NOT-FRAMEWORK.md](docs/implementation/LIBRARY-NOT-FRAMEWORK.md)** - Why Mycelium is a library, not a framework
-- **[docs/implementation/CONFIG-BOUNDARY-ANALYSIS.md](docs/implementation/CONFIG-BOUNDARY-ANALYSIS.md)** - Config ownership (Mycelium vs application)
-- **[docs/TRANSPORT.md](docs/TRANSPORT.md)** - Transport architecture, wire protocol, TLV format
-- **[docs/ACTORS.md](docs/ACTORS.md)** - Actor system (already implemented)
+- **[docs/SYSTEM_OVERVIEW.md](docs/SYSTEM_OVERVIEW.md)** - High-level architecture and design
+- **[docs/ARCHITECTURE_DIAGRAMS.md](docs/ARCHITECTURE_DIAGRAMS.md)** - Visual diagrams of the system
+- **[docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md](docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md)** - Single-process vs multi-process vs distributed deployment
+- **[docs/implementation/MYCELIUM_MONOMORPHIZATION.md](docs/implementation/MYCELIUM_MONOMORPHIZATION.md)** - How compile-time code generation eliminates runtime overhead
 
 ---
 
