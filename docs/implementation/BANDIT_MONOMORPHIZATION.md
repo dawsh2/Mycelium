@@ -101,9 +101,9 @@ bus.emit_v2_swap(&swap);  // 2ns per handler
 // bandit/crates/bandit-protocol/src/messages.rs
 
 use mycelium_protocol::impl_message;
-use zerocopy::{AsBytes, FromBytes, FromZeroes};
+use zerocopy::{IntoBytes, FromBytes, FromZeros, Immutable};
 
-#[derive(Debug, Clone, Copy, AsBytes, FromBytes, FromZeroes)]
+#[derive(Debug, Clone, Copy, IntoBytes, FromBytes, FromZeros)]
 #[repr(C)]
 pub struct V2Swap {
     pub pool_address: [u8; 20],
@@ -116,7 +116,7 @@ pub struct V2Swap {
 
 impl_message!(V2Swap, 19, "market_data");
 
-#[derive(Debug, Clone, Copy, AsBytes, FromBytes, FromZeroes)]
+#[derive(Debug, Clone, Copy, IntoBytes, FromBytes, FromZeros)]
 #[repr(C)]
 pub struct ArbitrageSignal {
     pub opportunity_id: u64,

@@ -4,10 +4,10 @@ use mycelium_protocol::impl_message;
 use mycelium_transport::MessageBus;
 use std::time::Duration;
 use tokio::time::sleep;
-use zerocopy::{AsBytes, FromBytes, FromZeroes};
+use zerocopy::{IntoBytes, FromBytes, FromZeros, Immutable};
 
 // Common test message types
-#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+#[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros, Immutable)]
 #[repr(C)]
 pub struct SwapEvent {
     pub amount_in: u128,
@@ -18,7 +18,7 @@ pub struct SwapEvent {
 
 impl_message!(SwapEvent, 1, "market-data");
 
-#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+#[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros, Immutable)]
 #[repr(C)]
 pub struct ArbitrageSignal {
     pub profit: u128,
@@ -28,7 +28,7 @@ pub struct ArbitrageSignal {
 
 impl_message!(ArbitrageSignal, 2, "arbitrage");
 
-#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+#[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros, Immutable)]
 #[repr(C)]
 pub struct OrderExecution {
     pub order_id: u64,
@@ -38,7 +38,7 @@ pub struct OrderExecution {
 
 impl_message!(OrderExecution, 3, "orders");
 
-#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+#[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros, Immutable)]
 #[repr(C)]
 pub struct PoolStateUpdate {
     pub reserve0: u128,

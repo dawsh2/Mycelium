@@ -10,10 +10,10 @@ use mycelium_transport::{
 };
 use mycelium_protocol::{impl_message, Message};
 use std::sync::Arc;
-use zerocopy::{AsBytes, FromBytes, FromZeroes};
+use zerocopy::{IntoBytes, FromBytes, FromZeros, Immutable};
 
 /// Generic event with sequence number for ordering
-#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+#[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros, Immutable)]
 #[repr(C)]
 struct DataEvent {
     source_id: u64,
@@ -25,7 +25,7 @@ struct DataEvent {
 impl_message!(DataEvent, 1, "events");
 
 /// Generic alert/signal message
-#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+#[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros, Immutable)]
 #[repr(C)]
 struct Alert {
     severity: u64,     // 1-4 (info, warning, error, critical) - u64 to avoid padding
@@ -112,7 +112,7 @@ impl DataProcessor {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("\n=== Mycelium: Generic Managed Service Demo ===\n");
     println!("Demonstrates:");
     println!("  1. ManagedService - Lifecycle management");

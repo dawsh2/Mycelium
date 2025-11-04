@@ -89,7 +89,7 @@ Traditional approaches compromise on at least one dimension. We achieve all four
 Messages are defined as C-compatible structs with compile-time metadata:
 
 ```rust
-#[derive(Debug, Clone, Copy, AsBytes, FromBytes, FromZeroes)]
+#[derive(Debug, Clone, Copy, IntoBytes, FromBytes, FromZeros)]
 #[repr(C)]
 pub struct PoolStateUpdate {
     pool_address: [u8; 20],      // Ethereum address
@@ -111,7 +111,7 @@ impl Message for PoolStateUpdate {
 **Key Design Decisions:**
 
 1. **`#[repr(C)]`**: Ensures deterministic memory layout across compiler versions
-2. **`AsBytes + FromBytes`**: Enables zero-copy serialization via pointer casting
+2. **`IntoBytes + FromBytes`**: Enables zero-copy serialization via pointer casting
 3. **Compile-time TYPE_ID**: Eliminates runtime string comparisons and hash lookups
 4. **Fixed-size fields**: Optional types use discriminant + value (no pointer indirection)
 

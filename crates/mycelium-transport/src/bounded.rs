@@ -134,9 +134,9 @@ impl<M: Message> BoundedPublisher<M> {
     ///
     /// Note: This is a snapshot and may change immediately after reading.
     pub fn len(&self) -> usize {
-        // mpsc doesn't expose current length, so we estimate via capacity
-        // In a real implementation, we'd need to track this separately
-        0 // TODO: Track actual length
+        let max = self.tx.max_capacity();
+        let available = self.tx.capacity();
+        max.saturating_sub(available)
     }
 
     /// Check if the channel is empty
@@ -146,8 +146,7 @@ impl<M: Message> BoundedPublisher<M> {
 
     /// Check if the channel is full (would block on publish)
     pub fn is_full(&self) -> bool {
-        // Would need custom tracking to implement accurately
-        false // TODO: Track fullness
+        self.tx.capacity() == 0
     }
 
     /// Check if the receiver is still alive
@@ -287,9 +286,9 @@ impl<M: Message> Default for BoundedPublisherBuilder<M> {
 mod tests {
     use super::*;
     use mycelium_protocol::impl_message;
-    use zerocopy::{AsBytes, FromBytes, FromZeroes};
+    use zerocopy::{IntoBytes, FromBytes, FromZeros, Immutable};
 
-    #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+    #[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros, Immutable)]
     #[repr(C)]
     struct TestMsg {
         value: u64,

@@ -4,9 +4,9 @@ use anyhow::Result;
 use mycelium_protocol::impl_message;
 use mycelium_transport::{service, ServiceContext, ServiceRuntime};
 use mycelium_transport::MessageBus;
-use zerocopy::{AsBytes, FromBytes, FromZeroes};
+use zerocopy::{IntoBytes, FromBytes, FromZeros, Immutable};
 
-#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+#[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros, Immutable)]
 #[repr(C)]
 struct TestEvent {
     value: u64,

@@ -23,7 +23,7 @@
 
 use crate::Message;
 use crate::{BatchOperation, CounterUpdate, TextMessage};
-use zerocopy::{AsBytes, FromBytes};
+use zerocopy::{FromBytes, IntoBytes, Immutable};
 
 /// Header size: 2 bytes (type_id) + 4 bytes (length) = 6 bytes
 pub const HEADER_SIZE: usize = 6;
@@ -85,9 +85,9 @@ pub type CodecResult<T> = Result<T, CodecError>;
 ///
 /// // bytes = [TYPE_ID(u16), LENGTH(u32), PAYLOAD(zerocopy)]
 /// ```
-pub fn encode_message<M: Message + AsBytes>(message: &M) -> CodecResult<Vec<u8>> {
+pub fn encode_message<M: Message + IntoBytes + Immutable>(message: &M) -> CodecResult<Vec<u8>> {
     // Serialize message with zerocopy
-    let payload = message.as_bytes();
+    let payload = message.as_bytes(); // IntoBytes::as_bytes()
 
     // Check payload size
     if payload.len() > MAX_PAYLOAD_SIZE {
@@ -173,7 +173,7 @@ pub fn decode_message<M: Message + FromBytes>(bytes: &[u8]) -> CodecResult<M> {
     let payload = &bytes[payload_offset..payload_offset + header.length as usize];
 
     // Zero-copy deserialize with zerocopy
-    M::read_from(payload).ok_or_else(|| {
+    M::read_from_bytes(payload).ok_or_else(|| {
         CodecError::DeserializationFailed(format!(
             "Failed to deserialize {}-byte payload",
             payload.len()
@@ -234,7 +234,7 @@ pub fn decode_any_message_with_policy(
     // Direct match - no registry lookup!
     match header.type_id {
         TextMessage::TYPE_ID => {
-            let msg = TextMessage::read_from(payload).ok_or_else(|| {
+            let msg = TextMessage::read_from_bytes(payload).ok_or_else(|| {
                 CodecError::DeserializationFailed(format!(
                     "Failed to deserialize TextMessage from {}-byte payload",
                     payload.len()
@@ -244,7 +244,7 @@ pub fn decode_any_message_with_policy(
         }
 
         CounterUpdate::TYPE_ID => {
-            let msg = CounterUpdate::read_from(payload).ok_or_else(|| {
+            let msg = CounterUpdate::read_from_bytes(payload).ok_or_else(|| {
                 CodecError::DeserializationFailed(format!(
                     "Failed to deserialize CounterUpdate from {}-byte payload",
                     payload.len()
@@ -254,7 +254,7 @@ pub fn decode_any_message_with_policy(
         }
 
         BatchOperation::TYPE_ID => {
-            let msg = BatchOperation::read_from(payload).ok_or_else(|| {
+            let msg = BatchOperation::read_from_bytes(payload).ok_or_else(|| {
                 CodecError::DeserializationFailed(format!(
                     "Failed to deserialize BatchOperation from {}-byte payload",
                     payload.len()

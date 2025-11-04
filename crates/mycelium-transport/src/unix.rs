@@ -178,7 +178,7 @@ pub struct UnixPublisher<M> {
 
 impl<M: Message> UnixPublisher<M>
 where
-    M: zerocopy::AsBytes,
+    M: zerocopy::IntoBytes,
 {
     /// Publish a message over Unix socket using the persistent connection
     ///
@@ -205,9 +205,9 @@ pub type UnixSubscriber<M> = StreamSubscriber<M>;
 mod tests {
     use super::*;
     use mycelium_protocol::impl_message;
-    use zerocopy::{AsBytes, FromBytes, FromZeroes};
+    use zerocopy::{IntoBytes, FromBytes, FromZeros, Immutable};
 
-    #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+    #[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros, Immutable)]
     #[repr(C)]
     struct TestMsg {
         value: u64,

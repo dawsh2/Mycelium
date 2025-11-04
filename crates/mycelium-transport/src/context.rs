@@ -163,15 +163,15 @@ impl ServiceContext {
     /// ```rust
     /// # use mycelium_transport::{ServiceContext, service};
     /// # use mycelium_protocol::{Message, impl_message};
-    /// # use zerocopy::{AsBytes, FromBytes, FromZeroes};
+    /// # use zerocopy::{IntoBytes, FromBytes, FromZeros, Immutable};
     /// # use anyhow::Result;
     /// #
-    /// # #[derive(Debug, Clone, Copy, AsBytes, FromBytes, FromZeroes)]
+    /// # #[derive(Debug, Clone, Copy, IntoBytes, FromBytes, FromZeros, Immutable)]
     /// # #[repr(C)]
     /// # struct PingMessage { id: u64 }
     /// # impl_message!(PingMessage, 1, "ping");
     /// #
-    /// # #[derive(Debug, Clone, Copy, AsBytes, FromBytes, FromZeroes)]
+    /// # #[derive(Debug, Clone, Copy, IntoBytes, FromBytes, FromZeros, Immutable)]
     /// # #[repr(C)]
     /// # struct PongMessage { id: u64 }
     /// # impl_message!(PongMessage, 2, "pong");

@@ -1,8 +1,10 @@
-//! Proc macro for #[service]
+//! Proc macros for Mycelium services and compile-time routing
 
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{parse_macro_input, ImplItem, ItemImpl};
+
+mod routing;
 
 #[proc_macro_attribute]
 pub fn service(_attr: TokenStream, item: TokenStream) -> TokenStream {
@@ -91,4 +93,51 @@ pub fn service(_attr: TokenStream, item: TokenStream) -> TokenStream {
     };
 
     TokenStream::from(expanded)
+}
+
+/// Compile-time routing macro for ultra-low latency message handling
+///
+/// Generates a plain struct with direct function call routing, reducing
+/// overhead from ~65ns (Arc-based MessageBus) to ~2-3ns per handler.
+///
+/// # Example
+///
+/// ```ignore
+/// use mycelium_transport::MessageHandler;
+/// use mycelium_macro::routing_config;
+///
+/// struct RiskManager;
+/// impl MessageHandler<V2Swap> for RiskManager {
+///     fn handle(&mut self, swap: &V2Swap) {
+///         // Handle swap
+///     }
+/// }
+///
+/// struct ArbitrageDetector;
+/// impl MessageHandler<V2Swap> for ArbitrageDetector {
+///     fn handle(&mut self, swap: &V2Swap) {
+///         // Detect arbitrage
+///     }
+/// }
+///
+/// // Generate routing struct
+/// routing_config! {
+///     name: TradingServices,
+///     routes: {
+///         V2Swap => [RiskManager, ArbitrageDetector],
+///     }
+/// }
+///
+/// // Use it
+/// let mut services = TradingServices::new(
+///     RiskManager,
+///     ArbitrageDetector,
+/// );
+/// services.route_v2_swap(&swap);  // 2-3ns overhead
+/// ```
+#[proc_macro]
+pub fn routing_config(input: TokenStream) -> TokenStream {
+    let config = parse_macro_input!(input as routing::RoutingConfig);
+    let output = routing::generate_routing_struct(config);
+    TokenStream::from(output)
 }

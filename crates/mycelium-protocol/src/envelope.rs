@@ -301,9 +301,9 @@ impl Clone for Envelope {
 mod tests {
     use super::*;
     use crate::impl_message;
-    use zerocopy::{AsBytes, FromBytes, FromZeroes};
+    use zerocopy::{FromBytes, FromZeros, Immutable, IntoBytes};
 
-    #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+    #[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros, Immutable)]
     #[repr(C)]
     struct TestMessage {
         value: u64,
@@ -332,7 +332,7 @@ mod tests {
 
     #[test]
     fn test_envelope_downcast_type_mismatch() {
-        #[derive(Debug, Clone, Copy, AsBytes, FromBytes, FromZeroes)]
+        #[derive(Debug, Clone, Copy, IntoBytes, FromBytes, FromZeros, Immutable)]
         #[repr(C)]
         struct OtherMessage {
             data: u64,

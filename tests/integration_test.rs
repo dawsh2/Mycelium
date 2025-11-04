@@ -1,10 +1,10 @@
 use mycelium_protocol::impl_message;
 use mycelium_transport::config::{Node, Topology};
 use mycelium_transport::{MessageBus, TcpTransport, UnixTransport};
-use zerocopy::{AsBytes, FromBytes, FromZeroes};
+use zerocopy::{IntoBytes, FromBytes, FromZeros, Immutable};
 
 // Simulated market data message
-#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+#[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros, Immutable)]
 #[repr(C)]
 struct SwapEvent {
     amount_in: u128,
@@ -18,7 +18,7 @@ struct SwapEvent {
 impl_message!(SwapEvent, 1, "market-data");
 
 // Simulated arbitrage opportunity message
-#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+#[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros, Immutable)]
 #[repr(C)]
 struct ArbitrageOpportunity {
     profit: u128,
@@ -30,7 +30,7 @@ struct ArbitrageOpportunity {
 impl_message!(ArbitrageOpportunity, 2, "arbitrage");
 
 // Simulated order message
-#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+#[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros, Immutable)]
 #[repr(C)]
 struct OrderExecution {
     amount: u128,

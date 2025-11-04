@@ -192,7 +192,7 @@ When you call `ctx.emit(message).await?`, here's what Mycelium handles automatic
 
 Messages use [zerocopy](https://github.com/google/zerocopy) for **true zero-copy deserialization** - direct memory casting with no allocation or copying overhead.
 
-**Bijective requirement**: Messages must perfectly round-trip (serialize → deserialize = identical). This is enforced by `#[repr(C)]` and zerocopy's `AsBytes`/`FromBytes` traits, enabling zero-copy across process boundaries.
+**Bijective requirement**: Messages must perfectly round-trip (serialize → deserialize = identical). This is enforced by `#[repr(C)]` and zerocopy's `IntoBytes`/`FromBytes` traits, enabling zero-copy across process boundaries.
 
 ---
 

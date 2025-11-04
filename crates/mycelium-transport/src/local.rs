@@ -90,9 +90,9 @@ impl Default for LocalTransport {
 mod tests {
     use super::*;
     use mycelium_protocol::impl_message;
-    use zerocopy::{AsBytes, FromBytes, FromZeroes};
+    use zerocopy::{IntoBytes, FromBytes, FromZeros, Immutable};
 
-    #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+    #[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros, Immutable)]
     #[repr(C)]
     struct TestMsg {
         value: u64,
@@ -146,13 +146,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_multiple_topics() {
-        #[derive(Debug, Clone, Copy, AsBytes, FromBytes, FromZeroes)]
+        #[derive(Debug, Clone, Copy, IntoBytes, FromBytes, FromZeros, Immutable)]
         #[repr(C)]
         struct Msg1 {
             value: u64,
         }
 
-        #[derive(Debug, Clone, Copy, AsBytes, FromBytes, FromZeroes)]
+        #[derive(Debug, Clone, Copy, IntoBytes, FromBytes, FromZeros, Immutable)]
         #[repr(C)]
         struct Msg2 {
             data: u64,
@@ -187,13 +187,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_topic_count() {
-        #[derive(Debug, Clone, Copy, AsBytes, FromBytes, FromZeroes)]
+        #[derive(Debug, Clone, Copy, IntoBytes, FromBytes, FromZeros, Immutable)]
         #[repr(C)]
         struct Msg1 {
             _dummy: u8,  // Empty structs not supported by zerocopy
         }
 
-        #[derive(Debug, Clone, Copy, AsBytes, FromBytes, FromZeroes)]
+        #[derive(Debug, Clone, Copy, IntoBytes, FromBytes, FromZeros, Immutable)]
         #[repr(C)]
         struct Msg2 {
             _dummy: u8,

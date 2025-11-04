@@ -9,9 +9,11 @@
 //! Note: Messages CAN be Copy (and currently are, using FixedVec), but the trait
 //! doesn't require it to allow for future messages with non-Copy data if needed.
 use std::fmt::Debug;
-use zerocopy::{AsBytes, FromBytes, FromZeroes};
+use zerocopy::{FromBytes, FromZeros, Immutable, IntoBytes};
 
-pub trait Message: AsBytes + FromBytes + FromZeroes + Send + Sync + Debug + Clone + 'static {
+pub trait Message:
+    IntoBytes + FromBytes + FromZeros + Immutable + Send + Sync + Debug + Clone + 'static
+{
     /// Unique message type ID (for TLV encoding)
     const TYPE_ID: u16;
 
@@ -33,9 +35,9 @@ macro_rules! impl_message {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use zerocopy::{AsBytes, FromBytes, FromZeroes};
+    use zerocopy::{FromBytes, FromZeros, Immutable, IntoBytes};
 
-    #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+    #[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros, Immutable)]
     #[repr(C)]
     struct TestMessage {
         id: u64,
@@ -52,10 +54,7 @@ mod tests {
 
     #[test]
     fn test_zerocopy_roundtrip() {
-        let original = TestMessage {
-            id: 42,
-            value: 100,
-        };
+        let original = TestMessage { id: 42, value: 100 };
 
         // Serialize with zerocopy (zero-copy)
         let bytes = original.as_bytes();

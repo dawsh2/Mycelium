@@ -6,10 +6,10 @@
 /// Run with: cargo run --example sensor_network
 use mycelium_protocol::{impl_message, Message};
 use mycelium_transport::MessageBus;
-use zerocopy::{AsBytes, FromBytes, FromZeroes};
+use zerocopy::{IntoBytes, FromBytes, FromZeros, Immutable};
 
 /// Generic sensor reading - works for any sensor type
-#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+#[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros, Immutable)]
 #[repr(C)]
 struct SensorReading {
     sensor_id: u64,
@@ -21,7 +21,7 @@ struct SensorReading {
 impl_message!(SensorReading, 1, "sensors");
 
 /// Alert message when sensor exceeds threshold
-#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+#[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros, Immutable)]
 #[repr(C)]
 struct SensorAlert {
     sensor_id: u64,

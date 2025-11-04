@@ -156,9 +156,9 @@ mod tests {
     use super::*;
     use mycelium_protocol::impl_message;
     use tokio::net::{UnixListener, UnixStream};
-    use zerocopy::{AsBytes, FromBytes, FromZeroes};
+    use zerocopy::{IntoBytes, FromBytes, FromZeros, Immutable};
 
-    #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+    #[derive(Debug, Clone, Copy, PartialEq, IntoBytes, FromBytes, FromZeros, Immutable)]
     #[repr(C)]
     struct TestMsg {
         value: u64,

@@ -409,6 +409,9 @@ fn generate_message_struct(name: &str, contract: &MessageContract) -> String {
     code.push_str("///\n");
     code.push_str("/// **Note**: U256 values are stored as [u8; 32] for zerocopy compatibility.\n");
     code.push_str("#[derive(Debug, Clone, Copy, PartialEq)]\n");
+    code.push_str(
+        "#[derive(zerocopy::KnownLayout, zerocopy::Immutable, zerocopy::TryFromBytes, zerocopy::FromZeros, zerocopy::FromBytes, zerocopy::IntoBytes)]\n",
+    );
     code.push_str("#[repr(C)]\n");
     code.push_str(&format!("pub struct {} {{\n", name));
 
@@ -431,26 +434,8 @@ fn generate_message_struct(name: &str, contract: &MessageContract) -> String {
 
     code.push_str("}\n\n");
 
-    // Manual AsBytes impl (unsafe but simple)
-    code.push_str(&format!("unsafe impl zerocopy::AsBytes for {} {{\n", name));
-    code.push_str("    fn only_derive_is_allowed_to_implement_this_trait() {}\n");
-    code.push_str("}\n\n");
-
-    // Manual FromBytes impl
-    code.push_str(&format!(
-        "unsafe impl zerocopy::FromBytes for {} {{\n",
-        name
-    ));
-    code.push_str("    fn only_derive_is_allowed_to_implement_this_trait() {}\n");
-    code.push_str("}\n\n");
-
-    // Manual FromZeroes impl
-    code.push_str(&format!(
-        "unsafe impl zerocopy::FromZeroes for {} {{\n",
-        name
-    ));
-    code.push_str("    fn only_derive_is_allowed_to_implement_this_trait() {}\n");
-    code.push_str("}\n\n");
+    // Note: zerocopy traits are now derived on the struct definition (see #[derive] above)
+    // No manual impls needed for zerocopy 0.8
 
     code
 }

@@ -6,6 +6,7 @@ pub mod bus;
 pub mod codec;
 pub mod config;
 pub mod error;
+pub mod handler;
 pub mod local;
 pub mod ordered;
 pub mod publisher;
@@ -36,6 +37,7 @@ pub use bus::MessageBus;
 pub use codec::{deserialize_message, read_frame, write_message, CodecError};
 pub use config::TransportConfig;
 pub use error::{Result, TransportError};
+pub use handler::{AsyncMessageHandler, MessageHandler};
 pub use local::LocalTransport;
 pub use ordered::{OrderedSubscriber, OrderingStats};
 pub use publisher::Publisher;
@@ -45,8 +47,8 @@ pub use service_context::ServiceContext;
 pub use service_metrics::ServiceMetrics;
 pub use service_runtime::{Service, ServiceHandle, ServiceRuntime};
 
-// Re-export the #[service] macro
-pub use mycelium_macro::service;
+// Re-export proc macros
+pub use mycelium_macro::{routing_config, service};
 pub use shared::{BufferSizes, ChannelManager, ConnectionInfo, TransportType};
 pub use stream::{handle_stream_connection, StreamSubscriber};
 pub use subscriber::Subscriber;

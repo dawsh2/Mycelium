@@ -46,6 +46,10 @@ path = "examples/simple_pubsub.rs"
 name = "actor_demo"
 path = "examples/actor_demo.rs"
 
+[[example]]
+name = "compile_time_routing"
+path = "examples/compile_time_routing.rs"
+
 # Generic examples (domain-agnostic)
 [[example]]
 name = "sensor_network"

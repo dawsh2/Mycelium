@@ -1,0 +1,677 @@
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/paths_and_modules.rs:20:    #[derive(imp::FromBytes, imp::IntoBytes, imp::Unaligned)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/paths_and_modules.rs:26:    #[derive(imp::FromBytes, imp::IntoBytes, imp::Unaligned)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/paths_and_modules.rs:35:#[derive(imp::FromBytes, imp::IntoBytes, imp::Unaligned)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/crate_path.rs:23:        imp::IntoBytes,
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/crate_path.rs:36:    impl AssertNotZerocopyIntoBytes for SomeStruct {}
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/crate_path.rs:52:        T: IntoBytes + FromBytes + Unaligned + Immutable,
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/crate_path.rs:56:    pub unsafe trait IntoBytes {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/crate_path.rs:105:            unsafe impl$(<$generic: IntoBytes>)? IntoBytes for $ty {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/crate_path.rs:176:pub trait AssertNotZerocopyIntoBytes {}
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/crate_path.rs:177:impl<T: imp::IntoBytes> AssertNotZerocopyIntoBytes for T {}
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/unsafe_cell.rs:21:#[derive(imp::FromBytes, imp::IntoBytes, imp::KnownLayout, imp::Unaligned)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/unsafe_cell.rs:25:#[derive(imp::FromZeros, imp::IntoBytes, imp::KnownLayout, imp::Unaligned)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/unsafe_cell.rs:29:#[derive(imp::FromZeros, imp::IntoBytes, imp::KnownLayout, imp::Unaligned)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/hash.rs:15:#[derive(imp::IntoBytes, imp::Immutable, imp::ByteHash)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/hash.rs:23:util_assert_impl_all!(Struct: imp::IntoBytes, imp::hash::Hash);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/output_tests.rs:28:    IntoBytes => derive_into_bytes_inner,
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/output_tests.rs:451:        IntoBytes {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/output_tests.rs:457:            unsafe impl ::zerocopy::IntoBytes for Foo {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/output_tests.rs:464:        IntoBytes {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/output_tests.rs:473:            unsafe impl ::zerocopy::IntoBytes for Foo
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/output_tests.rs:475:                u8: ::zerocopy::IntoBytes,
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/output_tests.rs:476:                u8: ::zerocopy::IntoBytes,
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/output_tests.rs:488:        IntoBytes {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/output_tests.rs:497:            unsafe impl ::zerocopy::IntoBytes for Foo
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/output_tests.rs:499:                u8: ::zerocopy::IntoBytes,
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/output_tests.rs:500:                [Trailing]: ::zerocopy::IntoBytes,
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/output_tests.rs:512:        IntoBytes {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/output_tests.rs:521:            unsafe impl<Trailing> ::zerocopy::IntoBytes for Foo<Trailing>
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/output_tests.rs:523:                u8: ::zerocopy::IntoBytes + ::zerocopy::Unaligned,
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/output_tests.rs:524:                [Trailing]: ::zerocopy::IntoBytes + ::zerocopy::Unaligned,
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/output_tests.rs:537:                IntoBytes {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/output_tests.rs:545:                    unsafe impl ::zerocopy::IntoBytes for Foo {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/output_tests.rs:2213:                Self: ::zerocopy::IntoBytes + ::zerocopy::Immutable,
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/output_tests.rs:2222:                        ::zerocopy::IntoBytes::as_bytes(self)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/output_tests.rs:2232:                        ::zerocopy::IntoBytes::as_bytes(data)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/output_tests.rs:2250:                Self: ::zerocopy::IntoBytes + ::zerocopy::Immutable,
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/output_tests.rs:2255:                        ::zerocopy::IntoBytes::as_bytes(self),
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/output_tests.rs:2256:                        ::zerocopy::IntoBytes::as_bytes(other),
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/output_tests.rs:2265:                Self: ::zerocopy::IntoBytes + ::zerocopy::Immutable,
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/union_to_bytes.rs:15:// A union is `imp::IntoBytes` if:
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/union_to_bytes.rs:16:// - all fields are `imp::IntoBytes`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/union_to_bytes.rs:21:#[derive(imp::IntoBytes, Clone, Copy)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/union_to_bytes.rs:27:util_assert_impl_all!(CZst: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/union_to_bytes.rs:29:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/union_to_bytes.rs:36:util_assert_impl_all!(C: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/union_to_bytes.rs:41:// #[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/union_to_bytes.rs:50:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/union_to_bytes.rs:56:util_assert_impl_all!(CZstPacked: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/union_to_bytes.rs:58:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/union_to_bytes.rs:65:util_assert_impl_all!(CPacked: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/union_to_bytes.rs:67:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/union_to_bytes.rs:75:util_assert_impl_all!(CMultibytePacked: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/msrv_specific.stderr:12:36 |         is_into_bytes_1::<IntoBytes1<AU16>>();
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/msrv_specific.stderr:15:note: required because of the requirements on the impl of `zerocopy::IntoBytes` for `IntoBytes1<AU16>`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/msrv_specific.stderr:18:25 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/msrv_specific.stderr:23:34 | fn is_into_bytes_1<T: IntoBytes>() {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/msrv_specific.stderr:25:   = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/absence_of_deprecated_warning.rs:18:use zerocopy::IntoBytes;
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/absence_of_deprecated_warning.rs:21:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_try_from_bytes.rs:60:        <Baz as imp::TryFromBytes>::try_read_from_bytes(imp::IntoBytes::as_bytes(&1u32)),
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_try_from_bytes.rs:64:        <Baz as imp::TryFromBytes>::try_read_from_bytes(imp::IntoBytes::as_bytes(&0u32)),
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_try_from_bytes.rs:94:        <Blah as imp::TryFromBytes>::try_read_from_bytes(imp::IntoBytes::as_bytes(&1i8)),
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_try_from_bytes.rs:98:        <Blah as imp::TryFromBytes>::try_read_from_bytes(imp::IntoBytes::as_bytes(&0i8)),
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_try_from_bytes.rs:102:        <Blah as imp::TryFromBytes>::try_read_from_bytes(imp::IntoBytes::as_bytes(&3i8)),
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_try_from_bytes.rs:106:        <Blah as imp::TryFromBytes>::try_read_from_bytes(imp::IntoBytes::as_bytes(&6i8)),
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_try_from_bytes.rs:115:    Eq, PartialEq, Debug, imp::KnownLayout, imp::Immutable, imp::TryFromBytes, imp::IntoBytes,
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_try_from_bytes.rs:149:    Eq, PartialEq, Debug, imp::KnownLayout, imp::Immutable, imp::TryFromBytes, imp::IntoBytes,
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_try_from_bytes.rs:181:// Technically non-portable since this is only `IntoBytes` if the discriminant
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_try_from_bytes.rs:184:    Eq, PartialEq, Debug, imp::KnownLayout, imp::Immutable, imp::TryFromBytes, imp::IntoBytes,
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_try_from_bytes.rs:223:    #[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_try_from_bytes.rs:248:    Eq, PartialEq, Debug, imp::KnownLayout, imp::Immutable, imp::TryFromBytes, imp::IntoBytes,
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_try_from_bytes.rs:288:    #[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/eq.rs:15:#[derive(imp::Debug, imp::IntoBytes, imp::Immutable, imp::ByteEq)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/eq.rs:23:util_assert_impl_all!(Struct: imp::IntoBytes, imp::PartialEq, imp::Eq);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/include.rs:58:        super::imp::IntoBytes,
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/derive_transparent.rs:16:use zerocopy::{FromBytes, FromZeros, IntoBytes, TryFromBytes, Unaligned};
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/derive_transparent.rs:24:#[derive(IntoBytes, FromBytes, Unaligned)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/derive_transparent.rs:37:util_assert_impl_all!(TransparentStruct<NotZerocopy>: IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:15:// A struct is `IntoBytes` if:
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:16:// - all fields are `IntoBytes`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:21:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:25:util_assert_impl_all!(CZst: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:27:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:35:util_assert_impl_all!(C: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:37:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:45:util_assert_impl_all!(C: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:47:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:54:util_assert_impl_all!(Transparent: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:56:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:63:util_assert_impl_all!(TransparentGeneric<u64>: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:64:util_assert_impl_all!(TransparentGeneric<[u64]>: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:66:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:70:util_assert_impl_all!(CZstPacked: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:72:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:86:util_assert_impl_all!(CPacked: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:88:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:98:util_assert_impl_all!(CPacked2: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:100:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:112:util_assert_impl_all!(CPackedGeneric<u8, util::AU16>: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:113:util_assert_impl_all!(CPackedGeneric<u8, [util::AU16]>: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:115:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:127:util_assert_impl_all!(PackedGeneric<u8, util::AU16>: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:128:util_assert_impl_all!(PackedGeneric<u8, [util::AU16]>: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:132:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:138:util_assert_impl_all!(Unpacked: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:140:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:148:util_assert_impl_all!(ReprCGenericOneField<util::AU16>: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:149:util_assert_impl_all!(ReprCGenericOneField<[util::AU16]>: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:151:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:160:util_assert_impl_all!(ReprCGenericMultipleFields<u8, [u8; 2]>: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:161:util_assert_impl_all!(ReprCGenericMultipleFields<u8, [[u8; 2]]>: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:162:util_assert_not_impl_any!(ReprCGenericMultipleFields<u8, util::AU16>: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:163:util_assert_not_impl_any!(ReprCGenericMultipleFields<u8, [util::AU16]>: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:165:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:171:util_assert_impl_all!(Unsized: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:173:// Deriving `IntoBytes` should work if the struct has bounded parameters.
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:175:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:177:struct WithParams<'a: 'b, 'b: 'a, T: 'a + 'b + imp::IntoBytes, const N: usize>(
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:184:    T: 'a + 'b + imp::IntoBytes;
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:186:util_assert_impl_all!(WithParams<'static, 'static, u8, 42>: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:190:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:194:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:202:util_assert_impl_all!(IndexEntry<0>: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/struct_to_bytes.rs:203:util_assert_impl_all!(IndexEntry<1>: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/derive_transparent.stderr:26:24 | #[derive(IntoBytes, FromBytes, Unaligned)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/derive_transparent.stderr:60:24 | #[derive(IntoBytes, FromBytes, Unaligned)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/derive_transparent.stderr:94:24 | #[derive(IntoBytes, FromBytes, Unaligned)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/derive_transparent.stderr:103:error[E0277]: the trait bound `NotZerocopy: zerocopy::IntoBytes` is not satisfied
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/derive_transparent.stderr:106:37 | util_assert_impl_all!(TransparentStruct<NotZerocopy>: IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/derive_transparent.stderr:109:help: the trait `zerocopy::IntoBytes` is not implemented for `NotZerocopy`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/derive_transparent.stderr:114:   = note: Consider adding `#[derive(IntoBytes)]` to `NotZerocopy`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/derive_transparent.stderr:115:   = help: the following other types implement trait `zerocopy::IntoBytes`:
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/derive_transparent.stderr:125:note: required for `TransparentStruct<NotZerocopy>` to implement `zerocopy::IntoBytes`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/derive_transparent.stderr:128:24 | #[derive(IntoBytes, FromBytes, Unaligned)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/derive_transparent.stderr:133:37 | util_assert_impl_all!(TransparentStruct<NotZerocopy>: IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/derive_transparent.stderr:135:   = note: this error originates in the derive macro `IntoBytes` which comes from the expansion of the macro `util_assert_impl_all` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/derive_transparent.stderr:162:24 | #[derive(IntoBytes, FromBytes, Unaligned)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/derive_transparent.stderr:10:24 | #[derive(IntoBytes, FromBytes, Unaligned)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/derive_transparent.stderr:28:24 | #[derive(IntoBytes, FromBytes, Unaligned)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/derive_transparent.stderr:46:24 | #[derive(IntoBytes, FromBytes, Unaligned)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/derive_transparent.stderr:55:error[E0277]: the trait bound `NotZerocopy: zerocopy::IntoBytes` is not satisfied
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/derive_transparent.stderr:58:37 | util_assert_impl_all!(TransparentStruct<NotZerocopy>: IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/derive_transparent.stderr:59:   | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `zerocopy::IntoBytes` is not implemented for `NotZerocopy`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/derive_transparent.stderr:61:note: required because of the requirements on the impl of `zerocopy::IntoBytes` for `TransparentStruct<NotZerocopy>`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/derive_transparent.stderr:64:24 | #[derive(IntoBytes, FromBytes, Unaligned)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/derive_transparent.stderr:69:37 | util_assert_impl_all!(TransparentStruct<NotZerocopy>: IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/derive_transparent.stderr:82:24 | #[derive(IntoBytes, FromBytes, Unaligned)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.stderr:255:562 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.stderr:258:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.stderr:263:568 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.stderr:266:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.stderr:420:error[E0277]: `IntoBytes1` has 1 total byte(s) of padding
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.stderr:423:538 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.stderr:424:    |          ^^^^^^^^^ types with padding cannot implement `IntoBytes`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.stderr:429:    = help: the trait `PaddingFree<IntoBytes1, 1>` is not implemented for `()`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.stderr:430:            but trait `PaddingFree<IntoBytes1, 0>` is implemented for it
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.stderr:432:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.stderr:434:error[E0277]: `IntoBytes2` has 3 total byte(s) of padding
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.stderr:437:549 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.stderr:438:    |          ^^^^^^^^^ types with padding cannot implement `IntoBytes`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.stderr:443:    = help: the trait `PaddingFree<IntoBytes2, 3>` is not implemented for `()`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.stderr:444:            but trait `PaddingFree<IntoBytes2, 0>` is implemented for it
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.stderr:446:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.stderr:448:error[E0277]: `IntoBytes3` has 2 total byte(s) of padding
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.stderr:451:555 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.stderr:452:    |          ^^^^^^^^^ types with padding cannot implement `IntoBytes`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.stderr:457:    = help: the trait `PaddingFree<IntoBytes3, 2>` is not implemented for `()`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.stderr:458:            but trait `PaddingFree<IntoBytes3, 0>` is implemented for it
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.stderr:460:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.stderr:465:573 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.stderr:471:573 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.stderr:473:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/derive_transparent.stderr:21:24 | #[derive(IntoBytes, FromBytes, Unaligned)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/derive_transparent.stderr:50:24 | #[derive(IntoBytes, FromBytes, Unaligned)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/derive_transparent.stderr:79:24 | #[derive(IntoBytes, FromBytes, Unaligned)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/derive_transparent.stderr:88:error[E0277]: the trait bound `NotZerocopy: zerocopy::IntoBytes` is not satisfied
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/derive_transparent.stderr:91:37 | util_assert_impl_all!(TransparentStruct<NotZerocopy>: IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/derive_transparent.stderr:92:   |                       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the trait `zerocopy::IntoBytes` is not implemented for `NotZerocopy`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/derive_transparent.stderr:94:   = note: Consider adding `#[derive(IntoBytes)]` to `NotZerocopy`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/derive_transparent.stderr:95:   = help: the following other types implement trait `zerocopy::IntoBytes`:
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/derive_transparent.stderr:105:note: required for `TransparentStruct<NotZerocopy>` to implement `zerocopy::IntoBytes`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/derive_transparent.stderr:108:24 | #[derive(IntoBytes, FromBytes, Unaligned)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/derive_transparent.stderr:113:37 | util_assert_impl_all!(TransparentStruct<NotZerocopy>: IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/derive_transparent.stderr:115:   = note: this error originates in the derive macro `IntoBytes` which comes from the expansion of the macro `util_assert_impl_all` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/derive_transparent.stderr:137:24 | #[derive(IntoBytes, FromBytes, Unaligned)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_to_bytes.rs:15:// An enum is `IntoBytes` if if has a defined repr.
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_to_bytes.rs:17:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_to_bytes.rs:23:util_assert_impl_all!(C: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_to_bytes.rs:25:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_to_bytes.rs:31:util_assert_impl_all!(U8: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_to_bytes.rs:33:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_to_bytes.rs:39:util_assert_impl_all!(U16: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_to_bytes.rs:41:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_to_bytes.rs:47:util_assert_impl_all!(U32: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_to_bytes.rs:49:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_to_bytes.rs:55:util_assert_impl_all!(U64: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_to_bytes.rs:57:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_to_bytes.rs:63:util_assert_impl_all!(Usize: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_to_bytes.rs:65:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_to_bytes.rs:71:util_assert_impl_all!(I8: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_to_bytes.rs:73:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_to_bytes.rs:79:util_assert_impl_all!(I16: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_to_bytes.rs:81:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_to_bytes.rs:87:util_assert_impl_all!(I32: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_to_bytes.rs:89:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_to_bytes.rs:95:util_assert_impl_all!(I64: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_to_bytes.rs:97:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_to_bytes.rs:103:util_assert_impl_all!(Isize: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_to_bytes.rs:105:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_to_bytes.rs:112:util_assert_impl_all!(HasData: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_to_bytes.rs:114:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_to_bytes.rs:123:util_assert_impl_all!(HasData: imp::IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/enum_to_bytes.rs:129:#[derive(imp::IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/union.stderr:4:34 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/union.stderr:7:   = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/union.stderr:12:48 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/union.stderr:15:   = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/union.stderr:20:54 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/union.stderr:23:   = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/union.stderr:75:error[E0277]: the trait bound `(): PaddingFree<IntoBytes2, 1_usize>` is not satisfied
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/union.stderr:78:40 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/union.stderr:79:   |          ^^^^^^^^^ the trait `PaddingFree<IntoBytes2, 1_usize>` is not implemented for `()`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/union.stderr:84:   = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:10:172 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:13:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:18:177 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:21:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:26:200 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:29:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:159:100 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:163:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:165:error[E0277]: the trait bound `(): PaddingFree<IntoBytes2, 1_usize>` is not satisfied
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:168:107 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:169:    |          ^^^^^^^^^ the trait `PaddingFree<IntoBytes2, 1_usize>` is not implemented for `()`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:174:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:176:error[E0277]: the trait bound `(): PaddingFree<IntoBytes3, 1_usize>` is not satisfied
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:179:114 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:180:    |          ^^^^^^^^^ the trait `PaddingFree<IntoBytes3, 1_usize>` is not implemented for `()`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:185:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:190:130 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:193:    = help: within `IntoBytes4`, the trait `Sized` is not implemented for `[u8]`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:194:note: required because it appears within the type `IntoBytes4`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:197:132 | struct IntoBytes4 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:219:error[E0277]: the trait bound `(): DynamicPaddingFree<IntoBytes5, true>` is not satisfied
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:222:139 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:223:    |          ^^^^^^^^^ the trait `DynamicPaddingFree<IntoBytes5, true>` is not implemented for `()`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:228:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:230:error[E0277]: the trait bound `(): DynamicPaddingFree<IntoBytes6, true>` is not satisfied
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:233:148 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:234:    |          ^^^^^^^^^ the trait `DynamicPaddingFree<IntoBytes6, true>` is not implemented for `()`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:239:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:241:error[E0277]: the trait bound `(): DynamicPaddingFree<IntoBytes7, true>` is not satisfied
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:244:158 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:245:    |          ^^^^^^^^^ the trait `DynamicPaddingFree<IntoBytes7, true>` is not implemented for `()`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.stderr:250:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union.stderr:4:34 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union.stderr:7:   = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union.stderr:12:48 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union.stderr:15:   = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union.stderr:20:54 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union.stderr:23:   = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union.stderr:68:40 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union.stderr:73:   = help: try referring to `IntoBytes` crate for guidance on how handle this unexpected cfg
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union.stderr:74:   = help: the derive macro `IntoBytes` may come from an old version of the `zerocopy_derive` crate, try updating your dependency with `cargo update -p zerocopy_derive`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union.stderr:77:   = note: this warning originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union.stderr:100:error[E0277]: `IntoBytes2` has 1 total byte(s) of padding
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union.stderr:103:40 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union.stderr:104:   |          ^^^^^^^^^ types with padding cannot implement `IntoBytes`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union.stderr:109:   = help: the trait `PaddingFree<IntoBytes2, 1>` is not implemented for `()`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union.stderr:110:           but trait `PaddingFree<IntoBytes2, 0>` is implemented for it
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union.stderr:112:   = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/lib.rs:59:// for deriving FromZeros, FromBytes, IntoBytes, or Unaligned on an enum"
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/lib.rs:145:derive!(IntoBytes => derive_into_bytes => derive_into_bytes_inner);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/lib.rs:159:/// Deprecated: prefer [`IntoBytes`] instead.
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/lib.rs:160:#[deprecated(since = "0.8.0", note = "`AsBytes` was renamed to `IntoBytes`")]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/lib.rs:611:            Self: #zerocopy_crate::IntoBytes + #zerocopy_crate::Immutable,
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/lib.rs:620:                    #zerocopy_crate::IntoBytes::as_bytes(self)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/lib.rs:630:                    #zerocopy_crate::IntoBytes::as_bytes(data)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/lib.rs:659:            Self: #zerocopy_crate::IntoBytes + #zerocopy_crate::Immutable,
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/lib.rs:664:                    #zerocopy_crate::IntoBytes::as_bytes(self),
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/lib.rs:665:                    #zerocopy_crate::IntoBytes::as_bytes(other),
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/lib.rs:678:            Self: #zerocopy_crate::IntoBytes + #zerocopy_crate::Immutable,
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/lib.rs:1272:        //   of that field) and we require that field to be `IntoBytes` (meaning
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/lib.rs:1276:        //   which we require to be `IntoBytes` (meaning they don't have any
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/lib.rs:1332:    Ok(ImplBlockBuilder::new(ast, strct, Trait::IntoBytes, field_bounds, zerocopy_crate)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/lib.rs:1341:/// - Its fields must be `IntoBytes`.
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/lib.rs:1353:    Ok(ImplBlockBuilder::new(ast, enm, Trait::IntoBytes, FieldBounds::ALL_SELF, zerocopy_crate)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/lib.rs:1358:/// A union is `IntoBytes` if:
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/lib.rs:1359:/// - all fields are `IntoBytes`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/lib.rs:1406:        ImplBlockBuilder::new(ast, unn, Trait::IntoBytes, FieldBounds::ALL_SELF, zerocopy_crate)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/lib.rs:1530:    IntoBytes,
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/src/lib.rs:1555:            Trait::IntoBytes => "IntoBytes",
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union.stderr:4:34 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union.stderr:7:   = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union.stderr:12:48 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union.stderr:15:   = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union.stderr:20:54 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union.stderr:23:   = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union.stderr:68:40 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union.stderr:73:   = help: try referring to `IntoBytes` crate for guidance on how handle this unexpected cfg
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union.stderr:74:   = help: the derive macro `IntoBytes` may come from an old version of the `zerocopy_derive` crate, try updating your dependency with `cargo update -p zerocopy_derive`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union.stderr:77:   = note: this warning originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union.stderr:104:error[E0277]: `IntoBytes2` has 1 total byte(s) of padding
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union.stderr:107:40 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union.stderr:108:   |          ^^^^^^^^^ types with padding cannot implement `IntoBytes`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union.stderr:113:   = help: the trait `PaddingFree<IntoBytes2, 1>` is not implemented for `()`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union.stderr:114:           but trait `PaddingFree<IntoBytes2, 0>` is implemented for it
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union.stderr:116:   = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:10:172 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:13:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:18:177 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:21:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:26:200 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:29:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:251:100 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:266:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:268:error[E0277]: `IntoBytes2` has 1 total byte(s) of padding
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:271:107 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:272:    |          ^^^^^^^^^ types with padding cannot implement `IntoBytes`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:277:    = help: the trait `PaddingFree<IntoBytes2, 1>` is not implemented for `()`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:278:            but trait `PaddingFree<IntoBytes2, 0>` is implemented for it
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:280:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:282:error[E0277]: `IntoBytes3` has 1 total byte(s) of padding
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:285:114 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:286:    |          ^^^^^^^^^ types with padding cannot implement `IntoBytes`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:291:    = help: the trait `PaddingFree<IntoBytes3, 1>` is not implemented for `()`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:292:            but trait `PaddingFree<IntoBytes3, 0>` is implemented for it
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:294:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:299:130 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:302:    = help: within `IntoBytes4`, the trait `Sized` is not implemented for `[u8]`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:303:note: required because it appears within the type `IntoBytes4`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:306:132 | struct IntoBytes4 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:308:    = note: required for `IntoBytes4` to implement `macro_util::__size_of::Sized`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:314:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:320:    |        ^^^^^^^ `IntoBytes` needs all field types to be `Sized` in order to determine whether there is padding
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:324:    = note: `IntoBytes` does not require the fields of `#[repr(packed)]` types to be `Sized`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:332:error[E0277]: `IntoBytes5` has one or more padding bytes
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:335:139 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:336:    |          ^^^^^^^^^ types with padding cannot implement `IntoBytes`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:341:    = help: the trait `DynamicPaddingFree<IntoBytes5, true>` is not implemented for `()`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:342:            but trait `DynamicPaddingFree<IntoBytes5, false>` is implemented for it
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:344:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:346:error[E0277]: `IntoBytes6` has one or more padding bytes
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:349:148 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:350:    |          ^^^^^^^^^ types with padding cannot implement `IntoBytes`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:355:    = help: the trait `DynamicPaddingFree<IntoBytes6, true>` is not implemented for `()`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:356:            but trait `DynamicPaddingFree<IntoBytes6, false>` is implemented for it
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:358:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:360:error[E0277]: `IntoBytes7` has one or more padding bytes
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:363:158 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:364:    |          ^^^^^^^^^ types with padding cannot implement `IntoBytes`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:369:    = help: the trait `DynamicPaddingFree<IntoBytes7, true>` is not implemented for `()`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:370:            but trait `DynamicPaddingFree<IntoBytes7, false>` is implemented for it
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:372:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:421:195 |         is_into_bytes_11::<IntoBytes11<AU16>>();
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:435:note: required for `IntoBytes11<AU16>` to implement `zerocopy::IntoBytes`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:438:184 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:443:193 | fn is_into_bytes_11<T: IntoBytes>() {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.stderr:445:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/late_compile_pass.stderr:63:error[E0277]: the trait bound `NotZerocopy: zerocopy::IntoBytes` is not satisfied
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/late_compile_pass.stderr:66:56 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/late_compile_pass.stderr:67:   |          ^^^^^^^^^ the trait `zerocopy::IntoBytes` is not implemented for `NotZerocopy`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/late_compile_pass.stderr:70:   = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.rs:535:// IntoBytes errors
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.rs:538:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.rs:540:enum IntoBytes1 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.rs:545:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.rs:547:struct Align4IntoBytes(u32);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.rs:549:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.rs:551:enum IntoBytes2 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.rs:552:    A(Align4IntoBytes),
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.rs:555:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.rs:557:enum IntoBytes3 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.rs:562:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.rs:563:enum IntoBytes4 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.rs:568:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.rs:569:enum IntoBytes5 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.rs:573:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.rs:575:enum IntoBytes6<T> {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:10:172 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:13:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:18:177 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:21:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:26:200 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:29:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:288:100 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:308:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:314:error[E0277]: `IntoBytes2` has 1 total byte(s) of padding
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:317:107 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:318:    |          ^^^^^^^^^ types with padding cannot implement `IntoBytes`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:323:    = help: the trait `PaddingFree<IntoBytes2, 1>` is not implemented for `()`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:324:            but trait `PaddingFree<IntoBytes2, 0>` is implemented for it
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:326:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:332:error[E0277]: `IntoBytes3` has 1 total byte(s) of padding
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:335:114 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:336:    |          ^^^^^^^^^ types with padding cannot implement `IntoBytes`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:341:    = help: the trait `PaddingFree<IntoBytes3, 1>` is not implemented for `()`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:342:            but trait `PaddingFree<IntoBytes3, 0>` is implemented for it
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:344:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:353:130 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:356:    = help: within `IntoBytes4`, the trait `Sized` is not implemented for `[u8]`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:357:note: required because it appears within the type `IntoBytes4`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:360:132 | struct IntoBytes4 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:362:    = note: required for `IntoBytes4` to implement `macro_util::__size_of::Sized`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:368:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:374:    |        ^^^^^^^ `IntoBytes` needs all field types to be `Sized` in order to determine whether there is padding
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:378:    = note: `IntoBytes` does not require the fields of `#[repr(packed)]` types to be `Sized`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:386:error[E0277]: `IntoBytes5` has one or more padding bytes
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:389:139 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:390:    |          ^^^^^^^^^ types with padding cannot implement `IntoBytes`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:395:    = help: the trait `DynamicPaddingFree<IntoBytes5, true>` is not implemented for `()`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:396:            but trait `DynamicPaddingFree<IntoBytes5, false>` is implemented for it
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:398:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:404:error[E0277]: `IntoBytes6` has one or more padding bytes
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:407:148 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:408:    |          ^^^^^^^^^ types with padding cannot implement `IntoBytes`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:413:    = help: the trait `DynamicPaddingFree<IntoBytes6, true>` is not implemented for `()`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:414:            but trait `DynamicPaddingFree<IntoBytes6, false>` is implemented for it
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:416:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:422:error[E0277]: `IntoBytes7` has one or more padding bytes
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:425:158 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:426:    |          ^^^^^^^^^ types with padding cannot implement `IntoBytes`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:431:    = help: the trait `DynamicPaddingFree<IntoBytes7, true>` is not implemented for `()`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:432:            but trait `DynamicPaddingFree<IntoBytes7, false>` is implemented for it
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:434:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:496:195 |         is_into_bytes_11::<IntoBytes11<AU16>>();
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:515:note: required for `IntoBytes11<AU16>` to implement `zerocopy::IntoBytes`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:518:184 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:523:193 | fn is_into_bytes_11<T: IntoBytes>() {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.stderr:525:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/deprecated.rs:44:test!(Enum => #[repr(u8)] enum Enum { A, } => TryFromBytes, FromZeros, KnownLayout, Immutable, IntoBytes, Unaligned);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/deprecated.rs:46:test!(Struct => #[repr(C)] struct Struct; => TryFromBytes, FromZeros, FromBytes, KnownLayout, Immutable, IntoBytes, Unaligned);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/deprecated.rs:48:test!(Union => #[repr(C)] union Union{ a: (), } => TryFromBytes, FromZeros, FromBytes, KnownLayout, Immutable, IntoBytes, Unaligned);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/late_compile_pass.stderr:129:error[E0277]: the trait bound `NotZerocopy: zerocopy::IntoBytes` is not satisfied
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/late_compile_pass.stderr:132:56 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/late_compile_pass.stderr:133:   |          ^^^^^^^^^ the trait `zerocopy::IntoBytes` is not implemented for `NotZerocopy`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/late_compile_pass.stderr:135:   = note: Consider adding `#[derive(IntoBytes)]` to `NotZerocopy`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/late_compile_pass.stderr:136:   = help: the following other types implement trait `zerocopy::IntoBytes`:
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/late_compile_pass.stderr:147:   = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.rs:535:// IntoBytes errors
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.rs:538:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.rs:540:enum IntoBytes1 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.rs:545:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.rs:547:struct Align4IntoBytes(u32);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.rs:549:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.rs:551:enum IntoBytes2 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.rs:552:    A(Align4IntoBytes),
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.rs:555:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.rs:557:enum IntoBytes3 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.rs:562:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.rs:563:enum IntoBytes4 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.rs:568:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.rs:569:enum IntoBytes5 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.rs:573:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/enum.rs:575:enum IntoBytes6<T> {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union_into_bytes_cfg/union_into_bytes_cfg.rs:18:use zerocopy::IntoBytes;
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union_into_bytes_cfg/union_into_bytes_cfg.rs:20:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/late_compile_pass.stderr:183:error[E0277]: the trait bound `NotZerocopy: zerocopy::IntoBytes` is not satisfied
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/late_compile_pass.stderr:186:56 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/late_compile_pass.stderr:189:help: the trait `zerocopy::IntoBytes` is not implemented for `NotZerocopy`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/late_compile_pass.stderr:194:   = note: Consider adding `#[derive(IntoBytes)]` to `NotZerocopy`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/late_compile_pass.stderr:195:   = help: the following other types implement trait `zerocopy::IntoBytes`:
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/late_compile_pass.stderr:206:   = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.rs:535:// IntoBytes errors
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.rs:538:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.rs:540:enum IntoBytes1 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.rs:545:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.rs:547:struct Align4IntoBytes(u32);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.rs:549:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.rs:551:enum IntoBytes2 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.rs:552:    A(Align4IntoBytes),
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.rs:555:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.rs:557:enum IntoBytes3 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.rs:562:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.rs:563:enum IntoBytes4 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.rs:568:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.rs:569:enum IntoBytes5 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.rs:573:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.rs:575:enum IntoBytes6<T> {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union_into_bytes_cfg/union_into_bytes_cfg.stderr:5:20 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union_into_bytes_cfg/union_into_bytes_cfg.stderr:8:   = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union_into_bytes_cfg/union_into_bytes_cfg.stderr:13:20 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union_into_bytes_cfg/union_into_bytes_cfg.stderr:18:   = help: try referring to `IntoBytes` crate for guidance on how handle this unexpected cfg
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union_into_bytes_cfg/union_into_bytes_cfg.stderr:19:   = help: the derive macro `IntoBytes` may come from an old version of the `zerocopy_derive` crate, try updating your dependency with `cargo update -p zerocopy_derive`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union_into_bytes_cfg/union_into_bytes_cfg.stderr:22:   = note: this warning originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.rs:15:use zerocopy::{IntoBytes, KnownLayout};
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.rs:94:// IntoBytes errors
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.rs:97:// Since `IntoBytes1` has at least one generic parameter, an `IntoBytes` impl is
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.rs:100:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.rs:102:struct IntoBytes1<T> {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.rs:107:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.rs:109:struct IntoBytes2 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.rs:114:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.rs:116:struct IntoBytes3 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.rs:130:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.rs:132:struct IntoBytes4 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.rs:139:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.rs:141:struct IntoBytes5 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.rs:148:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.rs:150:struct IntoBytes6 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.rs:158:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.rs:160:struct IntoBytes7 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.rs:166:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.rs:168:struct IntoBytes8 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.rs:172:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.rs:173:struct IntoBytes9<T> {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.rs:177:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.rs:179:struct IntoBytes10<T> {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.rs:184:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.rs:186:struct IntoBytes11<T> {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.rs:193:fn is_into_bytes_11<T: IntoBytes>() {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.rs:195:        is_into_bytes_11::<IntoBytes11<AU16>>();
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.rs:200:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/struct.rs:202:struct IntoBytes12<T> {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/union_into_bytes_cfg/union_into_bytes_cfg.rs:18:use zerocopy::IntoBytes;
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/union_into_bytes_cfg/union_into_bytes_cfg.rs:20:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/late_compile_pass.rs:53:// IntoBytes errors
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/late_compile_pass.rs:56:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/late_compile_pass.rs:58:struct IntoBytes1 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/derive_transparent.rs:16:use zerocopy::{FromBytes, FromZeros, IntoBytes, TryFromBytes, Unaligned};
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/derive_transparent.rs:24:#[derive(IntoBytes, FromBytes, Unaligned)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/derive_transparent.rs:37:util_assert_impl_all!(TransparentStruct<NotZerocopy>: IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.rs:15:use zerocopy::{IntoBytes, KnownLayout};
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.rs:94:// IntoBytes errors
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.rs:97:// Since `IntoBytes1` has at least one generic parameter, an `IntoBytes` impl is
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.rs:100:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.rs:102:struct IntoBytes1<T> {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.rs:107:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.rs:109:struct IntoBytes2 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.rs:114:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.rs:116:struct IntoBytes3 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.rs:130:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.rs:132:struct IntoBytes4 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.rs:139:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.rs:141:struct IntoBytes5 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.rs:148:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.rs:150:struct IntoBytes6 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.rs:158:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.rs:160:struct IntoBytes7 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.rs:166:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.rs:168:struct IntoBytes8 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.rs:172:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.rs:173:struct IntoBytes9<T> {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.rs:177:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.rs:179:struct IntoBytes10<T> {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.rs:184:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.rs:186:struct IntoBytes11<T> {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.rs:193:fn is_into_bytes_11<T: IntoBytes>() {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.rs:195:        is_into_bytes_11::<IntoBytes11<AU16>>();
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.rs:200:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/struct.rs:202:struct IntoBytes12<T> {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/union_into_bytes_cfg/union_into_bytes_cfg.stderr:5:20 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/union_into_bytes_cfg/union_into_bytes_cfg.stderr:8:   = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.rs:15:use zerocopy::{IntoBytes, KnownLayout};
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.rs:94:// IntoBytes errors
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.rs:97:// Since `IntoBytes1` has at least one generic parameter, an `IntoBytes` impl is
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.rs:100:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.rs:102:struct IntoBytes1<T> {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.rs:107:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.rs:109:struct IntoBytes2 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.rs:114:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.rs:116:struct IntoBytes3 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.rs:130:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.rs:132:struct IntoBytes4 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.rs:139:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.rs:141:struct IntoBytes5 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.rs:148:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.rs:150:struct IntoBytes6 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.rs:158:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.rs:160:struct IntoBytes7 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.rs:166:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.rs:168:struct IntoBytes8 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.rs:172:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.rs:173:struct IntoBytes9<T> {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.rs:177:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.rs:179:struct IntoBytes10<T> {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.rs:184:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.rs:186:struct IntoBytes11<T> {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.rs:193:fn is_into_bytes_11<T: IntoBytes>() {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.rs:195:        is_into_bytes_11::<IntoBytes11<AU16>>();
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.rs:200:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/struct.rs:202:struct IntoBytes12<T> {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union.rs:31:// IntoBytes errors
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union.rs:34:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union.rs:36:union IntoBytes1<T> {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union.rs:40:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union.rs:42:union IntoBytes2 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union.rs:48:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union.rs:49:union IntoBytes3 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union.rs:54:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-stable/union.rs:56:union IntoBytes4 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/late_compile_pass.rs:53:// IntoBytes errors
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/late_compile_pass.rs:56:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/late_compile_pass.rs:58:struct IntoBytes1 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union.rs:31:// IntoBytes errors
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union.rs:34:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union.rs:36:union IntoBytes1<T> {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union.rs:40:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union.rs:42:union IntoBytes2 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union.rs:48:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union.rs:49:union IntoBytes3 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union.rs:54:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union.rs:56:union IntoBytes4 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.stderr:255:562 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.stderr:258:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.stderr:263:568 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.stderr:266:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.stderr:362:error[E0277]: the trait bound `(): PaddingFree<IntoBytes1, 1_usize>` is not satisfied
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.stderr:365:538 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.stderr:366:    |          ^^^^^^^^^ the trait `PaddingFree<IntoBytes1, 1_usize>` is not implemented for `()`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.stderr:371:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.stderr:373:error[E0277]: the trait bound `(): PaddingFree<IntoBytes2, 3_usize>` is not satisfied
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.stderr:376:549 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.stderr:377:    |          ^^^^^^^^^ the trait `PaddingFree<IntoBytes2, 3_usize>` is not implemented for `()`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.stderr:382:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.stderr:384:error[E0277]: the trait bound `(): PaddingFree<IntoBytes3, 2_usize>` is not satisfied
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.stderr:387:555 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.stderr:388:    |          ^^^^^^^^^ the trait `PaddingFree<IntoBytes3, 2_usize>` is not implemented for `()`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.stderr:393:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.stderr:398:573 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.stderr:404:573 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/enum.stderr:406:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/union.rs:31:// IntoBytes errors
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/union.rs:34:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/union.rs:36:union IntoBytes1<T> {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/union.rs:40:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/union.rs:42:union IntoBytes2 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/union.rs:48:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/union.rs:49:union IntoBytes3 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/union.rs:54:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/union.rs:56:union IntoBytes4 {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/derive_transparent.rs:16:use zerocopy::{FromBytes, FromZeros, IntoBytes, TryFromBytes, Unaligned};
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/derive_transparent.rs:24:#[derive(IntoBytes, FromBytes, Unaligned)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/derive_transparent.rs:37:util_assert_impl_all!(TransparentStruct<NotZerocopy>: IntoBytes);
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/priv_in_pub.rs:27:    #[derive(imp::KnownLayout, imp::IntoBytes, imp::FromZeros, imp::FromBytes, imp::Unaligned)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/priv_in_pub.rs:31:    #[derive(imp::KnownLayout, imp::IntoBytes, imp::FromZeros, imp::FromBytes, imp::Unaligned)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union_into_bytes_cfg/union_into_bytes_cfg.stderr:5:20 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union_into_bytes_cfg/union_into_bytes_cfg.stderr:8:   = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union_into_bytes_cfg/union_into_bytes_cfg.stderr:13:20 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union_into_bytes_cfg/union_into_bytes_cfg.stderr:18:   = help: try referring to `IntoBytes` crate for guidance on how handle this unexpected cfg
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union_into_bytes_cfg/union_into_bytes_cfg.stderr:19:   = help: the derive macro `IntoBytes` may come from an old version of the `zerocopy_derive` crate, try updating your dependency with `cargo update -p zerocopy_derive`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union_into_bytes_cfg/union_into_bytes_cfg.stderr:22:   = note: this warning originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union_into_bytes_cfg/union_into_bytes_cfg.rs:18:use zerocopy::IntoBytes;
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/union_into_bytes_cfg/union_into_bytes_cfg.rs:20:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/msrv_specific.rs:18:use zerocopy::IntoBytes;
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/msrv_specific.rs:25:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/msrv_specific.rs:27:struct IntoBytes1<T> {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/msrv_specific.rs:34:fn is_into_bytes_1<T: IntoBytes>() {
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-msrv/msrv_specific.rs:36:        is_into_bytes_1::<IntoBytes1<AU16>>();
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.stderr:255:562 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.stderr:258:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.stderr:263:568 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.stderr:266:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.stderr:461:error[E0277]: `IntoBytes1` has 1 total byte(s) of padding
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.stderr:464:538 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.stderr:465:    |          ^^^^^^^^^ types with padding cannot implement `IntoBytes`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.stderr:470:    = help: the trait `PaddingFree<IntoBytes1, 1>` is not implemented for `()`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.stderr:471:            but trait `PaddingFree<IntoBytes1, 0>` is implemented for it
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.stderr:473:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.stderr:479:error[E0277]: `IntoBytes2` has 3 total byte(s) of padding
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.stderr:482:549 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.stderr:483:    |          ^^^^^^^^^ types with padding cannot implement `IntoBytes`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.stderr:488:    = help: the trait `PaddingFree<IntoBytes2, 3>` is not implemented for `()`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.stderr:489:            but trait `PaddingFree<IntoBytes2, 0>` is implemented for it
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.stderr:491:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.stderr:497:error[E0277]: `IntoBytes3` has 2 total byte(s) of padding
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.stderr:500:555 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.stderr:501:    |          ^^^^^^^^^ types with padding cannot implement `IntoBytes`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.stderr:506:    = help: the trait `PaddingFree<IntoBytes3, 2>` is not implemented for `()`
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.stderr:507:            but trait `PaddingFree<IntoBytes3, 0>` is implemented for it
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.stderr:509:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.stderr:518:573 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.stderr:524:573 | #[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/enum.stderr:526:    = note: this error originates in the derive macro `IntoBytes` (in Nightly builds, run with -Z macro-backtrace for more info)
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/late_compile_pass.rs:53:// IntoBytes errors
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/late_compile_pass.rs:56:#[derive(IntoBytes)]
+/Users/daws/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zerocopy-derive-0.8.27/tests/ui-nightly/late_compile_pass.rs:58:struct IntoBytes1 {
