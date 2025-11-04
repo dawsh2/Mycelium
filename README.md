@@ -1,251 +1,128 @@
-# Mycelium <img src="docs/assets/cultures.svg" alt="Mycelium Logo" width="48" style="vertical-align: middle; margin-bottom: -8px;">
+# Mycelium <img src="docs/assets/cultures.svg" alt="Mycelium" width="48" style="vertical-align: middle; margin-bottom: -8px;">
 
-Mycelium is a **type-safe pub/sub messaging system** with topology-based transport selection. Define messages once in YAML, write pub/sub code once, deploy anywhere - transport is inferred from configuration. Same binary runs as single-process (Arc), multi-process (Unix sockets), or distributed (TCP). Built for low-latency systems like high-frequency trading, multiplayer game servers, and real-time analytics.
+Typed message bus for Rust services that can run in a single process or across
+multiple processes without changing application code. Mycelium keeps
+message-shape definitions, transport selection, and actor supervision in one
+place so the same service logic works with shared memory (Arc), Unix sockets, or
+TCP.
 
-**Key features:** 
-- **Compile-time code generation** - Message types, validation, and buffer pool configuration generated from `contracts.yaml` during build
-- **Compile-time routing** - Optional direct function call routing (2-3ns overhead) for ultra-low latency, 30x faster than Arc-based routing
-- **Zero-cost abstractions** - Type-safe `Publisher<M>` and `Subscriber<M>` with no runtime overhead
-- **Bijective zerocopy serialization** - Direct memory casting with no allocation or copying
-- **Flexible transport** - Same code runs with Arc (single-process), Unix sockets (multi-process), or TCP (distributed)
-- **Automatic observability** - Built-in tracing, metrics, and structured logging
-- **Actor-based supervision** - Exponential backoff retry for resilient services
+- Messages are defined once in `contracts.yaml`. Code generation produces Rust
+  structs with serialization, validation, and TLV encoders.
+- Services are plain structs annotated with `#[service]`. The macro wires in a
+  `ServiceContext` that exposes async publishers/subscribers plus tracing and
+  metrics hooks.
+- `MessageBus` encapsulates the transport. Swap the transport at startup; the
+  service code stays untouched.
 
----
+## Core pieces
 
-## Performance (Measured in Release Mode)
+| Component | Location | Role |
+| --- | --- | --- |
+| `contracts.yaml` | project root | Source of truth for message schemas. The build script in `crates/mycelium-protocol` generates strongly typed Rust APIs. |
+| `ServiceContext` | `crates/mycelium-transport/src/service.rs` | Runtime handle passed to every service method. Provides `emit`, `subscribe`, shutdown signals, metrics, and tracing spans. |
+| `MessageBus` | `crates/mycelium-transport/src/bus.rs` | Transport abstraction. Supports `Arc` (single process), Unix domain sockets, and TCP. |
+| `ServiceRuntime` | `crates/mycelium-transport/src/runtime.rs` | Owns task supervision. Spawns `#[service]` actors, applies exponential backoff, and coordinates shutdown. |
+| `routing_config!` | `crates/mycelium-transport/src/routing.rs` | Optional compile-time router that maps message types to handlers with direct function calls. |
 
-**Service API (`ctx.emit()` with full observability):**
-- **120 nanoseconds** per emit (includes tracing, metrics, timing)
-- **8 million emits/second** per core
-- **2.5x overhead** vs raw publish (for full instrumentation)
+## Deployment options
 
-**Raw Transport Layer:**
-- **Same process**: `Arc<T>` zero-copy sharing (47ns) - no serialization
-- **Multi-process**: Unix domain sockets (unmeasured, TLV protocol)
-- **Distributed**: TCP with zero-copy deserialization (unmeasured, TLV protocol)
+| Use case | Transport | How to configure |
+| --- | --- | --- |
+| All services in one binary (lowest latency) | `MessageBus::new()` (Arc) | Pass the same `Arc<MessageBus>` to every service and spawn them in one `ServiceRuntime`. |
+| Multiple binaries on one host | `MessageBus::with_unix_transport(path)` | Start a listener process with the Unix transport; other processes connect to the same path. |
+| Cross-host / distributed | `MessageBus::with_tcp_transport(addr)` | Run a TCP listener and point clients at the host:port. |
 
-*Note: Unix and TCP transport benchmarks pending Phase 3 implementation.*
+Switching between the three changes only the `MessageBus` constructor; the
+service code and generated message types are identical.
 
----
+## Quick start
 
-## Quick Start
+1. **Describe messages.** Edit `contracts.yaml`:
 
-### 1. Define Your Message Contract
+   ```yaml
+   messages:
+     GasMetrics:
+       tlv_type: 200
+       domain: telemetry
+       fields:
+         block_number: u64
+         base_fee_per_gas: "[u8; 32]"
+   ```
 
-```yaml
-# contracts.yaml
-messages:
-  V2Swap:
-    type_id: 19
-    domain: market_data
-    fields:
-      pool_address: "[u8; 20]"
-      token0_address: "[u8; 20]"
-      token1_address: "[u8; 20]"
-      amount0_in: "U256"
-      amount0_out: "U256"
-      timestamp_ns: "u64"
-```
+2. **Build once.** `cargo build` regenerates `bandit_messages::GasMetrics` (and
+   the associated `Message` trait impl) during the build script phase.
 
-Run `cargo build` - messages are **generated automatically** with the `Message` trait.
+3. **Write a service.**
 
-### 2. Implement Your Service
+   ```rust
+   use anyhow::Result;
+   use mycelium_transport::{service, ServiceContext};
 
-```rust
-use mycelium::prelude::*;
+   pub struct GasLogger;
 
-pub struct PolygonAdapter {
-    config: PolygonConfig,  // Your domain config
-    cache: MetadataCache,
-}
+   #[service]
+   impl GasLogger {
+       async fn run(&mut self, ctx: &ServiceContext) -> Result<()> {
+           let mut sub = ctx.subscribe::<bandit_messages::GasMetrics>().await?;
 
-#[mycelium::service]
-impl PolygonAdapter {
-    async fn run(&mut self, ctx: ServiceContext) -> Result<()> {
-        // Connect to data source
-        let mut ws = connect_websocket(&self.config.ws_url).await?;
+           while let Some(metric) = sub.recv().await {
+               tracing::info!(block = metric.block_number, "gas metric");
+           }
 
-        // Process events
-        while let Some(event) = ws.next().await {
-            let swap = parse_swap(&event)?;
-            
-            // Emit typed message - Mycelium handles everything:
-            // - TLV serialization (zerocopy)
-            // - Routing to subscribers
-            // - Transport selection (Arc/Unix/TCP)
-            // - Trace context propagation
-            // - Metrics collection
-            ctx.emit(swap).await?;
-        }
+           Ok(())
+       }
+   }
+   ```
 
-        Ok(())
-    }
-}
-```
+4. **Choose a transport and spawn.**
 
-**What `#[mycelium::service]` does:**
-- Wraps your service in an actor with supervision (exponential backoff retry)
-- Sets up routing based on message types
-- Provides `ServiceContext` with publishers pre-configured
-- Adds automatic observability (tracing, metrics, structured logging)
+   ```rust
+   use mycelium_transport::{MessageBus, ServiceRuntime};
 
-### 3. Wire It Up in Your Binary
+   #[tokio::main]
+   async fn main() -> Result<(), anyhow::Error> {
+       let bus = MessageBus::new();            // swap for Unix/TCP as needed
+       let runtime = ServiceRuntime::new(bus);
 
-```rust
-// Your main.rs - YOU control startup
-use mycelium_transport::{MessageBus, ServiceRuntime};
+       runtime.spawn_service(GasLogger).await?;
 
-#[tokio::main]
-async fn main() -> Result<()> {
-    // Load your config (any format you want)
-    let config = load_config("config.toml")?;
-    
-    // Create your service
-    let adapter = PolygonAdapter::new(config);
-    
-    // Create Mycelium infrastructure
-    let bus = MessageBus::new();  // Arc transport (same process)
-    let runtime = ServiceRuntime::new(bus);
-    
-    // Spawn service with supervision
-    runtime.spawn_service(adapter).await?;
-    
-    // Your shutdown logic
-    tokio::signal::ctrl_c().await?;
-    runtime.shutdown().await?;
-    
-    Ok(())
-}
-```
+       tokio::signal::ctrl_c().await?;
+       runtime.shutdown().await?;
+       Ok(())
+   }
+   ```
 
-**Start it like any Rust program:**
-```bash
-cargo run --bin polygon_adapter
-# or
-./target/release/polygon_adapter
-```
+## Observability and resilience
 
-### 4. Choose Your Deployment Mode
+- `ServiceContext::emit` attaches tracing spans and counters. The overhead is ~120
+  ns with instrumentation enabled, ~65 ns without.
+- Services can call `ctx.is_shutting_down()` or register shutdown hooks to stop
+  gracefully when the runtime receives a termination signal.
+- Failures inside a service task trigger exponential backoff restarts. The
+  backoff parameters live in `crates/mycelium-transport/src/runtime.rs`.
 
-Mycelium supports two routing approaches depending on your performance requirements:
+## When to use compile-time routing
 
-#### Runtime Routing (Default - Maximum Flexibility)
+`routing_config!` generates a struct that routes messages by direct function
+calls (no dynamic dispatch). Use it when you run fully single-process and need
+single-digit nanosecond handler latency. For anything that crosses process
+boundaries or prefers dynamic subscriptions, stick with the runtime bus.
 
-```rust
-// Single process (Arc transport - 65ns overhead per message)
-let bus = MessageBus::new();
+## Testing tips
 
-// Multi-process, same host (Unix domain sockets)
-let bus = MessageBus::with_unix_transport("/tmp/mycelium")?;
+- Services implement pure structs; in unit tests you can instantiate them and
+  drive the async methods with `tokio::test` plus a mock `MessageBus` (use the
+  Arc transport and issue messages directly).
+- Integration tests often start a `ServiceRuntime` with the Arc transport to keep
+  things fast, even if production swaps to Unix/TCP.
 
-// Distributed (TCP)
-let bus = MessageBus::with_tcp_transport("10.0.1.10:9000")?;
-```
+## FAQ
 
-**Same service code works with any transport.** Change one line, redeploy.
+**Does each process need the same `contracts.yaml`?** Yes. Generated code is part
+of the workspace, so keep schemas in sync across binaries.
 
-#### Compile-Time Routing (Optional - Maximum Performance)
+**Can transports mix?** You can run multiple transports simultaneously (e.g., Arc
+inside a binary with a TCP bridge), but most deployments pick one per runtime.
 
-For single-process deployments requiring ultra-low latency (<1μs budget):
-
-```rust
-use mycelium_transport::{routing_config, MessageHandler};
-
-// Implement handlers for your services
-impl MessageHandler<V2Swap> for RiskManager {
-    fn handle(&mut self, swap: &V2Swap) {
-        // Your logic here - runs in 2-3ns
-    }
-}
-
-// Generate routing struct at compile time
-routing_config! {
-    name: TradingServices,
-    routes: {
-        V2Swap => [RiskManager, ArbitrageDetector, MetricsCollector],
-    }
-}
-
-// Direct function calls - 2-3ns overhead (30x faster than Arc)
-let mut services = TradingServices::new(
-    RiskManager::new(),
-    ArbitrageDetector::new(),
-    MetricsCollector::new(),
-);
-services.route_v2_swap(&swap);  // Inlined to direct calls
-```
-
-**Performance comparison:**
-- **Compile-time routing**: 2-3ns per handler (direct function calls)
-- **Runtime Arc routing**: 65ns per message (Arc + channel overhead)
-- **Speedup**: 30x for single-process deployments
-
-See [`examples/compile_time_routing.rs`](examples/compile_time_routing.rs) for a complete working example.
-
----
-
-## What `ctx.emit()` Actually Does
-
-When you call `ctx.emit(message).await?`, here's what Mycelium handles automatically:
-
-1. **Timing**: Measures emit latency for metrics (40ns overhead)
-2. **Topic Routing**: Maps message type to topic (e.g., `V2Swap` → `"market_data.v2_swaps"`)
-3. **Publisher Lookup**: Finds the correct `Publisher` for this message type (40ns DashMap lookup)
-4. **Envelope Wrapping**: Wraps message in `Envelope` with type information
-5. **Transport**: Sends via `broadcast::channel` (local Arc transport)
-6. **Metrics Recording**: Records emit count and latency (2ns atomic operations)
-7. **Trace Logging**: Logs emit with trace_id context (1ns when disabled)
-
-**Current implementation** (Phase 2):
-- ✅ Local transport (`Arc<Envelope>`) - zero-copy, 47ns baseline
-- ✅ Automatic metrics collection (emits_total, emit_latency_us_avg)
-- ✅ Trace context in logs (trace_id included automatically)
-- ⏳ Wire format serialization (Unix/TCP) - deferred to Phase 2.5
-- ⏳ Cross-service trace propagation - deferred to Phase 2.5
-
-**Your code:** `ctx.emit(swap).await?;` (**120ns total**)
-
-**Mycelium does:** Timing → Routing → Envelope → Transport → Metrics → Logging
-
----
-
-## Architecture
-
-### Core Components
-
-- **`mycelium-protocol`** - Message trait, TYPE_ID, TOPIC, TLV serialization, code generation from contracts.yaml
-- **`mycelium-transport`** - MessageBus, Publishers, Subscribers, Arc/Unix/TCP transports, ServiceContext, ServiceRuntime
-- **`mycelium-macro`** - `#[service]` proc macro for actor-based services
-
-### Wire Protocol
-
-**Local transport** (same node): No serialization - messages shared via `Arc<T>` clones.
-
-**Remote transports** (Unix/TCP): Type-Length-Value (TLV) protocol with **bijective serialization**:
-
-```
-┌──────────┬──────────┬─────────────────┐
-│ Type ID  │ Length   │ Payload         │
-│ (2 bytes)│ (4 bytes)│ (N bytes)       │
-└──────────┴──────────┴─────────────────┘
-```
-
-Messages use [zerocopy](https://github.com/google/zerocopy) for **true zero-copy deserialization** - direct memory casting with no allocation or copying overhead.
-
-**Bijective requirement**: Messages must perfectly round-trip (serialize → deserialize = identical). This is enforced by `#[repr(C)]` and zerocopy's `IntoBytes`/`FromBytes` traits, enabling zero-copy across process boundaries.
-
----
-
-## Documentation
-
-- **[docs/SYSTEM_OVERVIEW.md](docs/SYSTEM_OVERVIEW.md)** - High-level architecture and design
-- **[docs/ARCHITECTURE_DIAGRAMS.md](docs/ARCHITECTURE_DIAGRAMS.md)** - Visual diagrams of the system
-- **[docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md](docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md)** - Single-process vs multi-process vs distributed deployment
-- **[docs/implementation/MYCELIUM_MONOMORPHIZATION.md](docs/implementation/MYCELIUM_MONOMORPHIZATION.md)** - How compile-time code generation eliminates runtime overhead
-
----
-
-## License
-
-MIT OR Apache-2.0
+**Where are benchmarks?** See `docs/perf/README.md` for the latest latency
+measurements across transports and routing modes.
