@@ -232,7 +232,7 @@ impl ShmReader {
     pub fn open<P: AsRef<Path>>(path: P, expected_digest: [u8; 32]) -> Result<Self> {
         let file = OpenOptions::new().read(true).write(true).open(path)?;
 
-        let mut mmap = unsafe { MmapOptions::new().map_mut(&file)? };
+        let mmap = unsafe { MmapOptions::new().map_mut(&file)? };
 
         // Validate header
         let header = unsafe { &*(mmap.as_ptr() as *const ShmHeader) };

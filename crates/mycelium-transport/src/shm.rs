@@ -127,7 +127,7 @@ pub async fn bind_shm_endpoint(
 fn run_shm_writer(
     mut writer: ShmWriter,
     fanout: BridgeFanout,
-    mut shutdown: watch::Receiver<bool>,
+    shutdown: watch::Receiver<bool>,
     stats: Arc<EndpointStats>,
 ) {
     let mut rx = fanout.subscribe();
@@ -191,7 +191,7 @@ fn run_shm_reader(
     path: PathBuf,
     schema_digest: [u8; 32],
     local: LocalTransport,
-    mut shutdown: watch::Receiver<bool>,
+    shutdown: watch::Receiver<bool>,
     stats: Arc<EndpointStats>,
 ) {
     // Open shared memory for reading

@@ -950,12 +950,14 @@ mod tests {
                     services: vec!["data-collector".to_string()],
                     host: None,
                     port: None,
+                    endpoint: None,
                 },
                 Node {
                     name: "processors".to_string(),
                     services: vec!["processor".to_string()],
                     host: None,
                     port: None,
+                    endpoint: None,
                 },
             ],
             socket_dir: dir.path().to_path_buf(),
@@ -1039,12 +1041,14 @@ mod tests {
                     services: vec!["data-collector".to_string()],
                     host: Some("127.0.0.1".to_string()),
                     port: Some(0), // Will be replaced with actual port
+                    endpoint: None,
                 },
                 Node {
                     name: "processors".to_string(),
                     services: vec!["processor".to_string()],
                     host: Some("127.0.0.1".to_string()),
                     port: Some(0),
+                    endpoint: None,
                 },
             ],
             socket_dir: dir.path().to_path_buf(),
@@ -1114,6 +1118,7 @@ mod tests {
                 services: vec!["state-manager".to_string(), "executor".to_string()],
                 host: None,
                 port: None,
+                endpoint: None,
             }],
             socket_dir: dir.path().to_path_buf(),
         };
@@ -1151,12 +1156,14 @@ mod tests {
                     services: vec!["state-manager".to_string()],
                     host: None,
                     port: None,
+                    endpoint: None,
                 },
                 Node {
                     name: "executor".to_string(),
                     services: vec!["executor".to_string()],
                     host: None,
                     port: None,
+                    endpoint: None,
                 },
             ],
             socket_dir: dir.path().to_path_buf(),
@@ -1200,12 +1207,14 @@ mod tests {
                     services: vec!["state-manager".to_string()],
                     host: Some("192.168.1.10".to_string()), // Different host
                     port: Some(9001),
+                    endpoint: None,
                 },
                 Node {
                     name: "executor".to_string(),
                     services: vec!["executor".to_string()],
                     host: Some(executor_addr.ip().to_string()), // 127.0.0.1
                     port: Some(executor_addr.port()),
+                    endpoint: None,
                 },
             ],
             socket_dir: dir.path().to_path_buf(),
@@ -1234,6 +1243,7 @@ mod tests {
                 services: vec!["state-manager".to_string(), "executor".to_string()],
                 host: None,
                 port: None,
+                endpoint: None,
             }],
             socket_dir: dir.path().to_path_buf(),
         };
@@ -1279,6 +1289,7 @@ mod tests {
                 services: vec!["state-manager".to_string()],
                 host: None,
                 port: None,
+                endpoint: None,
             }],
             socket_dir: dir.path().to_path_buf(),
         };
