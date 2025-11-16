@@ -1,0 +1,1431 @@
+//! Application state and coordination
+
+use crate::views::{
+    arbitrage::ArbitrageView, market_data::MarketDataView, pools::PoolsView,
+    services::ServicesView, validation::ValidationView,
+};
+use anyhow::Result;
+use ratatui::{
+    layout::{Constraint, Direction, Layout},
+    style::{Color, Modifier, Style},
+    text::{Line, Span},
+    widgets::{Block, Borders, Tabs},
+    Frame,
+};
+use ui_core::MonitorConfig;
+
+/// Main application state
+pub struct App {
+    config: MonitorConfig,
+    current_tab: usize,
+    tabs: Vec<&'static str>,
+    mouse_capture_enabled: bool,
+
+    // Views
+    arbitrage_view: ArbitrageView,
+    validation_view: ValidationView,
+    pools_view: PoolsView,
+    market_data_view: MarketDataView,
+    services_view: ServicesView,
+}
+
+impl App {
+    pub async fn new(config: MonitorConfig) -> Result<Self> {
+        Ok(Self {
+            config: config.clone(),
+            current_tab: 0,
+            tabs: vec!["Services", "Data Flow", "Pools", "Arbitrage", "Validation"],
+            mouse_capture_enabled: false, // Start with mouse capture OFF for text selection
+            services_view: ServicesView::new(config.clone()).await?,
+            market_data_view: MarketDataView::new(config.clone()).await?,
+            arbitrage_view: ArbitrageView::new(config.clone()).await?,
+            pools_view: PoolsView::new(config.clone()).await?,
+            validation_view: ValidationView::new(config).await?,
+        })
+    }
+
+    pub fn is_mouse_capture_enabled(&self) -> bool {
+        self.mouse_capture_enabled
+    }
+
+    pub fn toggle_mouse_capture(&mut self) -> bool {
+        self.mouse_capture_enabled = !self.mouse_capture_enabled;
+        self.mouse_capture_enabled
+    }
+
+    pub fn render(&mut self, f: &mut Frame) {
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(3), // Tab bar
+                Constraint::Min(0),    // Content
+            ])
+            .split(f.size());
+
+        // Render tab bar
+        let titles: Vec<Line> = self
+            .tabs
+            .iter()
+            .enumerate()
+            .map(|(i, t)| {
+                let (first, rest) = t.split_at(1);
+                Line::from(vec![
+                    Span::styled(format!("{}. ", i + 1), Style::default().fg(Color::Yellow)),
+                    Span::styled(
+                        first,
+                        Style::default()
+                            .fg(Color::Yellow)
+                            .add_modifier(Modifier::UNDERLINED),
+                    ),
+                    Span::styled(rest, Style::default().fg(Color::White)),
+                ])
+            })
+            .collect();
+
+        let tabs = Tabs::new(titles)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .title("Torq Monitor | q: Quit | Q: Kill API+TUI"),
+            )
+            .select(self.current_tab)
+            .style(Style::default().fg(Color::White))
+            .highlight_style(
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            );
+
+        f.render_widget(tabs, chunks[0]);
+
+        // Render active view
+        match self.current_tab {
+            0 => self.services_view.render(f, chunks[1]),
+            1 => self.market_data_view.render(f, chunks[1]),
+            2 => self.pools_view.render(f, chunks[1]),
+            3 => self.arbitrage_view.render(f, chunks[1]),
+            4 => self.validation_view.render(f, chunks[1]),
+            _ => {}
+        }
+    }
+
+    pub async fn update(&mut self) -> Result<()> {
+        // Update active view
+        match self.current_tab {
+            0 => self.services_view.update().await?,
+            1 => self.market_data_view.update().await?,
+            2 => self.pools_view.update().await?,
+            3 => self.arbitrage_view.update().await?,
+            4 => self.validation_view.update().await?,
+            _ => {}
+        }
+        Ok(())
+    }
+
+    pub async fn handle_key(&mut self, key: char) -> Result<()> {
+        // Tab-specific key handlers
+        match self.current_tab {
+            0 => {
+                // Services tab
+                match key {
+                    'k' => {
+                        // Kill selected instance
+                        let _ = self.services_view.kill_selected_instance();
+                    }
+                    's' => self.services_view.stop_service()?,
+                    'r' => {
+                        // If viewing logs, refresh them; otherwise restart service
+                        if self.services_view.is_viewing_logs() {
+                            self.services_view.refresh_logs()?;
+                        } else {
+                            self.services_view.restart_service()?;
+                        }
+                    }
+                    'l' => self.services_view.view_logs()?,
+                    'a' => self.services_view.toggle_auto_refresh(),
+                    'c' => self.services_view.clear_logs()?,
+                    'C' => self.services_view.copy_logs()?,
+                    'L' => self.services_view.toggle_log_level(),
+                    'd' => self.services_view.toggle_debug_mode(),
+                    'm' => {
+                        // Toggle mouse capture for text selection
+                        // This is handled in the main event loop
+                    }
+                    'p' => self.services_view.launch_profile(0)?, // Launch first (default) profile
+                    'x' => self.services_view.stop_profile(0)?, // Stop profile (use 'x' since 's' stops single service)
+                    _ => {}
+                }
+            }
+            1 => {
+                // Data Flow tab
+                match key {
+                    'c' => {
+                        self.market_data_view.clear().await;
+                    }
+                    'm' => {
+                        // Toggle mouse capture for text selection
+                        // This is handled globally, not per-tab
+                    }
+                    _ => {}
+                }
+            }
+            2 => {
+                // Pools tab
+                match key {
+                    'c' => {
+                        self.pools_view.clear().await;
+                    }
+                    'C' => {
+                        // Shift+C: Clear Redis cache
+                        if let Err(e) = self.pools_view.clear_redis_cache().await {
+                            tracing::error!("Failed to clear Redis cache: {}", e);
+                        }
+                    }
+                    'v' => {
+                        self.pools_view.start_validation().await?;
+                    }
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
+    pub fn handle_enter(&mut self) -> Result<()> {
+        match self.current_tab {
+            0 => {
+                // Services tab: start selected service
+                let _ = self.services_view.start_service();
+            }
+            4 => {
+                // Validation tab: execute selected tool
+                // Use blocking call since we're in sync context
+                tokio::runtime::Handle::current().block_on(async {
+                    let _ = self.validation_view.handle_enter().await;
+                });
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+
+    pub fn handle_escape(&mut self) -> Result<()> {
+        match self.current_tab {
+            0 => {
+                // Services tab: exit log viewer
+                if self.services_view.is_viewing_logs() {
+                    self.services_view.view_logs()?;
+                }
+            }
+---
+//! Shared library for terminal-ui and api-server binaries
+//!
+//! This library provides:
+//! - HTTP API server for querying system state
+//! - Configuration loading
+//! - Shared types and utilities
+
+pub mod api_server;
+pub mod app;
+pub mod views;
+
+use anyhow::Result;
+use ui_core::MonitorConfig;
+
+/// Load configuration from file or environment
+pub fn load_config() -> Result<MonitorConfig> {
+    // Try to load from profile (e.g., config/profiles/defi_arbitrage/monitor.toml)
+    let profile = std::env::var("TORQ_PROFILE").unwrap_or_else(|_| "defi_arbitrage".to_string());
+
+    match MonitorConfig::from_profile(&profile) {
+        Ok(config) => {
+            tracing::info!("Loaded monitor config from profile: {}", profile);
+            Ok(config)
+        }
+        Err(e) => {
+            tracing::info!("No monitor config found ({}), using defaults", e);
+            // Return default config - this is fine for terminal UI
+            Ok(MonitorConfig::default())
+        }
+    }
+}
+
+/// Initialize logging for the service
+pub fn init_logging(service_name: &str) -> Result<()> {
+    let config_path = std::path::PathBuf::from("config/services/monitor/terminal-ui.toml");
+    let logging_config =
+        logging::LoggingConfig::from_file_or_default(&config_path, service_name.to_string());
+
+    // Initialize with tracing-appender (automatic rotation)
+    logging::init(logging_config).map_err(|e| {
+        eprintln!(
+            "Warning: Failed to initialize logging: {}. Logging disabled.",
+            e
+        );
+        e
+    })
+}
+---
+//! Terminal UI for Torq Trading System
+//!
+//! Multi-view terminal interface for monitoring:
+//! - Arbitrage signals
+//! - Market data (swaps, liquidity)
+//! - Pool states
+//! - Validation metrics
+//!
+//! Also runs HTTP API server in background for remote queries.
+
+use anyhow::Result;
+use crossterm::{
+    event::{self, Event, KeyCode, MouseEventKind},
+    execute,
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+};
+use ratatui::{backend::CrosstermBackend, Terminal};
+use std::io;
+use terminal_ui::{app::App, load_config};
+use tracing::{error, info};
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    // Initialize logging from config file
+    // Note: Terminal UI logs to file (not stdout/stderr which interferes with TUI)
+    if let Err(e) = terminal_ui::init_logging("terminal-ui") {
+        eprintln!(
+            "Warning: Failed to initialize logging: {}. Logging disabled.",
+            e
+        );
+    }
+
+    info!("Starting Torq Terminal UI");
+
+    // Load configuration
+    let config = load_config()?;
+
+    // Start API server in background for debugging
+    tokio::spawn(async {
+        terminal_ui::api_server::start_api_server().await;
+    });
+
+    // Setup terminal WITHOUT mouse capture initially (allows text selection)
+    // Press 'm' to toggle mouse scrolling on/off
+    enable_raw_mode()?;
+    let mut stdout = io::stdout();
+    execute!(
+        stdout,
+        EnterAlternateScreen // Mouse capture intentionally disabled - press 'm' to enable scrolling
+    )?;
+    let backend = CrosstermBackend::new(stdout);
+    let mut terminal = Terminal::new(backend)?;
+
+    // Create app and run
+    let app = App::new(config).await?;
+    let res = run_app(&mut terminal, app).await;
+
+    // Restore terminal
+    disable_raw_mode()?;
+    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+    terminal.show_cursor()?;
+
+    if let Err(err) = res {
+        error!("Terminal UI error: {:?}", err);
+        Err(err)
+    } else {
+        info!("Terminal UI exited successfully");
+        Ok(())
+    }
+}
+
+/// Run the terminal UI application
+async fn run_app(
+    terminal: &mut Terminal<CrosstermBackend<std::io::Stdout>>,
+    mut app: App,
+) -> Result<()> {
+    loop {
+        terminal.draw(|f| app.render(f))?;
+
+        // Handle input with timeout to allow periodic updates
+        if event::poll(std::time::Duration::from_millis(100))? {
+            match event::read()? {
+                Event::Key(key) => match key.code {
+                    KeyCode::Char('q') => {
+                        info!("User requested quit");
+                        return Ok(());
+                    }
+                    KeyCode::Char('Q') => {
+                        // Shift+Q: Kill API server and exit immediately
+                        info!("User requested immediate shutdown (API server + TUI)");
+                        std::process::exit(0);
+                    }
+                    KeyCode::Char('m') => {
+                        // Toggle mouse capture at terminal level
+                        let enabled = app.toggle_mouse_capture();
+                        if enabled {
+                            execute!(terminal.backend_mut(), crossterm::event::EnableMouseCapture)?;
+                            info!("Mouse scrolling ENABLED - press 'm' again for text selection");
+                        } else {
+                            execute!(
+                                terminal.backend_mut(),
+                                crossterm::event::DisableMouseCapture
+                            )?;
+                            info!("Mouse capture DISABLED - you can now select/copy text");
+                        }
+                    }
+                    KeyCode::Esc => app.handle_escape()?,
+                    KeyCode::Char('1') => app.switch_tab(0),
+                    KeyCode::Char('2') => app.switch_tab(1),
+                    KeyCode::Char('3') => app.switch_tab(2),
+                    KeyCode::Char('4') => app.switch_tab(3),
+                    KeyCode::Char('5') => app.switch_tab(4),
+                    KeyCode::Enter => app.handle_enter()?,
+                    KeyCode::Char(c) => app.handle_key(c).await?,
+                    KeyCode::Tab => {
+                        if !app.handle_tab_key() {
+                            app.next_tab();
+                        }
+                    }
+                    KeyCode::BackTab => app.previous_tab(),
+                    KeyCode::Up => app.scroll_up(),
+                    KeyCode::Down => app.scroll_down(),
+                    KeyCode::PageUp => app.page_up(),
+                    KeyCode::PageDown => app.page_down(),
+                    _ => {}
+                },
+                Event::Mouse(mouse) => match mouse.kind {
+                    MouseEventKind::ScrollUp => {
+                        app.handle_mouse_scroll(mouse.column, mouse.row, true);
+                    }
+                    MouseEventKind::ScrollDown => {
+                        app.handle_mouse_scroll(mouse.column, mouse.row, false);
+                    }
+                    MouseEventKind::Moved => {
+                        app.handle_mouse_move(mouse.column, mouse.row);
+                    }
+                    _ => {}
+                },
+                _ => {}
+            }
+        }
+
+        // Update app state (process relay messages, etc.)
+        app.update().await?;
+    }
+}
+---
+total 464
+drwxr-xr-x  9 daws  staff    288 Nov  2 13:49 .
+drwxr-xr-x  8 daws  staff    256 Oct 24 17:13 ..
+-rw-r--r--  1 daws  staff  12150 Oct 26 12:58 arbitrage.rs
+-rw-r--r--  1 daws  staff  10670 Oct 26 13:41 market_data.rs
+-rw-r--r--  1 daws  staff    116 Oct 26 12:27 mod.rs
+-rw-r--r--  1 daws  staff  67645 Nov  2 13:49 pools.rs
+-rw-r--r--  1 daws  staff  61414 Oct 25 00:39 pools.rs.bak
+-rw-r--r--  1 daws  staff  49630 Oct 26 14:07 services.rs
+-rw-r--r--  1 daws  staff  20571 Oct 26 12:27 validation.rs
+---
+//! Pool states view - displays WMATIC/USDC pools organized by pair
+
+use anyhow::{Context, Result};
+use codec::{parse_tlv_extensions, TLVExtensionEnum};
+use ratatui::{
+    layout::{Constraint, Direction, Layout, Rect},
+    style::{Color, Modifier, Style},
+    widgets::{Block, Borders, Clear, Paragraph, Row, Table, Wrap},
+    Frame,
+};
+use serde::{Deserialize, Serialize};
+use serde_json::json;
+use std::collections::{HashMap, HashSet};
+use std::env;
+use std::mem::size_of;
+use std::path::PathBuf;
+use std::process::Stdio;
+use std::sync::Arc;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::net::UnixStream;
+use tokio::process::Command;
+use tokio::sync::RwLock;
+use tokio::task::JoinHandle;
+use tracing::{debug, info, warn};
+use types::protocol::tlv::market_data::{
+    V2SwapTLV, V2SyncTLV, V3BurnTLV, V3MintTLV, V3SwapTLV, V3TickTLV,
+};
+use types::{protocol::message::header::MessageHeader, RelayDomain};
+use ui_core::MonitorConfig;
+use zerocopy::Ref;
+
+const MARKET_DATA_RELAY_PATH: &str = "/tmp/torq/market_data.sock";
+const REDIS_URL: &str = "redis://127.0.0.1:6379";
+const POOL_METADATA_PREFIX: &str = "pool:";
+
+type PairKey = ([u8; 20], [u8; 20]);
+
+// Custom serde module for u128 as string (to avoid JSON number overflow)
+mod serde_u128_string {
+    use serde::{de, Deserialize, Deserializer, Serializer};
+
+    pub fn serialize<S>(value: &u128, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        serializer.serialize_str(&value.to_string())
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<u128, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        // Accept both string and number for backward compatibility
+        struct U128Visitor;
+
+        impl<'de> de::Visitor<'de> for U128Visitor {
+            type Value = u128;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("a string or number representing u128")
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<u128, E>
+            where
+                E: de::Error,
+            {
+                value.parse::<u128>().map_err(de::Error::custom)
+            }
+
+            fn visit_u64<E>(self, value: u64) -> Result<u128, E>
+            where
+                E: de::Error,
+            {
+                Ok(value as u128)
+            }
+
+            fn visit_i64<E>(self, value: i64) -> Result<u128, E>
+            where
+                E: de::Error,
+            {
+                if value < 0 {
+                    Err(de::Error::custom("u128 cannot be negative"))
+                } else {
+                    Ok(value as u128)
+                }
+            }
+
+            fn visit_f64<E>(self, value: f64) -> Result<u128, E>
+            where
+                E: de::Error,
+            {
+                if value < 0.0 {
+                    Err(de::Error::custom("u128 cannot be negative"))
+                } else {
+                    Ok(value as u128)
+                }
+            }
+        }
+
+        deserializer.deserialize_any(U128Visitor)
+    }
+}
+
+#[derive(Debug)]
+enum ValidationModal {
+    Running {
+        pair_label: String,
+    },
+    Finished {
+        pair_label: String,
+        output: Vec<String>,
+        success: bool,
+    },
+}
+
+#[derive(Debug)]
+struct ValidationResult {
+    pair_label: String,
+    output: Vec<String>,
+    success: bool,
+}
+
+/// Default for Instant (used during deserialization)
+fn default_instant() -> std::time::Instant {
+    std::time::Instant::now()
+}
+
+/// Pool metadata from Redis (loaded once on startup and dynamically during runtime)
+#[derive(Clone, Debug, Serialize, Deserialize)]
+struct PoolMetadata {
+    pub pool_address: [u8; 20],
+    pub token0_symbol: String,
+    pub token1_symbol: String,
+    pub protocol: String,         // e.g., "V2", "V3"
+    pub dex_name: Option<String>, // e.g., "QuickSwap", "Polycat", "Uniswap"
+    pub venue_id: u16,
+    pub factory_address: Option<[u8; 20]>,
+    pub fee_tier: Option<u32>, // Fee in basis points (e.g., 3000 = 0.30%)
+}
+
+/// Pool display data organized by token pair
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct PoolDisplay {
+    pool_address: [u8; 20],
+    token0_address: [u8; 20],
+    token1_address: [u8; 20],
+    venue: u16,
+    protocol: String, // Protocol name (e.g., "UniswapV3", "QuickswapV2", or "V2"/"V3")
+    #[serde(with = "serde_u128_string")]
+    reserve0: u128,
+    #[serde(with = "serde_u128_string")]
+    reserve1: u128,
+    #[serde(with = "serde_u128_string")]
+    sqrt_price_x96: u128,
+    #[serde(with = "serde_u128_string")]
+    liquidity: u128,
+    #[serde(default)]
+    swap_count: u64,
+    block_number: u64,
+
+    /// Timestamp of last update (for flash highlighting)
+    #[serde(skip, default = "default_instant")]
+    last_update: std::time::Instant,
+}
+
+pub struct PoolsView {
+    scroll: u16,
+    selected_pair: usize,
+    pools: Arc<RwLock<HashMap<[u8; 20], PoolDisplay>>>,
+    metadata: Arc<RwLock<HashMap<[u8; 20], PoolMetadata>>>, // CHANGED: Now mutable for dynamic loading
+    connection_status: Arc<RwLock<String>>,
+    messages_received: Arc<RwLock<usize>>,
+    pools_parsed: Arc<RwLock<usize>>,
+    redis_client: Option<redis::Client>, // For state persistence
+    _stream_task: tokio::task::JoinHandle<()>,
+    collapsed_pairs: HashSet<PairKey>,
+    pair_order: Vec<PairKey>,
+    modal: Option<ValidationModal>,
+    validation_task: Option<JoinHandle<Result<ValidationResult>>>,
+    diagnose_bin: Option<PathBuf>,
+    modal_scroll: u16,
+    modal_max_scroll: u16,
+    modal_page: u16,
+}
+
+impl PoolsView {
+    pub async fn new(_config: MonitorConfig) -> Result<Self> {
+        let pools = Arc::new(RwLock::new(HashMap::new()));
+        let connection_status = Arc::new(RwLock::new("Connecting...".to_string()));
+        let messages_received = Arc::new(RwLock::new(0_usize));
+        let pools_parsed = Arc::new(RwLock::new(0_usize));
+
+        // Initialize Redis client for state persistence
+        let redis_client = match redis::Client::open(REDIS_URL) {
+            Ok(client) => Some(client),
+            Err(e) => {
+                warn!(
+                    "⚠️ Failed to create Redis client: {}. State persistence disabled.",
+                    e
+                );
+---
+//! Arbitrage signals view - displays real-time arbitrage opportunities
+//!
+//! Uses event-driven architecture with background task streaming from relay
+
+use anyhow::{Result};
+use codec::{parse_tlv_extensions, TLVExtensionEnum};
+use ratatui::{
+    layout::{Constraint, Rect},
+    style::{Color, Modifier, Style},
+    widgets::{Block, Borders, Row, Table},
+    Frame,
+};
+use std::collections::VecDeque;
+use std::mem::size_of;
+use std::sync::Arc;
+use tokio::io::AsyncReadExt;
+use tokio::net::UnixStream;
+
+use tokio::sync::RwLock;
+use types::protocol::tlv::arbitrage_signal::ArbitrageSignalTLV;
+use types::{protocol::message::header::MessageHeader, RelayDomain};
+use ui_core::MonitorConfig;
+use zerocopy::Ref;
+
+const SIGNAL_RELAY_PATH: &str = "/tmp/torq/signals.sock";
+const MAX_SIGNALS: usize = 100;
+
+/// Arbitrage opportunity with display-friendly data
+#[derive(Debug, Clone)]
+struct ArbitrageDisplay {
+    signal_id: u64,
+    timestamp_ns: u64,
+    source_venue: u16,
+    target_venue: u16,
+    net_profit_usd: f64,
+    spread_bps: u16,
+    gas_cost_usd: f64,
+}
+
+/// Event-driven arbitrage view with background streaming task
+pub struct ArbitrageView {
+    scroll: u16,
+    signals: Arc<RwLock<VecDeque<ArbitrageDisplay>>>,
+    connection_status: Arc<RwLock<String>>,
+    _stream_task: tokio::task::JoinHandle<()>,
+}
+
+impl ArbitrageView {
+    pub async fn new(_config: MonitorConfig) -> Result<Self> {
+        let signals = Arc::new(RwLock::new(VecDeque::with_capacity(MAX_SIGNALS)));
+        let connection_status = Arc::new(RwLock::new("Connecting...".to_string()));
+
+        // Spawn background task for streaming relay messages
+        let signals_clone = Arc::clone(&signals);
+        let status_clone = Arc::clone(&connection_status);
+
+        let stream_task = tokio::spawn(async move {
+            Self::relay_stream_task(signals_clone, status_clone).await;
+        });
+
+        Ok(Self {
+            scroll: 0,
+            signals,
+            connection_status,
+            _stream_task: stream_task,
+        })
+    }
+
+    /// Background task that streams from relay with automatic reconnection
+    async fn relay_stream_task(
+        signals: Arc<RwLock<VecDeque<ArbitrageDisplay>>>,
+        status: Arc<RwLock<String>>,
+    ) {
+        let mut message_buffer = Vec::new();
+
+        loop {
+            // Try to connect
+            match UnixStream::connect(SIGNAL_RELAY_PATH).await {
+                Ok(mut stream) => {
+                    *status.write().await = "Connected".to_string();
+                    message_buffer.clear();
+
+                    // Stream messages until disconnection
+                    let mut buffer = vec![0u8; 8192];
+                    loop {
+                        match stream.read(&mut buffer).await {
+                            Ok(0) => {
+                                // Connection closed
+                                *status.write().await = "Disconnected".to_string();
+                                break;
+                            }
+                            Ok(bytes_read) => {
+                                // Append to message buffer
+                                message_buffer.extend_from_slice(&buffer[..bytes_read]);
+
+                                // Process complete messages immediately (event-driven!)
+                                Self::process_message_buffer(&mut message_buffer, &signals).await;
+                            }
+                            Err(e) => {
+                                *status.write().await = format!("Read error: {}", e);
+                                break;
+                            }
+                        }
+                    }
+                }
+                Err(e) => {
+                    *status.write().await = format!("Connection failed: {}", e);
+                }
+            }
+
+            // Wait before reconnecting
+            tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+        }
+    }
+
+    pub fn render(&mut self, f: &mut Frame, area: Rect) {
+        // Try to read from shared state (non-blocking)
+        let signals_guard = match self.signals.try_read() {
+            Ok(guard) => guard,
+            Err(_) => {
+                // Lock is held, show loading state
+                let block = Block::default()
+                    .title("Arbitrage Signals | Loading...")
+                    .borders(Borders::ALL)
+                    .style(Style::default().fg(Color::White));
+                f.render_widget(block, area);
+                return;
+            }
+        };
+
+        let status_guard = match self.connection_status.try_read() {
+            Ok(guard) => guard,
+            Err(_) => {
+                let block = Block::default()
+                    .title("Arbitrage Signals | Status unavailable")
+                    .borders(Borders::ALL)
+                    .style(Style::default().fg(Color::White));
+                f.render_widget(block, area);
+                return;
+            }
+        };
+
+        let title = format!(
+            "Arbitrage Signals ({} signals) | {} | ↑↓: Scroll, PgUp/PgDn: Page",
+            signals_guard.len(),
+            *status_guard
+        );
+
+        let block = Block::default()
+            .title(title)
+            .borders(Borders::ALL)
+            .style(Style::default().fg(Color::White));
+
+        if signals_guard.is_empty() {
+            let inner = block.inner(area);
+            let placeholder = ratatui::widgets::Paragraph::new(
+                "No arbitrage signals yet.\n\nWaiting for signals from relay...",
+            )
+            .style(Style::default().fg(Color::DarkGray));
+            f.render_widget(block, area);
+            f.render_widget(placeholder, inner);
+            return;
+        }
+
+        // Table headers
+        let header = Row::new(vec![
+            "Signal ID",
+            "Source→Target",
+            "Net Profit",
+            "Spread",
+            "Gas Cost",
+            "Age",
+        ])
+        .style(
+            Style::default()
+                .fg(Color::Cyan)
+                .add_modifier(Modifier::BOLD),
+        );
+
+        // Table rows
+        let rows: Vec<Row> = signals_guard
+            .iter()
+            .map(|signal| {
+                let age_secs = ((std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos() as u64)
+                    .saturating_sub(signal.timestamp_ns))
+                    / 1_000_000_000;
+
+                let profit_color = if signal.net_profit_usd > 0.0 {
+                    Color::Green
+                } else {
+                    Color::Red
+                };
+
+                let spread_pct = signal.spread_bps as f64 / 100.0;
+
+                Row::new(vec![
+                    format!("{:016x}", signal.signal_id),
+---
+//! Service management view
+//!
+//! Launch and monitor Torq services from within the terminal UI
+
+use anyhow::Result;
+use ratatui::{
+    layout::{Constraint, Direction, Layout, Rect},
+    style::{Color, Modifier, Style},
+    text::{Line, Span},
+    widgets::{Block, Borders, List, ListItem, Paragraph},
+    Frame,
+};
+use serde::Deserialize;
+use std::collections::HashMap;
+use std::process::{Child, Command};
+use ui_core::MonitorConfig;
+
+/// Service registry entry from config/services/registry.toml
+#[derive(Debug, Clone, Deserialize)]
+struct ServiceRegistryEntry {
+    name: String,
+    description: String,
+    binary: String,
+    args: Vec<String>,
+    config_path: String,
+}
+
+/// Service registry file structure
+#[derive(Debug, Deserialize)]
+struct ServiceRegistry {
+    service: Vec<ServiceRegistryEntry>,
+}
+
+/// Logging configuration from service config files
+#[derive(Debug, Deserialize)]
+struct ServiceConfig {
+    #[serde(default)]
+    logging: LoggingConfig,
+}
+
+#[derive(Debug, Deserialize, Default)]
+struct LoggingConfig {
+    #[serde(default = "default_log_level")]
+    level: String,
+    #[serde(default = "default_log_path")]
+    file_path: String,
+    #[serde(default)]
+    file_prefix: String,
+}
+
+fn default_log_level() -> String {
+    "info".to_string()
+}
+
+fn default_log_path() -> String {
+    "/tmp/torq/logs".to_string()
+}
+
+#[derive(Debug, Clone)]
+pub struct ServiceDefinition {
+    pub name: String,
+    pub description: String,
+    pub binary: String,
+    pub args: Vec<String>,
+    pub log_file: String,          // Base path (without date) for display
+    pub default_log_level: String, // Default RUST_LOG level for this service
+    pub config_path: String,       // Path to service's config file
+}
+
+pub struct ProcessInstance {
+    pub pid: u32,
+    pub managed: bool, // Whether we started it
+    pub child: Option<Child>,
+}
+
+pub struct ServiceManager {
+    pub instances: Vec<ProcessInstance>, // Multiple instances can run
+    pub status: ServiceStatus,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum ServiceStatus {
+    Stopped,
+    Starting,
+    Running,
+    Failed,
+}
+
+#[derive(Debug, Clone)]
+pub struct InfrastructureStatus {
+    pub redis_connected: bool,
+    pub redis_port: u16,
+    pub postgres_connected: bool,
+}
+
+pub struct ServicesView {
+    services: Vec<ServiceDefinition>,
+    managers: HashMap<usize, ServiceManager>,
+    selected_service: usize,
+    selected_instance: usize, // Which instance of the service is selected
+    scroll: u16,
+    log_buffer: Vec<String>,
+    viewing_logs: bool,                 // Toggle for full-screen log view
+    log_scroll: u16,                    // Scroll position for log viewer
+    auto_refresh_logs: bool,            // Auto-refresh logs when viewing
+    log_level_override: Option<String>, // Override RUST_LOG for services
+    debug_mode: bool,                   // Force RUST_LOG=debug for all services
+    infrastructure: InfrastructureStatus,
+}
+
+#[derive(Debug, Clone)]
+pub struct ServiceProfile {
+    pub name: &'static str,
+    pub description: &'static str,
+    pub services: Vec<usize>,  // Indices of services to start, in order
+    pub startup_delay_ms: u64, // Delay between starting each service
+}
+
+impl ServicesView {
+    /// Load service definitions from registry
+    fn load_services_from_registry() -> Result<Vec<ServiceDefinition>> {
+        // Read registry file
+        let registry_path = "config/services/registry.toml";
+        let registry_content = std::fs::read_to_string(registry_path)
+            .map_err(|e| anyhow::anyhow!("Failed to read registry {}: {}", registry_path, e))?;
+
+        let registry: ServiceRegistry = toml::from_str(&registry_content)
+            .map_err(|e| anyhow::anyhow!("Failed to parse registry: {}", e))?;
+
+        let mut services = Vec::new();
+
+        for entry in registry.service {
+            // Read service config to get logging details
+            let logging = Self::read_logging_config(&entry.config_path);
+
+            // Build log file path
+            let log_file = if logging.file_prefix.is_empty() {
+                // Fallback: derive from service name
+                let service_slug = entry.name.to_lowercase().replace(" ", "_");
+                format!("{}/{}.log", logging.file_path, service_slug)
+            } else {
+                format!("{}/{}.log", logging.file_path, logging.file_prefix)
+            };
+
+            services.push(ServiceDefinition {
+                name: entry.name,
+                description: entry.description,
+                binary: entry.binary,
+                args: entry.args,
+                log_file,
+                default_log_level: logging.level,
+                config_path: entry.config_path,
+            });
+        }
+
+        Ok(services)
+    }
+
+    /// Read logging configuration from a service config file
+    fn read_logging_config(config_path: &str) -> LoggingConfig {
+        match std::fs::read_to_string(config_path) {
+            Ok(content) => {
+                match toml::from_str::<ServiceConfig>(&content) {
+                    Ok(config) => config.logging,
+                    Err(_) => {
+                        // Config exists but has no [logging] section
+                        LoggingConfig::default()
+                    }
+                }
+            }
+            Err(_) => {
+                // Config file doesn't exist, use defaults
+                LoggingConfig::default()
+            }
+        }
+    }
+
+    pub async fn new(_config: MonitorConfig) -> Result<Self> {
+        // Load services from registry
+        let services = Self::load_services_from_registry()?;
+
+        let mut view = Self {
+            services,
+            managers: HashMap::new(),
+            selected_service: 0,
+            selected_instance: 0,
+            scroll: 0,
+            log_buffer: Vec::new(),
+            viewing_logs: false,
+            log_scroll: 0,
+            auto_refresh_logs: false,
+            log_level_override: None,
+            debug_mode: false,
+            infrastructure: InfrastructureStatus {
+                redis_connected: false,
+                redis_port: 6379,
+                postgres_connected: false,
+            },
+        };
+
+---
+//! Data Flow view - four-pane live log viewer for debugging the pipeline
+
+use anyhow::Result;
+use ratatui::{
+    layout::{Constraint, Direction, Layout, Rect},
+    style::{Color, Style},
+    text::{Line, Span},
+    widgets::{Block, Borders, Paragraph, Wrap},
+    Frame,
+};
+use std::collections::VecDeque;
+use std::path::PathBuf;
+use std::sync::Arc;
+use tokio::fs::File;
+use tokio::io::{AsyncBufReadExt, BufReader};
+use tokio::sync::RwLock;
+use tracing::warn;
+use ui_core::MonitorConfig;
+
+const MAX_LINES_PER_PANE: usize = 1000; // Store up to 1000 lines for scrolling
+const LOG_DIR: &str = "/tmp/torq/logs";
+
+/// Service log configuration
+#[derive(Clone)]
+struct ServiceLog {
+    name: &'static str,
+    filename: &'static str,
+    color: Color,
+}
+
+const SERVICES: [ServiceLog; 4] = [
+    ServiceLog {
+        name: "Adapter",
+        filename: "polygon_composite.log",
+        color: Color::Green,
+    },
+    ServiceLog {
+        name: "Market Data Relay",
+        filename: "market_data_relay.log",
+        color: Color::Cyan,
+    },
+    ServiceLog {
+        name: "Arbitrage Service",
+        filename: "polygon_arbitrage.log",
+        color: Color::Yellow,
+    },
+    ServiceLog {
+        name: "Signal Relay",
+        filename: "signal_relay.log",
+        color: Color::Magenta,
+    },
+];
+
+pub struct MarketDataView {
+    logs: [Arc<RwLock<VecDeque<String>>>; 4],
+    _log_tasks: Vec<tokio::task::JoinHandle<()>>,
+    scroll_offsets: [usize; 4],  // Scroll offset from bottom for each pane
+    pane_areas: [Rect; 4],       // Store pane boundaries for mouse detection
+    focused_pane: Option<usize>, // Currently focused/hovered pane
+}
+
+impl MarketDataView {
+    pub async fn new(_config: MonitorConfig) -> Result<Self> {
+        let mut logs = Vec::new();
+        let mut log_tasks = Vec::new();
+
+        for service in &SERVICES {
+            let log_lines = Arc::new(RwLock::new(VecDeque::with_capacity(MAX_LINES_PER_PANE)));
+            let log_clone = Arc::clone(&log_lines);
+
+            let log_path = PathBuf::from(LOG_DIR).join(service.filename);
+            let task = tokio::spawn(async move {
+                Self::tail_log_file(log_path, log_clone).await;
+            });
+
+            logs.push(log_lines);
+            log_tasks.push(task);
+        }
+
+        Ok(Self {
+            logs: logs.try_into().unwrap(),
+            _log_tasks: log_tasks,
+            scroll_offsets: [0; 4],
+            pane_areas: [Rect::default(); 4],
+            focused_pane: None,
+        })
+    }
+
+    async fn tail_log_file(path: PathBuf, lines: Arc<RwLock<VecDeque<String>>>) {
+        use tokio::io::AsyncBufReadExt;
+
+        loop {
+            match File::open(&path).await {
+                Ok(file) => {
+                    let reader = BufReader::new(file);
+                    let mut line_stream = reader.lines();
+
+                    // Read ALL lines first
+                    let mut all_lines = Vec::new();
+                    while let Ok(Some(line)) = line_stream.next_line().await {
+                        if !line.trim().is_empty() {
+                            all_lines.push(line);
+                        }
+                    }
+
+                    // Take last 100 lines and populate the view
+                    {
+                        let mut log = lines.write().await;
+                        log.clear(); // Clear old content
+                        let start_idx = all_lines.len().saturating_sub(100);
+                        for line in &all_lines[start_idx..] {
+                            log.push_back(line.clone());
+                        }
+                    }
+
+                    // Wait a bit then re-read entire file (simpler than seeking)
+                    tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+                }
+                Err(e) => {
+                    warn!("Failed to open {:?}: {}", path, e);
+                    tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+                }
+            }
+        }
+    }
+
+    pub fn render(&mut self, f: &mut Frame, area: Rect) {
+        // Split into 2x2 grid
+        let vertical_chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(area);
+
+        let top_chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(vertical_chunks[0]);
+
+        let bottom_chunks = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(vertical_chunks[1]);
+
+        // Store pane areas for mouse detection
+        self.pane_areas = [
+            top_chunks[0],
+            top_chunks[1],
+            bottom_chunks[0],
+            bottom_chunks[1],
+        ];
+
+        // Render each service pane
+        for (i, (service, pane)) in SERVICES.iter().zip(self.pane_areas.iter()).enumerate() {
+            self.render_service_pane(f, *pane, service, i);
+        }
+    }
+
+    fn render_service_pane(&self, f: &mut Frame, area: Rect, service: &ServiceLog, index: usize) {
+        let log_guard = match self.logs[index].try_read() {
+            Ok(guard) => guard,
+            Err(_) => {
+                let block = Block::default()
+                    .title(format!("{} | Loading...", service.name))
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(service.color));
+                f.render_widget(block, area);
+                return;
+            }
+        };
+
+        let scroll_offset = self.scroll_offsets[index];
+        let is_focused = self.focused_pane == Some(index);
+
+        let title = if log_guard.is_empty() {
+            format!("{} | No logs yet", service.name)
+        } else if scroll_offset > 0 {
+            format!(
+                "{} | {} lines (↑{})",
+                service.name,
+                log_guard.len(),
+                scroll_offset
+            )
+        } else {
+            format!(
+                "{} | {} lines{}",
+                service.name,
+                log_guard.len(),
+                if is_focused { " [FOCUSED]" } else { "" }
+            )
+        };
+
+        let border_style = if is_focused {
+            Style::default().fg(service.color) // Could make this brighter if focused
+        } else {
+            Style::default().fg(service.color)
+        };
+
+        let block = Block::default()
+            .title(title)
+            .borders(Borders::ALL)
+---
+//! Validation metrics view with diagnostic tool suite
+//!
+//! Provides interactive tools to investigate dropped events, protocol detection,
+//! and validation pipeline health.
+
+use anyhow::Result;
+use ratatui::{
+    layout::{Constraint, Direction, Layout, Rect},
+    style::{Color, Modifier, Style},
+    text::{Line, Span},
+    widgets::{Block, Borders, List, ListItem, Paragraph},
+    Frame,
+};
+use ui_core::MonitorConfig;
+
+const API_BASE: &str = "http://127.0.0.1:3030";
+
+/// Diagnostic tool definition
+#[derive(Clone)]
+struct DiagnosticTool {
+    name: &'static str,
+    description: &'static str,
+    api_endpoint: &'static str,                  // API endpoint to call
+    formatter: fn(&serde_json::Value) -> String, // Format JSON response
+}
+
+/// Tool execution state
+enum ToolState {
+    Menu,
+    Running(String),          // Tool name
+    Complete(String, String), // Tool name + output
+    Error(String, String),    // Tool name + error
+}
+
+pub struct ValidationView {
+    scroll: u16,
+    tools: Vec<DiagnosticTool>,
+    selected_tool: usize,
+    state: ToolState,
+}
+
+// Formatter functions
+fn format_dropped_events(json: &serde_json::Value) -> String {
+    if let Some(events) = json["dropped_events"].as_array() {
+        let count = json["count"].as_u64().unwrap_or(0);
+        let mut output = format!("=== Dropped Events (showing {}) ===\n\n", count);
+        for event in events {
+            if let Some(line) = event.as_str() {
+                output.push_str(line);
+                output.push('\n');
+            }
+        }
+        output
+    } else {
+        "No data available".to_string()
+    }
+}
+
+fn format_event_signatures(json: &serde_json::Value) -> String {
+    let mut output = String::from("=== Known V2 Signatures ===\n");
+    output.push_str(&format!(
+        "Sync: {}\n",
+        json["known_v2"]["sync"].as_str().unwrap_or("N/A")
+    ));
+    output.push_str(&format!(
+        "Swap: {}\n\n",
+        json["known_v2"]["swap"].as_str().unwrap_or("N/A")
+    ));
+
+    output.push_str("=== Known V3 Signatures ===\n");
+    output.push_str(&format!(
+        "Swap: {}\n\n",
+        json["known_v3"]["swap"].as_str().unwrap_or("N/A")
+    ));
+
+    output.push_str("=== Seen in Last 1000 Events ===\n");
+    if let Some(sigs) = json["signatures"].as_array() {
+        for sig in sigs {
+            if let (Some(signature), Some(count)) = (sig[0].as_str(), sig[1].as_u64()) {
+                output.push_str(&format!("{:6} {}\n", count, signature));
+            }
+        }
+    }
+    output
+}
+
+fn format_protocol_stats(json: &serde_json::Value) -> String {
+    let mut output = String::from("=== Protocol Detection Stats ===\n\n");
+    if let Some(stats) = json["protocol_stats"].as_array() {
+        for stat in stats {
+            if let (Some(protocol), Some(count)) = (stat[0].as_str(), stat[1].as_u64()) {
+                output.push_str(&format!("{:6} {}\n", count, protocol));
+            }
+        }
+    }
+    if output.lines().count() == 2 {
+        output.push_str("(No data)\n");
+    }
+    output
+}
+
+fn format_missing_metadata(json: &serde_json::Value) -> String {
+    let mut output = String::from("=== Pools with Missing Metadata (Top 20) ===\n\n");
+    if let Some(pools) = json["missing_metadata_pools"].as_array() {
+        for pool in pools {
+            if let (Some(addr), Some(count)) = (pool[0].as_str(), pool[1].as_u64()) {
+                output.push_str(&format!("{:6} {}\n", count, addr));
+            }
+        }
+    }
+    if output.lines().count() == 2 {
+        output.push_str("(No pools missing metadata)\n");
+    }
+    output
+}
+
+fn format_jit_failures(json: &serde_json::Value) -> String {
+    let count = json["count"].as_u64().unwrap_or(0);
+    let mut output = format!("=== JIT Metadata Fetch Failures ({} recent) ===\n\n", count);
+    if let Some(failures) = json["jit_failures"].as_array() {
+        for failure in failures {
+            if let Some(text) = failure.as_str() {
+                output.push_str(text);
+                output.push_str("\n\n---\n\n");
+            }
+        }
+    }
+    if count == 0 {
+        output.push_str("(No recent failures)\n");
+    }
+    output
+}
+
+fn format_cache_stats(json: &serde_json::Value) -> String {
+    let mut output = String::from("=== Cache Hit/Miss Statistics (Last 10) ===\n\n");
+    if let Some(stats) = json["cache_stats"].as_array() {
+        for stat in stats {
+            if let Some(line) = stat.as_str() {
+                output.push_str(line);
+                output.push('\n');
+            }
+        }
+    }
+    if output.lines().count() == 2 {
+        output.push_str("(No cache stats available)\n");
+    }
+    output
+}
+
+fn format_validation_errors(json: &serde_json::Value) -> String {
+    let count = json["count"].as_u64().unwrap_or(0);
+    let mut output = format!("=== Recent Validation Errors ({}) ===\n\n", count);
+    if let Some(errors) = json["validation_errors"].as_array() {
+        for error in errors {
+            if let Some(line) = error.as_str() {
+                output.push_str(line);
+                output.push('\n');
+            }
+        }
+    }
+    if count == 0 {
+        output.push_str("(No recent errors)\n");
+    }
+    output
+}
+
+fn format_redis_metadata(json: &serde_json::Value) -> String {
+    let mut output = String::from("=== Redis Pool Metadata Distribution ===\n\n");
+    if let Some(dist) = json["redis_protocol_distribution"].as_str() {
+        output.push_str(dist);
+    }
+    output
+}
+
+fn format_event_drop_metrics(json: &serde_json::Value) -> String {
+    let mut output = String::from("=== Event Processing Metrics ===\n\n");
+
+    let received = json["messages_received"].as_u64().unwrap_or(0);
+    let processed = json["messages_processed"].as_u64().unwrap_or(0);
+    let skipped = json["messages_skipped"].as_u64().unwrap_or(0);
+    let failed = json["messages_failed"].as_u64().unwrap_or(0);
+    let drop_rate = json["drop_rate"].as_f64().unwrap_or(0.0);
+
+    output.push_str(&format!("Messages Received:    {:10}\n", received));
+    output.push_str(&format!(
+        "Messages Processed:   {:10} ({:.1}%)\n",
+        processed,
+        if received > 0 {
+            (processed as f64 / received as f64) * 100.0
+        } else {
+            0.0
+        }
+    ));
+    output.push_str(&format!(
+        "Messages Skipped:     {:10} ({:.1}%)\n",
+        skipped,
+        if received > 0 {
+            (skipped as f64 / received as f64) * 100.0
+        } else {
+            0.0

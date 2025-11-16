@@ -165,9 +165,7 @@ mod tests {
         let mut sub: Subscriber<TestMsg> = Subscriber::new(rx);
 
         // Send wrong type
-        let wrong_envelope = Envelope::new(OtherMsg {
-            data: 999,
-        });
+        let wrong_envelope = Envelope::new(OtherMsg { data: 999 });
         tx.send(wrong_envelope).unwrap();
 
         // Send correct type

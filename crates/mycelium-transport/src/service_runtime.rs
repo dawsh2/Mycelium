@@ -3,12 +3,14 @@
 use crate::bus::MessageBus;
 use crate::service_context::ServiceContext;
 use crate::service_metrics::ServiceMetrics;
-use tokio::sync::broadcast;
+use anyhow::anyhow;
+use tokio::sync::{broadcast, oneshot, Mutex};
 
 /// ServiceRuntime manages service lifecycle and supervision
 pub struct ServiceRuntime {
     bus: std::sync::Arc<MessageBus>,
     shutdown_tx: broadcast::Sender<()>,
+    handles: Mutex<Vec<tokio::task::JoinHandle<()>>>,
 }
 
 impl ServiceRuntime {
@@ -19,6 +21,7 @@ impl ServiceRuntime {
         Self {
             bus: std::sync::Arc::new(bus),
             shutdown_tx,
+            handles: Mutex::new(Vec::new()),
         }
     }
 
@@ -45,30 +48,47 @@ impl ServiceRuntime {
         );
 
         let service_name = S::NAME.to_string();
-        let handle =
-            tokio::spawn(async move { run_supervised(service, ctx, metrics, service_name).await });
+        let (completion_tx, completion_rx) = oneshot::channel();
 
-        Ok(ServiceHandle { handle })
+        let handle = tokio::spawn(async move {
+            let result = run_supervised(service, ctx, metrics, service_name).await;
+            let _ = completion_tx.send(result);
+        });
+
+        self.handles.lock().await.push(handle);
+
+        Ok(ServiceHandle {
+            completion: completion_rx,
+        })
     }
 
     /// Gracefully shutdown all services
     pub async fn shutdown(&self) -> anyhow::Result<()> {
         tracing::info!("Shutting down service runtime");
         let _ = self.shutdown_tx.send(());
+
+        let mut handles = self.handles.lock().await;
+        while let Some(handle) = handles.pop() {
+            if let Err(join_err) = handle.await {
+                tracing::error!("Service task panicked: {join_err}");
+            }
+        }
         Ok(())
     }
 }
 
 /// Handle to a running service
 pub struct ServiceHandle {
-    handle: tokio::task::JoinHandle<()>,
+    completion: oneshot::Receiver<anyhow::Result<()>>,
 }
 
 impl ServiceHandle {
     /// Wait for the service to complete
     pub async fn join(self) -> anyhow::Result<()> {
-        self.handle.await?;
-        Ok(())
+        match self.completion.await {
+            Ok(result) => result,
+            Err(_) => Err(anyhow!("service task dropped before completion")),
+        }
     }
 }
 
@@ -100,27 +120,24 @@ async fn run_supervised<S>(
     ctx: ServiceContext,
     metrics: ServiceMetrics,
     service_name: String,
-) where
+) -> anyhow::Result<()>
+where
     S: Service,
 {
     let mut retry_count = 0;
     let max_retries = 5;
 
-    if let Err(e) = service.startup().await {
-        tracing::error!(
-            service = S::NAME,
-            error = %e,
-            "Service startup failed"
-        );
+    service.startup().await.map_err(|e| {
+        tracing::error!(service = S::NAME, error = %e, "Service startup failed");
         metrics.record_error();
-        return;
-    }
+        e
+    })?;
 
-    loop {
+    let mut result = loop {
         match service.run(&ctx).await {
             Ok(()) => {
                 tracing::info!(service = S::NAME, "Service exited cleanly");
-                break;
+                break Ok(());
             }
             Err(e) => {
                 tracing::error!(
@@ -135,10 +152,9 @@ async fn run_supervised<S>(
                 retry_count += 1;
                 if retry_count >= max_retries {
                     tracing::error!(service = S::NAME, "Max retries exceeded, giving up");
-                    break;
+                    break Err(e);
                 }
 
-                // Record restart
                 metrics.record_restart();
 
                 let backoff = std::time::Duration::from_secs(2u64.pow(retry_count));
@@ -151,19 +167,18 @@ async fn run_supervised<S>(
                 tokio::time::sleep(backoff).await;
             }
         }
-    }
+    };
 
     if let Err(e) = service.shutdown().await {
-        tracing::error!(
-            service = S::NAME,
-            error = %e,
-            "Service shutdown failed"
-        );
+        tracing::error!(service = S::NAME, error = %e, "Service shutdown failed");
         metrics.record_error();
+        if result.is_ok() {
+            result = Err(e);
+        }
     }
 
-    // Print final metrics summary
     metrics.print_summary(&service_name);
+    result
 }
 
 fn generate_trace_id() -> String {

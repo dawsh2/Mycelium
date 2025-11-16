@@ -83,6 +83,7 @@ impl RestartStrategy {
 
 /// Supervision directive issued by a supervisor
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[allow(dead_code)] // Future use: Will be used when supervisor decision logic is implemented
 pub enum Directive {
     /// Resume the actor (continue processing)
     Resume,

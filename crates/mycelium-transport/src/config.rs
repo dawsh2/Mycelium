@@ -69,6 +69,31 @@ pub struct Node {
     /// Optional: TCP port (required if host is set and not localhost)
     #[serde(default)]
     pub port: Option<u16>,
+
+    /// Optional: Endpoint configuration for exposing this node's messages
+    /// to external clients via socket endpoints
+    #[serde(default)]
+    pub endpoint: Option<EndpointConfig>,
+}
+
+/// Configuration for exposing a node via socket endpoint
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct EndpointConfig {
+    /// Kind of endpoint: "tcp" or "unix"
+    pub kind: EndpointKind,
+
+    /// Address for TCP endpoints (e.g., "127.0.0.1:9091")
+    /// Ignored for Unix endpoints
+    #[serde(default)]
+    pub addr: Option<String>,
+}
+
+/// Endpoint kind
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum EndpointKind {
+    Tcp,
+    Unix,
 }
 
 fn default_socket_dir() -> PathBuf {

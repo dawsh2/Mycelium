@@ -1,5 +1,10 @@
-use crate::{config::TransportConfig, Publisher, Subscriber, ChannelManager};
-use mycelium_protocol::Message;
+use crate::bridge::BridgeFanout;
+use crate::codec::deserialize_message;
+use crate::error::Result;
+use crate::{config::TransportConfig, ChannelManager, Publisher, Subscriber, TransportError};
+use dashmap::DashMap;
+use mycelium_protocol::{Envelope, Message};
+use std::sync::Arc;
 
 /// Local transport using Arc<T> for zero-copy message passing
 ///
@@ -10,6 +15,8 @@ use mycelium_protocol::Message;
 #[derive(Clone)]
 pub struct LocalTransport {
     channel_manager: ChannelManager,
+    bridge_fanout: BridgeFanout,
+    type_registry: TypeRegistry,
 }
 
 impl LocalTransport {
@@ -21,7 +28,9 @@ impl LocalTransport {
     /// Create a new local transport with custom configuration
     pub fn with_config(config: TransportConfig) -> Self {
         Self {
-            channel_manager: ChannelManager::new(config),
+            channel_manager: ChannelManager::new(config.clone()),
+            bridge_fanout: BridgeFanout::new(config.channel_capacity),
+            type_registry: TypeRegistry::new(),
         }
     }
 
@@ -36,15 +45,16 @@ impl LocalTransport {
         Self::with_config(config)
     }
 
-
     /// Create a publisher for a message type
     pub fn publisher<M: Message>(&self) -> Publisher<M> {
+        self.type_registry.register::<M>();
         let tx = self.channel_manager.get_or_create_channel::<M>();
-        Publisher::new(tx)
+        Publisher::with_bridge(tx, self.bridge_fanout.clone())
     }
 
     /// Create a subscriber for a message type
     pub fn subscriber<M: Message>(&self) -> Subscriber<M> {
+        self.type_registry.register::<M>();
         let tx = self.channel_manager.get_or_create_channel::<M>();
         let rx = tx.subscribe();
         Subscriber::new(rx)
@@ -55,8 +65,9 @@ impl LocalTransport {
     /// This enables dynamic topic creation for actor mailboxes and partitioned topics.
     /// Example: `publisher_for_topic::<MyMessage>("actor.123abc")`
     pub fn publisher_for_topic<M: Message>(&self, topic: &str) -> Publisher<M> {
+        self.type_registry.register::<M>();
         let tx = self.channel_manager.get_or_create_channel_for_topic(topic);
-        Publisher::new(tx)
+        Publisher::with_bridge(tx, self.bridge_fanout.clone())
     }
 
     /// Create a subscriber for an explicit topic (Phase 1: Actor-ready)
@@ -64,6 +75,7 @@ impl LocalTransport {
     /// This enables dynamic topic subscription for actor mailboxes and partitioned topics.
     /// Example: `subscriber_for_topic::<MyMessage>("actor.123abc")`
     pub fn subscriber_for_topic<M: Message>(&self, topic: &str) -> Subscriber<M> {
+        self.type_registry.register::<M>();
         let tx = self.channel_manager.get_or_create_channel_for_topic(topic);
         let rx = tx.subscribe();
         Subscriber::new(rx)
@@ -78,12 +90,64 @@ impl LocalTransport {
     pub fn subscriber_count<M: Message>(&self) -> usize {
         self.channel_manager.subscriber_count::<M>()
     }
+
+    pub(crate) fn bridge_fanout(&self) -> BridgeFanout {
+        self.bridge_fanout.clone()
+    }
+
+    pub(crate) fn build_envelope_from_payload(
+        &self,
+        type_id: u16,
+        payload: &[u8],
+    ) -> Result<Envelope> {
+        self.type_registry.build(type_id, payload)
+    }
+
+    pub(crate) fn dispatch_envelope(&self, envelope: Envelope) -> Result<usize> {
+        let topic = envelope.topic.clone();
+        let tx = self.channel_manager.get_or_create_channel_for_topic(&topic);
+        tx.send(envelope).map_err(|_| TransportError::SendFailed)
+    }
 }
 
 impl Default for LocalTransport {
     fn default() -> Self {
         Self::new()
     }
+}
+
+type EnvelopeBuilder = fn(&[u8]) -> Result<Envelope>;
+
+#[derive(Clone)]
+struct TypeRegistry {
+    map: Arc<DashMap<u16, EnvelopeBuilder>>,
+}
+
+impl TypeRegistry {
+    fn new() -> Self {
+        Self {
+            map: Arc::new(DashMap::new()),
+        }
+    }
+
+    fn register<M: Message>(&self) {
+        self.map.entry(M::TYPE_ID).or_insert(envelope_builder::<M>);
+    }
+
+    fn build(&self, type_id: u16, payload: &[u8]) -> Result<Envelope> {
+        let builder = self.map.get(&type_id).ok_or_else(|| {
+            TransportError::ServiceNotFound(format!(
+                "No registered message type for type_id {}",
+                type_id
+            ))
+        })?;
+        builder(payload)
+    }
+}
+
+fn envelope_builder<M: Message>(payload: &[u8]) -> Result<Envelope> {
+    let msg = deserialize_message::<M>(payload)?;
+    Ok(Envelope::new(msg))
 }
 
 #[cfg(test)]
@@ -171,11 +235,7 @@ mod tests {
 
         // Publish to different topics
         pub1.publish(Msg1 { value: 42 }).await.unwrap();
-        pub2.publish(Msg2 {
-            data: 100,
-        })
-        .await
-        .unwrap();
+        pub2.publish(Msg2 { data: 100 }).await.unwrap();
 
         // Each subscriber only receives its own message
         let msg1 = sub1.recv().await.unwrap();
@@ -190,7 +250,7 @@ mod tests {
         #[derive(Debug, Clone, Copy, AsBytes, FromBytes, FromZeroes)]
         #[repr(C)]
         struct Msg1 {
-            _dummy: u8,  // Empty structs not supported by zerocopy
+            _dummy: u8, // Empty structs not supported by zerocopy
         }
 
         #[derive(Debug, Clone, Copy, AsBytes, FromBytes, FromZeroes)]

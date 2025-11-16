@@ -1,0 +1,760 @@
+Diff in /Users/daws/repos/mycelium/crates/mycelium-macro/src/routing.rs:4:
+ //! Arc allocation and channel overhead (~65ns → ~2-3ns per handler).
+ 
+ use heck::ToSnakeCase;
+[31m-use std::collections::HashSet;
+(B[m use proc_macro2::{Span, TokenStream};
+ use quote::quote;
+[32m+use std::collections::HashSet;
+(B[m use syn::{
+     parse::{Parse, ParseStream},
+     punctuated::Punctuated,
+Diff in /Users/daws/repos/mycelium/crates/mycelium-protocol/src/codegen.rs:558:
+             "[u8; 20]" => 20,
+             "[u8; 32]" => 32,
+             "[u8; 6]" => 6,
+[31m-            "U256" => 32,                        // Stored as [u8; 32]
+(B[m[32m+            "U256" => 32,           // Stored as [u8; 32]
+(B[m             "String" => 2 + 6 + 32, // FixedStr<32>: [count: u16][_padding: [u8; 6]][chars: [u8; 32]]
+             "Vec<[u8; 20]>" => {
+                 let max_len = max_length(4);
+Diff in /Users/daws/repos/mycelium/crates/mycelium-protocol/src/codegen.rs:572:
+                 let max_len = max_length(16);
+                 2 + 6 + (1 * max_len)
+             }
+[31m-            "[[u8; 32]; 256]" => 32 * 256,       // Fixed array: 256 elements of 32 bytes each
+(B[m[32m+            "[[u8; 32]; 256]" => 32 * 256, // Fixed array: 256 elements of 32 bytes each
+(B[m             "[[u8; 32]; 6]" => 32 * 6,
+             "[[u8; 20]; 6]" => 20 * 6,
+             _ => panic!("Unknown field type for size calculation: {}", field_type),
+Diff in /Users/daws/repos/mycelium/crates/mycelium-protocol/src/lib.rs:29:
+ 
+ // Export generated types as the primary API
+ pub use generated::{
+[32m+    BatchOperation,
+(B[m[32m+    CounterUpdate,
+(B[m     // Example message types from contracts.yaml
+     TextMessage,
+[31m-    CounterUpdate,
+(B[m[31m-    BatchOperation,
+(B[m     ValidationError,
+ };
+ 
+Diff in /Users/daws/repos/mycelium/crates/mycelium-protocol/src/message.rs:11:
+ use std::fmt::Debug;
+ use zerocopy::{AsBytes, FromBytes, FromZeroes};
+ 
+[31m-pub trait Message: AsBytes + FromBytes + FromZeroes + Send + Sync + Debug + Clone + 'static {
+(B[m[32m+pub trait Message:
+(B[m[32m+    AsBytes + FromBytes + FromZeroes + Send + Sync + Debug + Clone + 'static
+(B[m[32m+{
+(B[m     /// Unique message type ID (for TLV encoding)
+     const TYPE_ID: u16;
+ 
+Diff in /Users/daws/repos/mycelium/crates/mycelium-protocol/src/message.rs:52:
+ 
+     #[test]
+     fn test_zerocopy_roundtrip() {
+[31m-        let original = TestMessage {
+(B[m[31m-            id: 42,
+(B[m[31m-            value: 100,
+(B[m[31m-        };
+(B[m[32m+        let original = TestMessage { id: 42, value: 100 };
+(B[m 
+         // Serialize with zerocopy (zero-copy)
+         let bytes = original.as_bytes();
+Diff in /Users/daws/repos/mycelium/crates/mycelium-transport/src/actor/mod.rs:39:
+ pub use context::{ActorContext, ActorRef};
+ pub use handle::Actor;
+ pub use runtime::{ActorRuntime, SpawnError};
+[31m-pub use supervisor::{SupervisionStrategy, RestartStrategy};
+(B[m[32m+pub use supervisor::{RestartStrategy, SupervisionStrategy};
+(B[m 
+Diff in /Users/daws/repos/mycelium/crates/mycelium-transport/src/bus.rs:430:
+                 })?;
+ 
+             let peer_service_name = peer_node.services.first().ok_or_else(|| {
+[31m-                TransportError::ServiceNotFound(format!(
+(B[m[31m-                    "No services in {} node",
+(B[m[31m-                    peer_role
+(B[m[31m-                ))
+(B[m[32m+                TransportError::ServiceNotFound(format!("No services in {} node", peer_role))
+(B[m             })?;
+ 
+             topology.transport_between(my_service, peer_service_name)
+Diff in /Users/daws/repos/mycelium/crates/mycelium-transport/src/bus.rs:545:
+             .await
+             .unwrap();
+ 
+[31m-        let received = tokio::time::timeout(
+(B[m[31m-            tokio::time::Duration::from_secs(1),
+(B[m[31m-            remote_sub.recv(),
+(B[m[31m-        )
+(B[m[31m-        .await
+(B[m[31m-        .expect("timed out waiting for unix bridge message")
+(B[m[31m-        .expect("unix bridge stream closed");
+(B[m[32m+        let received = tokio::time::timeout(tokio::time::Duration::from_secs(1), remote_sub.recv())
+(B[m[32m+            .await
+(B[m[32m+            .expect("timed out waiting for unix bridge message")
+(B[m[32m+            .expect("unix bridge stream closed");
+(B[m 
+         assert_eq!(received.value, 1337);
+ 
+Diff in /Users/daws/repos/mycelium/crates/mycelium-transport/src/bus.rs:584:
+             .await
+             .unwrap();
+ 
+[31m-        let received = tokio::time::timeout(
+(B[m[31m-            tokio::time::Duration::from_secs(1),
+(B[m[31m-            remote_sub.recv(),
+(B[m[31m-        )
+(B[m[31m-        .await
+(B[m[31m-        .expect("timed out waiting for tcp bridge message")
+(B[m[31m-        .expect("tcp bridge closed");
+(B[m[32m+        let received = tokio::time::timeout(tokio::time::Duration::from_secs(1), remote_sub.recv())
+(B[m[32m+            .await
+(B[m[32m+            .expect("timed out waiting for tcp bridge message")
+(B[m[32m+            .expect("tcp bridge closed");
+(B[m 
+         assert_eq!(received.entity_id, 7);
+         assert_eq!(received.value, 9);
+Diff in /Users/daws/repos/mycelium/crates/mycelium-transport/src/lib.rs:1:
+ pub mod actor;
+ pub mod any;
+ pub mod bounded;
+[31m-pub mod buffer_pool;
+(B[m mod bridge;
+[32m+pub mod buffer_pool;
+(B[m pub mod bus;
+ pub mod codec;
+ pub mod config;
+Diff in /Users/daws/repos/mycelium/crates/mycelium-transport/src/lib.rs:17:
+ pub mod service_metrics;
+ pub mod service_runtime;
+ pub mod shared;
+[32m+mod socket_endpoint;
+(B[m pub mod stream;
+ mod stream_transport;
+[31m-mod socket_endpoint;
+(B[m pub mod subscriber;
+ pub mod tcp;
+ pub mod topics;
+Diff in /Users/daws/repos/mycelium/crates/mycelium-transport/src/lib.rs:55:
+ // Re-export proc macros
+ pub use mycelium_macro::{routing_config, service};
+ pub use shared::{BufferSizes, ChannelManager, ConnectionInfo, TransportType};
+[32m+pub use socket_endpoint::SocketEndpointHandle;
+(B[m pub use stream::{handle_stream_connection, StreamSubscriber};
+ pub use subscriber::Subscriber;
+ pub use tcp::{TcpPublisher, TcpSubscriber, TcpTransport};
+Diff in /Users/daws/repos/mycelium/crates/mycelium-transport/src/lib.rs:61:
+ pub use topics::TopicBuilder;
+ pub use unix::{UnixPublisher, UnixSubscriber, UnixTransport};
+ pub use zerocopy::{Cow, OwnedBuf, SharedView};
+[31m-pub use socket_endpoint::SocketEndpointHandle;
+(B[m 
+Diff in /Users/daws/repos/mycelium/crates/mycelium-transport/src/local.rs:39:
+         Self::with_config(config)
+     }
+ 
+[31m-
+(B[m     /// Create a publisher for a message type
+     pub fn publisher<M: Message>(&self) -> Publisher<M> {
+         let tx = self.channel_manager.get_or_create_channel::<M>();
+Diff in /Users/daws/repos/mycelium/crates/mycelium-transport/src/local.rs:178:
+ 
+         // Publish to different topics
+         pub1.publish(Msg1 { value: 42 }).await.unwrap();
+[31m-        pub2.publish(Msg2 {
+(B[m[31m-            data: 100,
+(B[m[31m-        })
+(B[m[31m-        .await
+(B[m[31m-        .unwrap();
+(B[m[32m+        pub2.publish(Msg2 { data: 100 }).await.unwrap();
+(B[m 
+         // Each subscriber only receives its own message
+         let msg1 = sub1.recv().await.unwrap();
+Diff in /Users/daws/repos/mycelium/crates/mycelium-transport/src/local.rs:197:
+         #[derive(Debug, Clone, Copy, AsBytes, FromBytes, FromZeroes)]
+         #[repr(C)]
+         struct Msg1 {
+[31m-            _dummy: u8,  // Empty structs not supported by zerocopy
+(B[m[32m+            _dummy: u8, // Empty structs not supported by zerocopy
+(B[m         }
+ 
+         #[derive(Debug, Clone, Copy, AsBytes, FromBytes, FromZeroes)]
+Diff in /Users/daws/repos/mycelium/crates/mycelium-transport/src/ordered.rs:319:
+         let mut ordered = OrderedSubscriber::new(sub, 0);
+ 
+         // Send messages OUT of order: 0, 2, 1, 3
+[31m-        tx.send(Envelope::with_sequence(TestMsg { value: 0 }, 0)).unwrap();
+(B[m[31m-        tx.send(Envelope::with_sequence(TestMsg { value: 2 }, 2)).unwrap();
+(B[m[31m-        tx.send(Envelope::with_sequence(TestMsg { value: 1 }, 1)).unwrap();
+(B[m[31m-        tx.send(Envelope::with_sequence(TestMsg { value: 3 }, 3)).unwrap();
+(B[m[32m+        tx.send(Envelope::with_sequence(TestMsg { value: 0 }, 0))
+(B[m[32m+            .unwrap();
+(B[m[32m+        tx.send(Envelope::with_sequence(TestMsg { value: 2 }, 2))
+(B[m[32m+            .unwrap();
+(B[m[32m+        tx.send(Envelope::with_sequence(TestMsg { value: 1 }, 1))
+(B[m[32m+            .unwrap();
+(B[m[32m+        tx.send(Envelope::with_sequence(TestMsg { value: 3 }, 3))
+(B[m[32m+            .unwrap();
+(B[m 
+         // Should receive IN order: 0, 1, 2, 3
+         for i in 0..4 {
+Diff in /Users/daws/repos/mycelium/crates/mycelium-transport/src/ordered.rs:347:
+         let mut ordered = OrderedSubscriber::new(sub, 0);
+ 
+         // Send messages with a gap: 0, 3, 1, 2
+[31m-        tx.send(Envelope::with_sequence(TestMsg { value: 0 }, 0)).unwrap();
+(B[m[31m-        tx.send(Envelope::with_sequence(TestMsg { value: 3 }, 3)).unwrap();
+(B[m[31m-        tx.send(Envelope::with_sequence(TestMsg { value: 1 }, 1)).unwrap();
+(B[m[31m-        tx.send(Envelope::with_sequence(TestMsg { value: 2 }, 2)).unwrap();
+(B[m[32m+        tx.send(Envelope::with_sequence(TestMsg { value: 0 }, 0))
+(B[m[32m+            .unwrap();
+(B[m[32m+        tx.send(Envelope::with_sequence(TestMsg { value: 3 }, 3))
+(B[m[32m+            .unwrap();
+(B[m[32m+        tx.send(Envelope::with_sequence(TestMsg { value: 1 }, 1))
+(B[m[32m+            .unwrap();
+(B[m[32m+        tx.send(Envelope::with_sequence(TestMsg { value: 2 }, 2))
+(B[m[32m+            .unwrap();
+(B[m 
+         // Should receive in order: 0, 1, 2, 3
+         for i in 0..4 {
+Diff in /Users/daws/repos/mycelium/crates/mycelium-transport/src/publisher.rs:15:
+ }
+ 
+ impl<M: Message> Publisher<M> {
+[31m-    pub(crate) fn with_bridge(tx: broadcast::Sender<Envelope>, bridge_fanout: BridgeFanout) -> Self {
+(B[m[32m+    pub(crate) fn with_bridge(
+(B[m[32m+        tx: broadcast::Sender<Envelope>,
+(B[m[32m+        bridge_fanout: BridgeFanout,
+(B[m[32m+    ) -> Self {
+(B[m         Self {
+             tx,
+             bridge_fanout,
+Diff in /Users/daws/repos/mycelium/crates/mycelium-transport/src/publisher.rs:190:
+         let frame = bridge_rx.recv().await.unwrap();
+         assert_eq!(frame.type_id, TestMsg::TYPE_ID);
+         assert_eq!(frame.topic, TestMsg::TOPIC);
+[31m-        assert_eq!(frame.bytes.len(), HEADER_SIZE + std::mem::size_of::<TestMsg>());
+(B[m[32m+        assert_eq!(
+(B[m[32m+            frame.bytes.len(),
+(B[m[32m+            HEADER_SIZE + std::mem::size_of::<TestMsg>()
+(B[m[32m+        );
+(B[m     }
+ }
+ 
+Diff in /Users/daws/repos/mycelium/crates/mycelium-transport/src/service_runtime.rs:4:
+ use crate::service_context::ServiceContext;
+ use crate::service_metrics::ServiceMetrics;
+ use anyhow::anyhow;
+[31m-use tokio::sync::{broadcast, Mutex, oneshot};
+(B[m[32m+use tokio::sync::{broadcast, oneshot, Mutex};
+(B[m 
+ /// ServiceRuntime manages service lifecycle and supervision
+ pub struct ServiceRuntime {
+Diff in /Users/daws/repos/mycelium/crates/mycelium-transport/src/socket_endpoint.rs:20:
+ impl SocketEndpointHandle {
+     pub async fn shutdown(self) -> Result<()> {
+         let _ = self.shutdown.send(true);
+[31m-        self.join
+(B[m[31m-            .await
+(B[m[31m-            .map_err(|err| TransportError::Io(std::io::Error::new(
+(B[m[32m+        self.join.await.map_err(|err| {
+(B[m[32m+            TransportError::Io(std::io::Error::new(
+(B[m                 std::io::ErrorKind::Other,
+                 format!("socket bridge task failed: {err}"),
+[31m-            )))?;
+(B[m[32m+            ))
+(B[m[32m+        })?;
+(B[m         Ok(())
+     }
+ }
+Diff in /Users/daws/repos/mycelium/crates/mycelium-transport/src/socket_endpoint.rs:135:
+     spawn_stream_pump(writer, fanout, shutdown, "unix");
+ }
+ 
+[31m-fn spawn_stream_pump_tcp(
+(B[m[31m-    stream: TcpStream,
+(B[m[31m-    fanout: BridgeFanout,
+(B[m[31m-    shutdown: watch::Receiver<bool>,
+(B[m[31m-) {
+(B[m[32m+fn spawn_stream_pump_tcp(stream: TcpStream, fanout: BridgeFanout, shutdown: watch::Receiver<bool>) {
+(B[m     let (_reader, writer) = stream.into_split();
+     spawn_stream_pump(writer, fanout, shutdown, "tcp");
+ }
+Diff in /Users/daws/repos/mycelium/crates/mycelium-transport/src/socket_endpoint.rs:149:
+     fanout: BridgeFanout,
+     mut shutdown: watch::Receiver<bool>,
+     label: &'static str,
+[31m-)
+(B[m[31m-where
+(B[m[32m+) where
+(B[m     W: AsyncWriteExt + Unpin + Send + 'static,
+ {
+     tokio::spawn(async move {
+Diff in /Users/daws/repos/mycelium/crates/mycelium-transport/src/stream_transport.rs:7:
+ use std::marker::PhantomData;
+ use std::sync::Arc;
+ use tokio::io::{AsyncReadExt, AsyncWriteExt};
+[31m-use zerocopy::AsBytes;
+(B[m use tokio::sync::{broadcast, Mutex};
+[32m+use zerocopy::AsBytes;
+(B[m 
+ #[derive(Clone)]
+ pub(crate) struct StreamTransportState {
+Diff in /Users/daws/repos/mycelium/crates/mycelium-transport/src/stream_transport.rs:29:
+     }
+ 
+     pub(crate) fn register_type<M: Message>(&self) {
+[31m-        self.type_to_topic
+(B[m[31m-            .insert(M::TYPE_ID, M::TOPIC.to_string());
+(B[m[32m+        self.type_to_topic.insert(M::TYPE_ID, M::TOPIC.to_string());
+(B[m     }
+ 
+     pub(crate) fn get_or_create_channel(&self, topic: &str) -> broadcast::Sender<Envelope> {
+Diff in /Users/daws/repos/mycelium/crates/mycelium-transport/src/stream_transport.rs:41:
+     }
+ }
+ 
+[31m-pub(crate) fn spawn_client_reader<S>(
+(B[m[31m-    stream: S,
+(B[m[31m-    state: StreamTransportState,
+(B[m[31m-    label: &'static str,
+(B[m[31m-) where
+(B[m[32m+pub(crate) fn spawn_client_reader<S>(stream: S, state: StreamTransportState, label: &'static str)
+(B[m[32m+where
+(B[m     S: AsyncReadExt + Unpin + Send + 'static,
+ {
+     let channels = Arc::clone(&state.channels);
+Diff in /Users/daws/repos/mycelium/crates/mycelium-transport/src/subscriber.rs:165:
+         let mut sub: Subscriber<TestMsg> = Subscriber::new(rx);
+ 
+         // Send wrong type
+[31m-        let wrong_envelope = Envelope::new(OtherMsg {
+(B[m[31m-            data: 999,
+(B[m[31m-        });
+(B[m[32m+        let wrong_envelope = Envelope::new(OtherMsg { data: 999 });
+(B[m         tx.send(wrong_envelope).unwrap();
+ 
+         // Send correct type
+Diff in /Users/daws/repos/mycelium/crates/mycelium-transport/src/tcp.rs:131:
+     use super::*;
+     use crate::codec::write_message;
+     use mycelium_protocol::impl_message;
+[31m-    use tokio::sync::oneshot;
+(B[m     use tokio::net::TcpListener;
+[32m+    use tokio::sync::oneshot;
+(B[m     use zerocopy::{AsBytes, FromBytes, FromZeroes};
+ 
+     #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+Diff in /Users/daws/repos/mycelium/crates/mycelium-transport/src/topics.rs:117:
+         );
+ 
+         // Hash 100 % 3 = 1
+[31m-        assert_eq!(
+(B[m[31m-            TopicBuilder::partition_by_hash("test", 100, 3),
+(B[m[31m-            "test.1"
+(B[m[31m-        );
+(B[m[32m+        assert_eq!(TopicBuilder::partition_by_hash("test", 100, 3), "test.1");
+(B[m 
+         // Edge case: 0 partitions (should default to 1)
+[31m-        assert_eq!(
+(B[m[31m-            TopicBuilder::partition_by_hash("test", 100, 0),
+(B[m[31m-            "test.0"
+(B[m[31m-        );
+(B[m[32m+        assert_eq!(TopicBuilder::partition_by_hash("test", 100, 0), "test.0");
+(B[m     }
+ }
+ 
+Diff in /Users/daws/repos/mycelium/examples/actor_demo.rs:36:
+ 
+     async fn handle(&mut self, msg: Self::Message, _ctx: &mut ActorContext<Self>) {
+         self.count += msg.amount;
+[31m-        println!("[{}] Count increased by {}. New total: {}", self.name, msg.amount, self.count);
+(B[m[32m+        println!(
+(B[m[32m+            "[{}] Count increased by {}. New total: {}",
+(B[m[32m+            self.name, msg.amount, self.count
+(B[m[32m+        );
+(B[m     }
+ 
+     async fn started(&mut self, ctx: &mut ActorContext<Self>) {
+Diff in /Users/daws/repos/mycelium/examples/actor_demo.rs:57:
+     println!("=== Actor System Demo ===\n");
+ 
+     // Spawn multiple counter actors
+[31m-    let counter1 = runtime.spawn(CounterActor {
+(B[m[31m-        count: 0,
+(B[m[31m-        name: "Counter1".to_string(),
+(B[m[31m-    }).await;
+(B[m[32m+    let counter1 = runtime
+(B[m[32m+        .spawn(CounterActor {
+(B[m[32m+            count: 0,
+(B[m[32m+            name: "Counter1".to_string(),
+(B[m[32m+        })
+(B[m[32m+        .await;
+(B[m 
+[31m-    let counter2 = runtime.spawn(CounterActor {
+(B[m[31m-        count: 100,
+(B[m[31m-        name: "Counter2".to_string(),
+(B[m[31m-    }).await;
+(B[m[32m+    let counter2 = runtime
+(B[m[32m+        .spawn(CounterActor {
+(B[m[32m+            count: 100,
+(B[m[32m+            name: "Counter2".to_string(),
+(B[m[32m+        })
+(B[m[32m+        .await;
+(B[m 
+     println!("\n--- Sending Messages ---\n");
+ 
+Diff in /Users/daws/repos/mycelium/examples/custom-protocol/src/main.rs:33:
+             timestamp: 1234567890,
+         };
+         codec::write_message(&mut client, &login).await?;
+[31m-        println!("  → Sent PlayerLogin (type_id={}, player_id={})",
+(B[m[31m-            PlayerLogin::TYPE_ID, login.player_id);
+(B[m[32m+        println!(
+(B[m[32m+            "  → Sent PlayerLogin (type_id={}, player_id={})",
+(B[m[32m+            PlayerLogin::TYPE_ID,
+(B[m[32m+            login.player_id
+(B[m[32m+        );
+(B[m 
+         // Send PlayerPosition message
+         let position = PlayerPosition {
+Diff in /Users/daws/repos/mycelium/examples/custom-protocol/src/main.rs:45:
+             rotation: 3.14159,
+         };
+         codec::write_message(&mut client, &position).await?;
+[31m-        println!("  → Sent PlayerPosition (type_id={}, pos=[{:.1}, {:.1}, {:.1}])",
+(B[m[31m-            PlayerPosition::TYPE_ID, position.x, position.y, position.z);
+(B[m[32m+        println!(
+(B[m[32m+            "  → Sent PlayerPosition (type_id={}, pos=[{:.1}, {:.1}, {:.1}])",
+(B[m[32m+            PlayerPosition::TYPE_ID,
+(B[m[32m+            position.x,
+(B[m[32m+            position.y,
+(B[m[32m+            position.z
+(B[m[32m+        );
+(B[m 
+         // Send GameState message
+         let game_state = GameState {
+Diff in /Users/daws/repos/mycelium/examples/custom-protocol/src/main.rs:56:
+             elapsed_time: 3600,
+         };
+         codec::write_message(&mut client, &game_state).await?;
+[31m-        println!("  → Sent GameState (type_id={}, tick={}, players={})",
+(B[m[31m-            GameState::TYPE_ID, game_state.tick, game_state.player_count);
+(B[m[32m+        println!(
+(B[m[32m+            "  → Sent GameState (type_id={}, tick={}, players={})",
+(B[m[32m+            GameState::TYPE_ID,
+(B[m[32m+            game_state.tick,
+(B[m[32m+            game_state.player_count
+(B[m[32m+        );
+(B[m 
+         // Send ChatMessage
+         let chat = ChatMessage {
+Diff in /Users/daws/repos/mycelium/examples/custom-protocol/src/main.rs:67:
+             timestamp: 1234567899,
+         };
+         codec::write_message(&mut client, &chat).await?;
+[31m-        println!("  → Sent ChatMessage (type_id={}, sender={})",
+(B[m[31m-            ChatMessage::TYPE_ID, chat.sender_id);
+(B[m[32m+        println!(
+(B[m[32m+            "  → Sent ChatMessage (type_id={}, sender={})",
+(B[m[32m+            ChatMessage::TYPE_ID,
+(B[m[32m+            chat.sender_id
+(B[m[32m+        );
+(B[m 
+         // Send ItemTransaction
+         let transaction = ItemTransaction {
+Diff in /Users/daws/repos/mycelium/examples/custom-protocol/src/main.rs:79:
+             quantity: 10,
+         };
+         codec::write_message(&mut client, &transaction).await?;
+[31m-        println!("  → Sent ItemTransaction (type_id={}, item={}, qty={})",
+(B[m[31m-            ItemTransaction::TYPE_ID, transaction.item_id, transaction.quantity);
+(B[m[32m+        println!(
+(B[m[32m+            "  → Sent ItemTransaction (type_id={}, item={}, qty={})",
+(B[m[32m+            ItemTransaction::TYPE_ID,
+(B[m[32m+            transaction.item_id,
+(B[m[32m+            transaction.quantity
+(B[m[32m+        );
+(B[m 
+         Ok::<_, Box<dyn std::error::Error + Send + Sync>>(())
+     });
+Diff in /Users/daws/repos/mycelium/examples/custom-protocol/src/main.rs:98:
+             PlayerLogin::TYPE_ID => {
+                 let payload = &buffer[mycelium_protocol::codec::HEADER_SIZE..];
+                 let msg: PlayerLogin = codec::deserialize_message(payload)?;
+[31m-                println!("  ← Received PlayerLogin: player_id={}, token=0x{:X}, timestamp={}",
+(B[m[31m-                    msg.player_id, msg.session_token, msg.timestamp);
+(B[m[32m+                println!(
+(B[m[32m+                    "  ← Received PlayerLogin: player_id={}, token=0x{:X}, timestamp={}",
+(B[m[32m+                    msg.player_id, msg.session_token, msg.timestamp
+(B[m[32m+                );
+(B[m             }
+             PlayerPosition::TYPE_ID => {
+                 let payload = &buffer[mycelium_protocol::codec::HEADER_SIZE..];
+Diff in /Users/daws/repos/mycelium/examples/custom-protocol/src/main.rs:110:
+             GameState::TYPE_ID => {
+                 let payload = &buffer[mycelium_protocol::codec::HEADER_SIZE..];
+                 let msg: GameState = codec::deserialize_message(payload)?;
+[31m-                println!("  ← Received GameState: game_id={}, tick={}, players={}, elapsed={}s",
+(B[m[31m-                    msg.game_id, msg.tick, msg.player_count, msg.elapsed_time);
+(B[m[32m+                println!(
+(B[m[32m+                    "  ← Received GameState: game_id={}, tick={}, players={}, elapsed={}s",
+(B[m[32m+                    msg.game_id, msg.tick, msg.player_count, msg.elapsed_time
+(B[m[32m+                );
+(B[m             }
+             ChatMessage::TYPE_ID => {
+                 let payload = &buffer[mycelium_protocol::codec::HEADER_SIZE..];
+Diff in /Users/daws/repos/mycelium/examples/custom-protocol/src/main.rs:118:
+                 let msg: ChatMessage = codec::deserialize_message(payload)?;
+[31m-                println!("  ← Received ChatMessage: sender={}, channel={}, hash=0x{:X}",
+(B[m[31m-                    msg.sender_id, msg.channel_id, msg.message_hash);
+(B[m[32m+                println!(
+(B[m[32m+                    "  ← Received ChatMessage: sender={}, channel={}, hash=0x{:X}",
+(B[m[32m+                    msg.sender_id, msg.channel_id, msg.message_hash
+(B[m[32m+                );
+(B[m             }
+             ItemTransaction::TYPE_ID => {
+                 let payload = &buffer[mycelium_protocol::codec::HEADER_SIZE..];
+Diff in /Users/daws/repos/mycelium/examples/custom-protocol/src/main.rs:124:
+                 let msg: ItemTransaction = codec::deserialize_message(payload)?;
+[31m-                println!("  ← Received ItemTransaction: {} → {}, item={}, qty={}",
+(B[m[31m-                    msg.from_player, msg.to_player, msg.item_id, msg.quantity);
+(B[m[32m+                println!(
+(B[m[32m+                    "  ← Received ItemTransaction: {} → {}, item={}, qty={}",
+(B[m[32m+                    msg.from_player, msg.to_player, msg.item_id, msg.quantity
+(B[m[32m+                );
+(B[m             }
+             _ => println!("  ← Unknown message type: {}", type_id),
+         }
+Diff in /Users/daws/repos/mycelium/examples/custom-protocol/src/main.rs:130:
+     }
+ 
+     match client_handle.await {
+[31m-        Ok(Ok(_)) => {},
+(B[m[32m+        Ok(Ok(_)) => {}
+(B[m         Ok(Err(e)) => return Err(format!("Client error: {}", e).into()),
+         Err(e) => return Err(format!("Join error: {}", e).into()),
+     }
+Diff in /Users/daws/repos/mycelium/examples/generic/game_server.rs:13:
+ #[repr(C)]
+ struct PlayerAction {
+     player_id: u64,
+[31m-    action_type: u64,  // 1=move, 2=attack, 3=use_item (u64 to avoid padding)
+(B[m[31m-    target_x: i64,     // i64 to avoid padding
+(B[m[31m-    target_y: i64,     // i64 to avoid padding
+(B[m[32m+    action_type: u64, // 1=move, 2=attack, 3=use_item (u64 to avoid padding)
+(B[m[32m+    target_x: i64,    // i64 to avoid padding
+(B[m[32m+    target_y: i64,    // i64 to avoid padding
+(B[m     timestamp_ms: u64,
+ }
+ 
+Diff in /Users/daws/repos/mycelium/examples/generic/game_server.rs:26:
+ #[repr(C)]
+ struct StateUpdate {
+     player_id: u64,
+[31m-    position_x: i64,   // i64 to avoid padding
+(B[m[31m-    position_y: i64,   // i64 to avoid padding
+(B[m[31m-    health: u64,       // u64 to avoid padding
+(B[m[32m+    position_x: i64, // i64 to avoid padding
+(B[m[32m+    position_y: i64, // i64 to avoid padding
+(B[m[32m+    health: u64,     // u64 to avoid padding
+(B[m     tick: u64,
+ }
+ 
+Diff in /Users/daws/repos/mycelium/examples/generic/game_server.rs:39:
+ #[repr(C)]
+ struct ChatMessage {
+     player_id: u64,
+[31m-    message_len: u64,  // u64 to avoid padding
+(B[m[32m+    message_len: u64, // u64 to avoid padding
+(B[m     message_id: u64,
+ }
+ 
+Diff in /Users/daws/repos/mycelium/examples/generic/game_server.rs:52:
+     let bus = MessageBus::new();
+ 
+     // Player action channel (with backpressure to prevent spam)
+[31m-    let (action_pub, mut action_recv): (BoundedPublisher<PlayerAction>, BoundedSubscriber<PlayerAction>) =
+(B[m[31m-        bus.bounded_pair(100);
+(B[m[32m+    let (action_pub, mut action_recv): (
+(B[m[32m+        BoundedPublisher<PlayerAction>,
+(B[m[32m+        BoundedSubscriber<PlayerAction>,
+(B[m[32m+    ) = bus.bounded_pair(100);
+(B[m 
+     // State updates (broadcast to all clients)
+     let state_pub = bus.publisher::<StateUpdate>();
+Diff in /Users/daws/repos/mycelium/examples/generic/game_server.rs:123:
+     // Chat listener
+     tokio::spawn(async move {
+         while let Some(msg) = chat_sub.recv().await {
+[31m-            println!("💬 [Chat] Player {} sent message #{}", msg.player_id, msg.message_id);
+(B[m[32m+            println!(
+(B[m[32m+                "💬 [Chat] Player {} sent message #{}",
+(B[m[32m+                msg.player_id, msg.message_id
+(B[m[32m+            );
+(B[m         }
+     });
+ 
+Diff in /Users/daws/repos/mycelium/examples/generic/managed_service.rs:1:
+[32m+use mycelium_protocol::{impl_message, Message};
+(B[m /// Generic managed service example - lifecycle management
+ ///
+ /// Demonstrates ManagedService trait, BoundedPublisher, and OrderedSubscriber
+Diff in /Users/daws/repos/mycelium/examples/generic/managed_service.rs:8:
+     BoundedPublisher, BoundedSubscriber, HealthStatus, ManagedService, MessageBus,
+     OrderedSubscriber,
+ };
+[31m-use mycelium_protocol::{impl_message, Message};
+(B[m use std::sync::Arc;
+ use zerocopy::{AsBytes, FromBytes, FromZeroes};
+ 
+Diff in /Users/daws/repos/mycelium/examples/generic/managed_service.rs:28:
+ #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+ #[repr(C)]
+ struct Alert {
+[31m-    severity: u64,     // 1-4 (info, warning, error, critical) - u64 to avoid padding
+(B[m[31m-    event_count: u64,  // Events processed before alert
+(B[m[32m+    severity: u64,    // 1-4 (info, warning, error, critical) - u64 to avoid padding
+(B[m[32m+    event_count: u64, // Events processed before alert
+(B[m     value: i64,
+ }
+ 
+Diff in /Users/daws/repos/mycelium/examples/generic/managed_service.rs:105:
+             if let Err(e) = self.alert_publisher.publish(alert).await {
+                 println!("⚠️  [Processor] Failed to publish alert: {}", e);
+             } else {
+[31m-                println!("🔔 [Processor] Alert published at event #{}", self.event_count);
+(B[m[32m+                println!(
+(B[m[32m+                    "🔔 [Processor] Alert published at event #{}",
+(B[m[32m+                    self.event_count
+(B[m[32m+                );
+(B[m             }
+         }
+     }
+Diff in /Users/daws/repos/mycelium/examples/generic/managed_service.rs:162:
+                 4 => "CRITICAL",
+                 _ => "UNKNOWN",
+             };
+[31m-            println!("🔔 [Alert Consumer] {} - Event count: {}", severity, alert.event_count);
+(B[m[32m+            println!(
+(B[m[32m+                "🔔 [Alert Consumer] {} - Event count: {}",
+(B[m[32m+                severity, alert.event_count
+(B[m[32m+            );
+(B[m             // Simulate slow consumer to demonstrate backpressure
+             tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+         }
+Diff in /Users/daws/repos/mycelium/examples/generic/sensor_network.rs:13:
+ #[repr(C)]
+ struct SensorReading {
+     sensor_id: u64,
+[31m-    value: i64,        // Raw sensor value (scaled to i64)
+(B[m[32m+    value: i64, // Raw sensor value (scaled to i64)
+(B[m     timestamp_ms: u64,
+[31m-    quality: u64,      // 0-100 quality indicator (u64 to avoid padding)
+(B[m[32m+    quality: u64, // 0-100 quality indicator (u64 to avoid padding)
+(B[m }
+ 
+ impl_message!(SensorReading, 1, "sensors");
+Diff in /Users/daws/repos/mycelium/examples/generic/sensor_network.rs:27:
+     sensor_id: u64,
+     threshold_exceeded: i64,
+     current_value: i64,
+[31m-    severity: u64,     // 1=low, 2=medium, 3=high, 4=critical (u64 to avoid padding)
+(B[m[32m+    severity: u64, // 1=low, 2=medium, 3=high, 4=critical (u64 to avoid padding)
+(B[m }
+ 
+ impl_message!(SensorAlert, 2, "alerts");
+Diff in /Users/daws/repos/mycelium/examples/generic/sensor_network.rs:104:
+     println!("🔄 Collecting sensor data...\n");
+ 
+     let sensor_data = vec![
+[31m-        (101, 450, 95),   // Normal reading
+(B[m[31m-        (102, 780, 92),   // Normal reading
+(B[m[31m-        (101, 1250, 90),  // Exceeds threshold -> alert
+(B[m[31m-        (103, 520, 88),   // Normal reading
+(B[m[31m-        (102, 2100, 85),  // Critical threshold -> alert
+(B[m[32m+        (101, 450, 95),  // Normal reading
+(B[m[32m+        (102, 780, 92),  // Normal reading
+(B[m[32m+        (101, 1250, 90), // Exceeds threshold -> alert
+(B[m[32m+        (103, 520, 88),  // Normal reading
+(B[m[32m+        (102, 2100, 85), // Critical threshold -> alert
+(B[m     ];
+ 
+     for (sensor_id, value, quality) in sensor_data {
+Diff in /Users/daws/repos/mycelium/examples/overhead_breakdown.rs:1:
+ //! Detailed breakdown of overhead in ServiceContext::emit()
+ 
+ use mycelium_protocol::impl_message;
+[31m-use mycelium_transport::ServiceMetrics;
+(B[m use mycelium_transport::MessageBus;
+[32m+use mycelium_transport::ServiceMetrics;
+(B[m use std::sync::Arc;
+ use std::time::Instant;
+ use zerocopy::{AsBytes, FromBytes, FromZeroes};
+Diff in /Users/daws/repos/mycelium/examples/pure_emit_test.rs:2:
+ 
+ use anyhow::Result;
+ use mycelium_protocol::impl_message;
+[31m-use mycelium_transport::{service, ServiceContext, ServiceRuntime};
+(B[m use mycelium_transport::MessageBus;
+[32m+use mycelium_transport::{service, ServiceContext, ServiceRuntime};
+(B[m use zerocopy::{AsBytes, FromBytes, FromZeroes};
+ 
+ #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+Diff in /Users/daws/repos/mycelium/examples/simple_pubsub.rs:38:
+     let mut subscriber2 = bus.subscriber::<DataEvent>();
+ 
+     println!("Created 1 publisher and 2 subscribers");
+[31m-    println!("Subscriber count: {}\n", bus.subscriber_count::<DataEvent>());
+(B[m[32m+    println!(
+(B[m[32m+        "Subscriber count: {}\n",
+(B[m[32m+        bus.subscriber_count::<DataEvent>()
+(B[m[32m+    );
+(B[m 
+     // Spawn subscriber tasks
+     let sub1_handle = tokio::spawn(async move {
+Diff in /Users/daws/repos/mycelium/examples/simple_service.rs:8:
+ 
+ use anyhow::Result;
+ use mycelium_protocol::impl_message;
+[31m-use mycelium_transport::{service, ServiceContext, ServiceRuntime};
+(B[m use mycelium_transport::MessageBus;
+[32m+use mycelium_transport::{service, ServiceContext, ServiceRuntime};
+(B[m use std::time::Duration;
+ use zerocopy::{AsBytes, FromBytes, FromZeroes};
+ 
+Diff in /Users/daws/repos/mycelium/tests/deployment_tests/mod.rs:13:
+ // pub mod distributed_deployment;
+ // pub mod mixed_deployment;
+ // pub mod topology_validation;
+[32m+
+(B[mDiff in /Users/daws/repos/mycelium/tests/lib.rs:8:
+ //! - Error handling and edge cases
+ 
+ pub mod common;
+[31m-pub mod transport_tests;
+(B[m pub mod deployment_tests;
+ pub mod performance_tests;
+[32m+pub mod transport_tests;
+(B[m // TODO: Re-enable after migration - error handling tests exist in integration/error_handling.rs
+ // pub mod error_handling_tests;
+ 
+Diff in /Users/daws/repos/mycelium/tests/lib.rs:17:
+ // Re-export common utilities for easier access
+ pub use common::*;
+[32m+
+(B[mDiff in /Users/daws/repos/mycelium/tests/performance_tests/mod.rs:11:
+ // pub mod latency_tests;
+ // pub mod memory_tests;
+ // pub mod concurrency_tests;
+[32m+
+(B[mDiff in /Users/daws/repos/mycelium/tests/transport_tests/mod.rs:10:
+ // pub mod unix_transport;
+ // pub mod tcp_transport;
+ // pub mod transport_fallbacks;
+[32m+
+(B[m

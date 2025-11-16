@@ -466,22 +466,29 @@ mod tests {
 }
 
 // ============================================================================
-// Manual zerocopy trait implementations for concrete types
+// Zerocopy trait implementations
 // ============================================================================
-//
-// NOTE: zerocopy cannot derive AsBytes/FromBytes generically for FixedVec<T, N>
-// Must manually implement for each concrete instantiation used in messages.
 
-/// Manual AsBytes/FromBytes for FixedVec<[u8; 20], 4> (arbitrage paths)
-unsafe impl AsBytes for FixedVec<[u8; 20], MAX_POOL_ADDRESSES> {
+// Provide blanket zerocopy support for any FixedVec<T, N> where T itself is
+// zerocopy-safe. This mirrors Vec semantics while preserving inline storage.
+unsafe impl<T, const N: usize> AsBytes for FixedVec<T, N>
+where
+    T: AsBytes + Copy + Default,
+{
     fn only_derive_is_allowed_to_implement_this_trait() {}
 }
 
-unsafe impl FromBytes for FixedVec<[u8; 20], MAX_POOL_ADDRESSES> {
+unsafe impl<T, const N: usize> FromBytes for FixedVec<T, N>
+where
+    T: FromBytes + Copy + Default,
+{
     fn only_derive_is_allowed_to_implement_this_trait() {}
 }
 
-unsafe impl FromZeroes for FixedVec<[u8; 20], MAX_POOL_ADDRESSES> {
+unsafe impl<T, const N: usize> FromZeroes for FixedVec<T, N>
+where
+    T: FromZeroes + Copy + Default,
+{
     fn only_derive_is_allowed_to_implement_this_trait() {}
 }
 

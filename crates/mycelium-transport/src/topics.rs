@@ -117,15 +117,9 @@ mod tests {
         );
 
         // Hash 100 % 3 = 1
-        assert_eq!(
-            TopicBuilder::partition_by_hash("test", 100, 3),
-            "test.1"
-        );
+        assert_eq!(TopicBuilder::partition_by_hash("test", 100, 3), "test.1");
 
         // Edge case: 0 partitions (should default to 1)
-        assert_eq!(
-            TopicBuilder::partition_by_hash("test", 100, 0),
-            "test.0"
-        );
+        assert_eq!(TopicBuilder::partition_by_hash("test", 100, 0), "test.0");
     }
 }

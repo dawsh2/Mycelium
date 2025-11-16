@@ -1,0 +1,212 @@
+[2025-11-16T03:45:00] OpenAI Codex v0.0.0 (research preview)
+--------
+workdir: /Users/daws/repos/mycelium
+model: gpt-5.1-codex-mini
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: high
+reasoning summaries: auto
+--------
+[2025-11-16T03:45:00] User instructions:
+Design an implementation plan for a Python bridge on top of Mycelium so Python services (data adapters, risk, execution, etc.) can publish/subscribe TLV messages via the existing Rust MessageBus. Repo at /Users/daws/repos/mycelium. Key references: docs/EXTENSIONS.md (new roadmap), docs/todo/2025-11-05-python-integration-roadmap.md, crates/mycelium-transport (MessageBus, transports). Deliver a step-by-step plan covering schema/codegen, bridge architecture, Python SDK/runtime, transport protocol, observability, and deployment considerations.
+
+[Running in read-only mode - no modifications allowed]
+[2025-11-16T03:45:00] OpenAI Codex v0.0.0 (research preview)
+--------
+workdir: /Users/daws/repos/mycelium
+model: gpt-5.1-codex-mini
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: high
+reasoning summaries: auto
+--------
+[2025-11-16T03:45:00] User instructions:
+Design an implementation plan for a Python bridge on top of Mycelium so Python services (data adapters, risk, execution, etc.) can publish/subscribe TLV messages via the existing Rust MessageBus. Repo at /Users/daws/repos/mycelium. Key references: docs/EXTENSIONS.md (new roadmap), docs/todo/2025-11-05-python-integration-roadmap.md, crates/mycelium-transport (MessageBus, transports). Deliver a step-by-step plan covering schema/codegen, bridge architecture, Python SDK/runtime, transport protocol, observability, and deployment considerations.
+
+[Running in read-only mode - no modifications allowed]
+
+[2025-11-16T03:45:02] thinking
+
+**Planning investigation approach**
+[2025-11-16T03:45:03] exec /bin/zsh -lc pwd in /Users/daws/repos/mycelium
+[2025-11-16T03:45:03] /bin/zsh -lc pwd succeeded in 157ms:
+/Users/daws/repos/mycelium
+[2025-11-16T03:45:03] tokens used: 927
+
+[2025-11-16T03:45:04] thinking
+
+**Consulting EXTENSIONS.md documentation**
+[2025-11-16T03:45:05] exec /bin/zsh -lc 'ls docs' in /Users/daws/repos/mycelium
+[2025-11-16T03:45:05] /bin/zsh -lc 'ls docs' succeeded in 125ms:
+AGENTICS.md
+ARCHITECTURE_DIAGRAMS.md
+assets
+EXTENSIONS.md
+implementation
+runbooks
+SYSTEM_OVERVIEW.md
+todo
+[2025-11-16T03:45:05] tokens used: 1,943
+[2025-11-16T03:45:07] exec /bin/zsh -lc 'cat docs/EXTENSIONS.md' in /Users/daws/repos/mycelium
+[2025-11-16T03:45:07] /bin/zsh -lc 'cat docs/EXTENSIONS.md' succeeded in 159ms:
+# EXTENSIONS ROADMAP
+
+This document tracks future-looking perf/ergonomics experiments. Each item is
+optional and can be implemented behind feature flags so core Mycelium semantics
+remain stable.
+
+## Batching for Unix/TCP
+
+- **Rationale**: Standard technique to amortize syscalls for high-volume
+  deployments (e.g., processing a full block of on-chain events before
+  broadcasting). Lets trading stacks publish one batch per block instead of
+  per-event chatter.
+- **Plan**:
+  1. Layer a batching buffer on top of `StreamPublisher` that reuses
+     `BufferPool` storage.
+  2. Flush based on size and timer thresholds (configurable in
+     `TransportConfig`).
+  3. Teach the codec to read multiple TLV frames per buffer.
+  4. Provide preset profiles (low-latency vs. high-throughput) with benchmarks.
+
+[2025-11-16T03:45:07] tokens used: 2,168
+[2025-11-16T03:45:09] exec /bin/zsh -lc 'cat docs/todo/2025-11-05-python-integration-roadmap.md' in /Users/daws/repos/mycelium
+[2025-11-16T03:45:09] /bin/zsh -lc 'cat docs/todo/2025-11-05-python-integration-roadmap.md' succeeded in 159ms:
+2025-11-05 – Python Integration Roadmap
+======================================
+
+Context
+-------
+
+Bandit and other Mycelium-based adapters need a first-class way to host Python
+services alongside Rust actors. The transport layer already supports UNIX/TCP
+sockets; what is missing is schema-aware tooling and operational scaffolding so
+Python can speak TLVs without manual byte juggling.
+
+Proposed Steps
+--------------
+
+1. Document Frame Contract
+   - Describe Mycelium publisher/subscriber frames (topic id, flags, payload
+     length, payload).
+   - Include examples for UNIX socket and TCP transports.
+
+2. Extend Schema Codegen
+[2025-11-16T03:45:09] tokens used: 3,896
+
+[2025-11-16T03:45:11] thinking
+
+**Examining mycelium-transport crate**
+[2025-11-16T03:45:11] exec /bin/zsh -lc 'ls crates' in /Users/daws/repos/mycelium
+[2025-11-16T03:45:11] /bin/zsh -lc 'ls crates' succeeded in 165ms:
+bandit-metrics-export
+mycelium-macro
+mycelium-protocol
+mycelium-transport
+polygon-terminal-torq
+[2025-11-16T03:45:11] tokens used: 6,312
+[2025-11-16T03:45:12] exec /bin/zsh -lc 'ls crates/mycelium-transport' in /Users/daws/repos/mycelium
+[2025-11-16T03:45:13] /bin/zsh -lc 'ls crates/mycelium-transport' succeeded in 135ms:
+Cargo.toml
+src
+tests
+[2025-11-16T03:45:13] tokens used: 8,815
+
+[2025-11-16T03:45:14] thinking
+
+**Preparing to explore project documentation**
+[2025-11-16T03:45:16] exec /bin/zsh -lc 'cat crates/mycelium-transport/src/lib.rs' in /Users/daws/repos/mycelium
+[2025-11-16T03:45:16] /bin/zsh -lc 'cat crates/mycelium-transport/src/lib.rs' succeeded in 135ms:
+pub mod actor;
+pub mod any;
+pub mod bounded;
+mod bridge;
+pub mod buffer_pool;
+pub mod bus;
+pub mod codec;
+pub mod config;
+pub mod error;
+pub mod handler;
+pub mod local;
+pub mod ordered;
+pub mod publisher;
+pub mod qos;
+pub mod service;
+pub mod service_context;
+pub mod service_metrics;
+pub mod service_runtime;
+pub mod shared;
+mod socket_endpoint;
+[2025-11-16T03:45:16] tokens used: 9,085
+
+[2025-11-16T03:45:17] thinking
+
+**Planning architecture and implementation steps**
+[2025-11-16T03:45:18] exec /bin/zsh -lc 'rg -n "contracts.yaml" -n' in /Users/daws/repos/mycelium
+[2025-11-16T03:45:18] /bin/zsh -lc 'rg -n "contracts.yaml" -n' succeeded in 152ms:
+docs/todo/2025-11-05-python-integration-roadmap.md:22:     unpacking helpers based on `contracts.yaml`.
+docs/todo/2025-11-05-python-bridge-plan.md:12:   - Extend `mycelium-protocol` codegen to emit a Python package with pack/unpack helpers for TLVs defined in `contracts.yaml`.
+examples/custom-protocol/src/main.rs:148:    println!("  1. Define custom messages in contracts.yaml");
+docs/SYSTEM_OVERVIEW.md:228:# contracts.yaml
+docs/SYSTEM_OVERVIEW.md:982:Generate message types from `contracts.yaml`:
+docs/SYSTEM_OVERVIEW.md:985:$ mycelium-codegen contracts.yaml --output src/generated.rs
+examples/custom-protocol/README.md:7:- How to define custom messages in `contracts.yaml`
+examples/custom-protocol/README.md:18:├── contracts.yaml      # YOUR custom message definitions
+examples/custom-protocol/README.md:25:### 1. Define Messages (contracts.yaml)
+examples/custom-protocol/README.md:43:    println!("cargo:rerun-if-changed=contracts.yaml");
+examples/custom-protocol/README.md:48:    mycelium_codegen::generate_from_yaml("contracts.yaml", &output_path)
+examples/custom-protocol/README.md:88:For each message in `contracts.yaml`, the codegen creates:
+examples/custom-protocol/README.md:124:- **Fast Build Times**: Code generation runs only when contracts.yaml changes
+examples/custom-protocol/README.md:132:2. Define your own `contracts.yaml`
+examples/custom-protocol/build.rs:4:    // Rebuild if contracts.yaml changes
+examples/custom-protocol/build.rs:5:    println!("cargo:rerun-if-changed=contracts.yaml");
+examples/custom-protocol/build.rs:7:    // Generate protocol messages from your custom contracts.yaml
+examples/custom-protocol/build.rs:11:    generate_from_yaml_external("contracts.yaml", &output_path)
+examples/custom-protocol/build.rs:12:        .expect("Failed to generate protocol messages from contracts.yaml");
+crates/mycelium-protocol/src/messages.rs:3://! Implements the message contracts defined in contracts.yaml.
+[2025-11-16T03:45:18] tokens used: 12,383
+
+[2025-11-16T03:45:23] thinking
+
+**Outlining comprehensive Python bridge plan**
+
+I'll create a detailed step-by-step plan covering schema/codegen, bridging architecture, Python SDK/runtime, transport protocol, observability, and deployment, referencing relevant docs and crates like `crates/mycelium-protocol`, `crates/mycelium-transport`, and files such as `docs/SYSTEM_OVERVIEW.md:228` and `docs/todo/2025-11-05-python-integration-roadmap.md:22`. Each section will include enumerated steps focusing on design, implementation, testing, and integration aspects with clear file and doc references.
+[2025-11-16T03:45:25] codex
+
+**Python Bridge Plan**
+
+- **Schema & Codegen**
+  1. Capture the TLV frame contract already described in `docs/todo/2025-11-05-python-integration-roadmap.md:10–28` (topic id, flags, payload length/payload) and codify it alongside `docs/SYSTEM_OVERVIEW.md:228–985` instructions that `contracts.yaml` is the single source of schema truth.
+  2. Extend `crates/mycelium-protocol`’s codegen (build.rs + `codegen.rs`) to emit Python helpers: pack/unpack functions, constants for topic IDs, and TLV framing utilities. Ensure layout (endianness, padding, length prefixes) is identical to Rust by reusing the same metadata structures that drive the Rust generation.
+  3. Ship generated Python code with tests that round-trip representative TLV payloads via Python’s struct/bytearray APIs; add CI checks to detect schema drift the way `mycelium-codegen` already protects Rust.
+  4. Offer tooling (e.g., `mycelium-codegen --python`) and documentation so teams can regenerate Python bindings whenever `contracts.yaml` changes.
+
+- **Bridge Architecture**
+  1. Implement a `python-bridge` actor in `crates/mycelium-transport` that lives under the existing `MessageBus`, picking up supervision/metrics/ServiceRuntime patterns already present in that crate.
+  2. The bridge should host a persistent observer thread per Python worker, translate Rust `MessageBus` TLVs into raw frames, and send/receive them over a bidirectional transport (UNIX/TCP sockets or stdio pipes) while honoring backpressure.
+  3. Expose config knobs (buffer sizes, auth, permitted topics) via `TransportConfig` so bridges can be wired into existing topology files; reuse `channel_manager`/`subscriber` plumbing to subscribe/publish in the bridge service.
+  4. Surface bridge lifecycle events (startup, shutdown, failure) via `ServiceMetrics`/`ManagedService` hooks so existing health checks can monitor it.
+
+- **Python SDK & Runtime**
+  1. Create a `python-sdk/` package that bundles generated schema helpers, TLV framing utilities, and a runtime for publishers/subscribers (mirroring `Publisher`/`Subscriber` semantics).
+  2. Provide high-level APIs for (a) discovering topics from the schema, (b) binding to a TLV transport, and (c) registering callbacks or async generators for incoming messages, so data adapters/risk services avoid manual byte parsing.
+  3. Offer a lightweight CLI for launching a Python worker (loads config, registers topics, attaches to TLS/unix sockets) plus optional supervisor integration (watchdog, graceful shutdown signals) to make it pluggable into the Rust bridge’s lifecycle.
+  4. Document packaging instructions (wheel/sdist) and runtime dependencies so Python services can be installed in isolated environments; include example adapters in `python-sdk/examples`.
+
+- **Transport Protocol**
+  1. Reuse the existing TLV framing (topic id + flags + payload length + payload) documented in `docs/todo/2025-11-05-python-integration-roadmap.md`, and provide canonical Python implementations for UNIX socket and TCP transports (mirroring `UnixTransport`/`TcpTransport` in `crates/mycelium-transport`).
+  2. Define a wire-level handshake (e.g., version + schema digest) so bridges can validate the schema before accepting messages, guarding against contract drift.
+  3. Provide sample configs in `docs/` and `examples/` for both same-host UNIX sockets and cross-host TCP setups, including TLS option suggestions for TCP where confidentiality is needed.
+
+- **Observability & Safety**
+  1. Instrument the bridge with existing metrics types (`service_metrics`, `qos::MailboxMetrics`) so it reports publish/subscribe rates, queue depth, and errors; emit topology-aware labels so dashboards can surface Python worker health.
+  2. Surface Rx/Tx bytes, TLV parse failures, and schema validation fails so operators can diagnose mismatched contracts quickly.
+  3. Tie the bridge into Mycelium’s logging conventions (structured spans, severity levels) and emit audit events when Python workers register/unregister topics, keeping the service graph visible.
+
+- **Deployment & Ops**
+  1. Package the Rust bridge as a pluggable service that can be defined in the same topology/config files as other Mycelium services, enabling shared supervision/backoff without rewriting deployment tooling.
+  2. Document recommended deployment patterns: e.g., colocated bridge + unix socket for low-latency adapters, standalone TCP bridge for remote Python workers, and fallback (stdin/stdout) for hosted environments lacking sockets.
+  3. Include smoke tests (unit + integration) that spin up the bridge, launch a Python echo script (using the new SDK), and validate TLV round-trips; ensure those tests run in CI to guard regressions.
+[2025-11-16T03:45:32] tokens used: 16,069

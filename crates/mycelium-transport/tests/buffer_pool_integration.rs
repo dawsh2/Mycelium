@@ -1,14 +1,15 @@
-use mycelium_protocol::{
-    create_buffer_pool_config, ArbitrageSignal, InstrumentMeta, PoolStateUpdate, U256,
-};
+use mycelium_protocol::{CounterUpdate, Message, TextMessage};
 use mycelium_transport::{BufferPool, BufferPoolConfig, TcpTransport, UnixTransport};
+use std::collections::HashMap;
 use tempfile::tempdir;
 
-/// Test TCP transport with buffer pool using real generated message types
+/// Test TCP transport with buffer pool using generic message types
 #[tokio::test]
 async fn test_tcp_with_buffer_pool_high_throughput() {
-    // Create buffer pool from generated config
-    let pool_config = BufferPoolConfig::from_map(create_buffer_pool_config());
+    // Create buffer pool config
+    let mut pool_config_map = HashMap::new();
+    pool_config_map.insert(TextMessage::TYPE_ID as usize, 10);
+    let pool_config = BufferPoolConfig::from_map(pool_config_map);
     let pool = BufferPool::new(pool_config.clone());
 
     // Create TCP transport with buffer pool
@@ -19,20 +20,22 @@ async fn test_tcp_with_buffer_pool_high_throughput() {
     let server_addr = server.local_addr();
 
     // Create subscriber
-    let mut sub = server.subscriber::<InstrumentMeta>();
+    let mut sub = server.subscriber::<TextMessage>();
 
     // Give server time to start
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
     // Connect client
     let client = TcpTransport::connect(server_addr).await.unwrap();
-    let publisher = client.publisher::<InstrumentMeta>().unwrap();
+    let publisher = client.publisher::<TextMessage>().unwrap();
 
     // Send 100 messages (should result in high hit rate)
     for i in 0..100 {
-        let mut addr = [1u8; 20]; // Non-zero address
-        addr[0] = (i + 1) as u8; // Make unique
-        let msg = InstrumentMeta::new(addr, &format!("TOKEN{}", i), 18, 137).unwrap();
+        let msg = TextMessage {
+            sender: format!("Sender{}", i).try_into().unwrap(),
+            content: format!("Message content #{}", i).try_into().unwrap(),
+            timestamp: 1000 + i,
+        };
 
         publisher.publish(msg).await.unwrap();
     }
@@ -44,9 +47,8 @@ async fn test_tcp_with_buffer_pool_high_throughput() {
             .expect("Timeout")
             .expect("Message");
 
-        assert_eq!(msg.decimals, 18);
-        assert_eq!(msg.chain_id, 137);
-        assert_eq!(msg.symbol_str(), &format!("TOKEN{}", i));
+        assert_eq!(msg.timestamp, 1000 + i);
+        assert_eq!(msg.sender.as_str().unwrap(), &format!("Sender{}", i));
     }
 
     // Verify buffer pool statistics
@@ -79,14 +81,16 @@ async fn test_tcp_with_buffer_pool_high_throughput() {
     );
 }
 
-/// Test Unix transport with buffer pool using PoolStateUpdate messages
+/// Test Unix transport with buffer pool using CounterUpdate messages
 #[tokio::test]
 async fn test_unix_with_buffer_pool_mixed_messages() {
     let dir = tempdir().unwrap();
     let socket_path = dir.path().join("test_buffer_pool.sock");
 
-    // Create buffer pool from generated config
-    let pool_config = BufferPoolConfig::from_map(create_buffer_pool_config());
+    // Create buffer pool config
+    let mut pool_config_map = HashMap::new();
+    pool_config_map.insert(CounterUpdate::TYPE_ID as usize, 10);
+    let pool_config = BufferPoolConfig::from_map(pool_config_map);
     let pool = BufferPool::new(pool_config.clone());
 
     // Create Unix transport with buffer pool
@@ -94,47 +98,26 @@ async fn test_unix_with_buffer_pool_mixed_messages() {
         .await
         .unwrap();
 
-    let mut sub = server.subscriber::<PoolStateUpdate>();
+    let mut sub = server.subscriber::<CounterUpdate>();
 
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
     // Connect client
     let client = UnixTransport::connect(&socket_path).await.unwrap();
-    let publisher = client.publisher::<PoolStateUpdate>().unwrap();
+    let publisher = client.publisher::<CounterUpdate>().unwrap();
 
-    // Send mix of V2 and V3 pool state updates (50 each)
-    for i in 0..50 {
-        // V2 pool
-        let mut addr1 = [1u8; 20];
-        addr1[0] = (i + 1) as u8;
-        let msg = PoolStateUpdate::new_v2(
-            addr1,
-            1,
-            U256::from(1000 * (i + 1)),
-            U256::from(2000 * (i + 1)),
-            1000 + i,
-        )
-        .unwrap();
-        publisher.publish(msg).await.unwrap();
-
-        // V3 pool
-        let mut addr2 = [2u8; 20];
-        addr2[0] = (i + 51) as u8;
-        let msg = PoolStateUpdate::new_v3(
-            addr2,
-            2,
-            U256::from(50000 * (i + 1)),
-            U256::from(123456789),
-            100,
-            2000 + i,
-        )
-        .unwrap();
+    // Send 100 counter updates
+    for i in 0..100 {
+        let msg = CounterUpdate {
+            counter_id: (i % 10) as u64,
+            value: i as i32,
+            delta: 1,
+        };
         publisher.publish(msg).await.unwrap();
     }
 
     // Receive all 100 messages
-    let mut v2_count = 0;
-    let mut v3_count = 0;
+    let mut total_value = 0i32;
 
     for _ in 0..100 {
         let msg = tokio::time::timeout(tokio::time::Duration::from_secs(2), sub.recv())
@@ -142,20 +125,15 @@ async fn test_unix_with_buffer_pool_mixed_messages() {
             .expect("Timeout")
             .expect("Message");
 
-        if msg.is_v2() {
-            v2_count += 1;
-        }
-        if msg.is_v3() {
-            v3_count += 1;
-        }
+        total_value += msg.value;
     }
 
-    assert_eq!(v2_count, 50);
-    assert_eq!(v3_count, 50);
+    // Sum of 0..100 = 4950
+    assert_eq!(total_value, 4950);
 
     // Verify buffer pool statistics
     let stats = pool.stats();
-    println!("Unix Buffer Pool Stats after 100 PoolStateUpdate messages:");
+    println!("Unix Buffer Pool Stats after 100 CounterUpdate messages:");
     println!("  Total allocations: {}", stats.total_allocations);
     println!("  Total acquires: {}", stats.total_acquires);
     println!("  Hit rate: {:.2}%", stats.hit_rate());
@@ -164,42 +142,43 @@ async fn test_unix_with_buffer_pool_mixed_messages() {
     assert_eq!(stats.currently_in_use, 0);
 }
 
-/// Test buffer pool with ArbitrageSignal messages (variable-length paths)
+/// Test buffer pool with TextMessage messages (variable-length content)
 #[tokio::test]
-async fn test_buffer_pool_with_arbitrage_signals() {
+async fn test_buffer_pool_with_text_messages() {
     let dir = tempdir().unwrap();
-    let socket_path = dir.path().join("test_arbitrage.sock");
+    let socket_path = dir.path().join("test_text.sock");
 
     // Create buffer pool
-    let pool_config = BufferPoolConfig::from_map(create_buffer_pool_config());
+    let mut pool_config_map = HashMap::new();
+    pool_config_map.insert(TextMessage::TYPE_ID as usize, 10);
+    let pool_config = BufferPoolConfig::from_map(pool_config_map);
     let pool = BufferPool::new(pool_config);
 
     let server = UnixTransport::bind_with_buffer_pool(&socket_path, Some(pool.clone()))
         .await
         .unwrap();
 
-    let mut sub = server.subscriber::<ArbitrageSignal>();
+    let mut sub = server.subscriber::<TextMessage>();
 
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
     let client = UnixTransport::connect(&socket_path).await.unwrap();
-    let publisher = client.publisher::<ArbitrageSignal>().unwrap();
+    let publisher = client.publisher::<TextMessage>().unwrap();
 
-    // Send signals with different path lengths (2, 3, 4 hops)
+    // Send messages with different content lengths
     for i in 0..30 {
-        let addr1 = [1u8; 20];
-        let addr2 = [2u8; 20];
-        let addr3 = [3u8; 20];
-        let addr4 = [4u8; 20];
-
-        let path = match i % 3 {
-            0 => vec![addr1, addr2],               // 2 hops
-            1 => vec![addr1, addr2, addr3],        // 3 hops
-            _ => vec![addr1, addr2, addr3, addr4], // 4 hops
+        let content = match i % 3 {
+            0 => "Short".to_string(),
+            1 => "Medium length message".to_string(),
+            _ => "This is a longer message with more content to test buffer pool efficiency"
+                .to_string(),
         };
 
-        let msg =
-            ArbitrageSignal::new(i, &path, 100.5 + i as f64, U256::from(21000), 1000 + i).unwrap();
+        let msg = TextMessage {
+            sender: format!("User{}", i).try_into().unwrap(),
+            content: content.try_into().unwrap(),
+            timestamp: 1000 + i,
+        };
 
         publisher.publish(msg).await.unwrap();
     }
@@ -211,16 +190,16 @@ async fn test_buffer_pool_with_arbitrage_signals() {
             .expect("Timeout")
             .expect("Message");
 
-        assert_eq!(msg.opportunity_id, i);
-        assert_eq!(msg.estimated_profit_usd, 100.5 + i as f64);
+        assert_eq!(msg.timestamp, 1000 + i);
+        assert_eq!(msg.sender.as_str().unwrap(), &format!("User{}", i));
     }
 
     let stats = pool.stats();
-    println!("ArbitrageSignal Buffer Pool Stats after 30 messages:");
+    println!("TextMessage Buffer Pool Stats after 30 messages:");
     println!("  Total allocations: {}", stats.total_allocations);
     println!("  Hit rate: {:.2}%", stats.hit_rate());
 
-    // All ArbitrageSignal messages use the same size class (256 bytes)
+    // All TextMessage messages use the same size class
     // so we should have very high hit rate
     assert!(stats.hit_rate() > 90.0);
     assert_eq!(stats.currently_in_use, 0);
@@ -232,26 +211,30 @@ async fn test_buffer_pool_no_memory_leak() {
     let dir = tempdir().unwrap();
     let socket_path = dir.path().join("test_leak.sock");
 
-    let pool_config = BufferPoolConfig::from_map(create_buffer_pool_config());
+    let mut pool_config_map = HashMap::new();
+    pool_config_map.insert(TextMessage::TYPE_ID as usize, 10);
+    let pool_config = BufferPoolConfig::from_map(pool_config_map);
     let pool = BufferPool::new(pool_config);
 
     let server = UnixTransport::bind_with_buffer_pool(&socket_path, Some(pool.clone()))
         .await
         .unwrap();
 
-    let mut sub = server.subscriber::<InstrumentMeta>();
+    let mut sub = server.subscriber::<TextMessage>();
 
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
     let client = UnixTransport::connect(&socket_path).await.unwrap();
-    let publisher = client.publisher::<InstrumentMeta>().unwrap();
+    let publisher = client.publisher::<TextMessage>().unwrap();
 
     // Send 1000 messages in bursts
     for batch in 0..10 {
         for i in 0..100 {
-            let mut addr = [1u8; 20];
-            addr[0] = ((batch * 100 + i) % 255 + 1) as u8; // Ensure non-zero
-            let msg = InstrumentMeta::new(addr, "WETH", 18, 137).unwrap();
+            let msg = TextMessage {
+                sender: format!("Batch{}User{}", batch, i).try_into().unwrap(),
+                content: "Test message for leak detection".try_into().unwrap(),
+                timestamp: 3000 + (batch * 100 + i),
+            };
 
             publisher.publish(msg).await.unwrap();
         }
@@ -305,17 +288,19 @@ async fn bench_buffer_pool_performance() {
     // Test WITHOUT buffer pool
     let socket_path1 = dir.path().join("bench_no_pool.sock");
     let server1 = UnixTransport::bind(&socket_path1).await.unwrap();
-    let mut sub1 = server1.subscriber::<InstrumentMeta>();
+    let mut sub1 = server1.subscriber::<TextMessage>();
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
     let client1 = UnixTransport::connect(&socket_path1).await.unwrap();
-    let pub1 = client1.publisher::<InstrumentMeta>().unwrap();
+    let pub1 = client1.publisher::<TextMessage>().unwrap();
 
     let start = Instant::now();
     for i in 0..1000 {
-        let mut addr = [1u8; 20];
-        addr[0] = (i % 255 + 1) as u8;
-        let msg = InstrumentMeta::new(addr, "WETH", 18, 137).unwrap();
+        let msg = TextMessage {
+            sender: format!("Bench{}", i).try_into().unwrap(),
+            content: "Benchmark message".try_into().unwrap(),
+            timestamp: 4000 + i,
+        };
         pub1.publish(msg).await.unwrap();
     }
     for _ in 0..1000 {
@@ -325,22 +310,26 @@ async fn bench_buffer_pool_performance() {
 
     // Test WITH buffer pool
     let socket_path2 = dir.path().join("bench_with_pool.sock");
-    let pool_config = BufferPoolConfig::from_map(create_buffer_pool_config());
+    let mut pool_config_map = HashMap::new();
+    pool_config_map.insert(TextMessage::TYPE_ID as usize, 10);
+    let pool_config = BufferPoolConfig::from_map(pool_config_map);
     let pool = BufferPool::new(pool_config);
     let server2 = UnixTransport::bind_with_buffer_pool(&socket_path2, Some(pool.clone()))
         .await
         .unwrap();
-    let mut sub2 = server2.subscriber::<InstrumentMeta>();
+    let mut sub2 = server2.subscriber::<TextMessage>();
     tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
 
     let client2 = UnixTransport::connect(&socket_path2).await.unwrap();
-    let pub2 = client2.publisher::<InstrumentMeta>().unwrap();
+    let pub2 = client2.publisher::<TextMessage>().unwrap();
 
     let start = Instant::now();
     for i in 0..1000 {
-        let mut addr = [1u8; 20];
-        addr[0] = (i % 255 + 1) as u8;
-        let msg = InstrumentMeta::new(addr, "WETH", 18, 137).unwrap();
+        let msg = TextMessage {
+            sender: format!("Bench{}", i).try_into().unwrap(),
+            content: "Benchmark message".try_into().unwrap(),
+            timestamp: 4000 + i,
+        };
         pub2.publish(msg).await.unwrap();
     }
     for _ in 0..1000 {

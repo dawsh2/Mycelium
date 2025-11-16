@@ -24,7 +24,7 @@ TCP.
 | `contracts.yaml` | project root | Source of truth for message schemas. The build script in `crates/mycelium-protocol` generates strongly typed Rust APIs. |
 | `ServiceContext` | `crates/mycelium-transport/src/service.rs` | Runtime handle passed to every service method. Provides `emit`, `subscribe`, shutdown signals, metrics, and tracing spans. |
 | `MessageBus` | `crates/mycelium-transport/src/bus.rs` | Transport abstraction. Supports `Arc` (single process), Unix domain sockets, and TCP. |
-| `ServiceRuntime` | `crates/mycelium-transport/src/runtime.rs` | Owns task supervision. Spawns `#[service]` actors, applies exponential backoff, and coordinates shutdown. |
+| `ServiceRuntime` | `crates/mycelium-transport/src/service_runtime.rs` | Owns task supervision. Spawns `#[service]` actors, applies exponential backoff, and coordinates shutdown. |
 | `routing_config!` | `crates/mycelium-transport/src/routing.rs` | Optional compile-time router that maps message types to handlers with direct function calls. |
 
 ## Deployment options
@@ -102,7 +102,7 @@ service code and generated message types are identical.
 - Services can call `ctx.is_shutting_down()` or register shutdown hooks to stop
   gracefully when the runtime receives a termination signal.
 - Failures inside a service task trigger exponential backoff restarts. The
-  backoff parameters live in `crates/mycelium-transport/src/runtime.rs`.
+  backoff parameters live in `crates/mycelium-transport/src/service_runtime.rs`.
 
 ## When to use compile-time routing
 

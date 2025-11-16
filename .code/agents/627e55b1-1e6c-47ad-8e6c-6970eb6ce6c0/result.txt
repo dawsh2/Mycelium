@@ -1,0 +1,599 @@
+Perfect! Now I have a comprehensive understanding of the codebase structure. Let me create a detailed consolidation plan based on my analysis.
+
+## **Mycelium Code Consolidation Plan**
+
+Based on my analysis of the repository at `/Users/daws/repos/mycelium`, I've identified the duplication patterns and developed a comprehensive consolidation strategy.
+
+---
+
+### **AREA 1: ServiceRuntime Duplication**
+
+**Files Inspected:**
+- Primary: `crates/mycelium-transport/src/service_runtime.rs` (194 lines)
+- Legacy duplicate: `crates/mycelium-transport/src/runtime.rs` (179 lines)
+- Dependencies: `crates/mycelium-transport/src/service_context.rs`, `crates/mycelium-transport/src/service_metrics.rs`
+- Legacy dependencies: `crates/mycelium-transport/src/context.rs`, `crates/mycelium-transport/src/metrics.rs`
+
+**Differences Identified:**
+1. **Imports**: Primary uses `crate::service_context::ServiceContext` and `crate::service_metrics::ServiceMetrics`, legacy uses `crate::context::ServiceContext` and `crate::metrics::ServiceMetrics`
+2. **Handle tracking**: Primary maintains a `Vec<JoinHandle>` in `Mutex` for proper shutdown, legacy has no handle tracking
+3. **Error handling**: Primary returns `Result` from `run_supervised`, legacy returns `()` and always returns `()` from `ServiceHandle::join`
+4. **Completion channel**: Primary uses `oneshot` channel in ServiceHandle to return result, legacy uses bare JoinHandle
+
+**Consolidation Plan:**
+
+**Phase 1: Validate Migration Safety (Week 1)**
+1. **Identify all consumers** of `runtime.rs`:
+   - Run: `grep -r "use.*runtime::" examples/ crates/ --include="*.rs"`
+   - Check if any examples or tests import from the legacy module
+   - Expected: No external consumers (legacy appears unused)
+
+2. **Compare API compatibility**:
+   - Create a compatibility matrix comparing all public APIs
+   - Document breaking changes in return types and error handling
+
+**Phase 2: Create Migration Path (Week 1-2)**
+1. **Unify dependencies first**:
+   - Decision point: Keep `service_context.rs`/`service_metrics.rs` as canonical
+   - Create deprecation aliases in `context.rs` → `service_context.rs`
+   - Add `#[deprecated]` attributes with migration guidance
+   
+2. **Add backward compatibility layer**:
+   - In `runtime.rs`, add: `pub use crate::service_runtime::*;`
+   - Add deprecation warning at module level
+   - Timeline: Keep compatibility for 1-2 release cycles
+
+**Phase 3: Execute Migration (Week 2)**
+1. **Update lib.rs**:
+   - File: `crates/mycelium-transport/src/lib.rs:50`
+   - Already exports from `service_runtime`, no change needed
+   - Verify no hidden exports of `runtime` module
+
+2. **Remove legacy files** (in order):
+   - Delete `crates/mycelium-transport/src/runtime.rs`
+   - Delete `crates/mycelium-transport/src/context.rs` 
+   - Delete `crates/mycelium-transport/src/metrics.rs`
+
+**Testing Strategy:**
+- Run full test suite: `cargo test --all-features`
+- Build all examples: `cargo build --examples`
+- Check for compilation errors in dependent crates
+- Validate no behavioral regressions in supervision logic
+
+**Risks:**
+- **Low risk**: No evidence of external consumers
+- **Medium risk**: If hidden internal references exist, will surface at compile time
+- **Mitigation**: Phased deprecation gives users time to migrate
+
+---
+
+### **AREA 2: Unix/TCP Transport Duplication**
+
+**Files Inspected:**
+- `crates/mycelium-transport/src/unix.rs` (318 lines)
+- `crates/mycelium-transport/src/tcp.rs` (314 lines)
+- Shared utility: `crates/mycelium-transport/src/stream.rs` (298 lines)
+
+**Duplication Analysis:**
+
+| Component | Unix (lines) | TCP (lines) | Shared Logic |
+|-----------|-------------|------------|--------------|
+| Channel management (`get_or_create_channel`) | 160-166 | 138-144 | **100% identical** |
+| Accept loop spawning | 114-145 | 92-123 | **95% identical** (only logging differs) |
+| Client reader spawning | 147-158 | 125-136 | **100% identical** |
+| Publisher creation | 168-177 | 146-155 | **100% identical** structure |
+| Subscriber creation | 179-189 | 157-167 | **100% identical** structure |
+| Publisher::publish | 207-217 | 190-200 | **100% identical** |
+
+**Consolidation Plan:**
+
+**Phase 1: Extract Shared Components (Week 1)**
+
+1. **Create `crates/mycelium-transport/src/stream_transport.rs`**:
+   ```
+   Purpose: Generic stream-based transport infrastructure
+   Dependencies: stream.rs, codec.rs, buffer_pool.rs
+   Lines: ~200 (extracted shared logic)
+   ```
+
+2. **Extract shared components** (in order):
+   
+   **Step 2a: Channel Manager**
+   ```rust
+   // New struct to hold shared state
+   pub(crate) struct StreamTransportState {
+       channels: Arc<DashMap<String, broadcast::Sender<Envelope>>>,
+       type_to_topic: Arc<DashMap<u16, String>>,
+       channel_capacity: usize,
+       buffer_pool: Option<Arc<BufferPool>>,
+   }
+   
+   impl StreamTransportState {
+       pub fn get_or_create_channel(&self, topic: &str) -> broadcast::Sender<Envelope>
+       pub fn register_type_mapping<M: Message>(&self)
+   }
+   ```
+   
+   **Step 2b: Accept Loop Handler**
+   ```rust
+   pub(crate) fn spawn_accept_loop<L, S>(
+       listener: Arc<L>,
+       state: StreamTransportState,
+       connection_logger: impl Fn(&str) + Send + Sync + 'static,
+   ) where
+       L: AcceptConnection<Stream = S>,
+       S: AsyncReadExt + AsyncWriteExt + Unpin + Send + 'static,
+   {
+       // Generic accept loop implementation
+   }
+   
+   // Trait to abstract Unix/TCP listener differences
+   pub(crate) trait AcceptConnection: Send + Sync {
+       type Stream;
+       async fn accept(&self) -> Result<(Self::Stream, ConnectionInfo)>;
+   }
+   ```
+   
+   **Step 2c: Client Reader Handler**
+   ```rust
+   pub(crate) fn spawn_client_reader<S>(
+       stream: S,
+       state: StreamTransportState,
+       error_logger: impl Fn(&str) + Send + 'static,
+   ) where
+       S: AsyncReadExt + Unpin + Send + 'static,
+   {
+       // Generic client reader implementation
+   }
+   ```
+
+   **Step 2d: Publisher/Subscriber Factories**
+   ```rust
+   pub(crate) struct StreamPublisher<M, W> {
+       write_half: Arc<Mutex<W>>,
+       _phantom: PhantomData<M>,
+   }
+   
+   impl<M: Message + AsBytes, W: AsyncWriteExt + Unpin> StreamPublisher<M, W> {
+       pub async fn publish(&self, msg: M) -> Result<()>
+   }
+   ```
+
+**Phase 2: Refactor Unix Transport (Week 2)**
+
+1. **Update `unix.rs` structure**:
+   ```
+   Lines reduced: 318 → ~150 (53% reduction)
+   
+   Keep: bind(), connect(), Unix-specific logic
+   Remove: get_or_create_channel, spawn_accept_loop, spawn_client_reader, 
+           publisher/subscriber implementations
+   Replace with: StreamTransportState, calls to stream_transport module
+   ```
+
+2. **Refactor sequence**:
+   - Replace `UnixTransport` internals to use `StreamTransportState`
+   - Update `bind()` to use `spawn_accept_loop` helper
+   - Update `connect()` to use `spawn_client_reader` helper
+   - Simplify `publisher()` and `subscriber()` to use generic factories
+   - Keep `UnixPublisher`/`UnixSubscriber` type aliases for API compatibility
+
+**Phase 3: Refactor TCP Transport (Week 2)**
+
+1. **Update `tcp.rs` structure**:
+   ```
+   Lines reduced: 314 → ~150 (52% reduction)
+   ```
+
+2. **Apply identical refactoring pattern** as Unix transport
+
+**Phase 4: Type Consolidation (Week 3)**
+
+1. **Create unified publisher type**:
+   ```rust
+   // In stream_transport.rs
+   pub type StreamPublisher<M, W> = ...
+   
+   // In unix.rs
+   pub type UnixPublisher<M> = StreamPublisher<M, OwnedWriteHalf>;
+   
+   // In tcp.rs  
+   pub type TcpPublisher<M> = StreamPublisher<M, tokio::net::tcp::OwnedWriteHalf>;
+   ```
+
+**Testing Strategy:**
+- **Unit tests**: Test each extracted component in isolation
+- **Integration tests**: Verify Unix/TCP transports work end-to-end
+- **Benchmark tests**: Ensure no performance regression (target: <1% overhead)
+- **Compatibility tests**: Run existing Unix/TCP test suites unchanged
+
+**Testing files to validate:**
+- `crates/mycelium-transport/tests/buffer_pool_integration.rs`
+- `crates/mycelium-transport/tests/simple_buffer_pool_test.rs`
+- All tests in `unix.rs` (lines 223-318) and `tcp.rs` (lines 206-314)
+
+**Risks & Mitigation:**
+- **Risk**: Generic abstractions add complexity, hurt readability
+  - *Mitigation*: Keep transport-specific files as primary documentation, use clear naming
+  - *Mitigation*: Add extensive doc comments on generic helpers
+  
+- **Risk**: Performance regression from indirection
+  - *Mitigation*: Use `#[inline]` aggressively on hot paths
+  - *Mitigation*: Run benchmarks before/after, target <1% overhead
+  - *Mitigation*: Monomorphization should eliminate runtime cost
+
+- **Risk**: Breaking existing type signatures
+  - *Mitigation*: Keep existing `UnixPublisher`/`TcpPublisher` as type aliases
+  - *Mitigation*: Phased rollout with deprecation warnings
+
+---
+
+### **AREA 3: MessageBus Smart Routing Duplication**
+
+**File Inspected:**
+- `crates/mycelium-transport/src/bus.rs` (937 lines)
+
+**Duplication Identified:**
+
+`publisher_to()` (lines 272-344) and `subscriber_from()` (lines 358-433) share **~80 lines of nearly identical topology resolution logic**:
+
+```
+Common pattern (appears in both methods):
+1. Get topology reference → lines 276-280, 362-366 (identical)
+2. Get node name → lines 282-284, 368-370 (identical)
+3. Find target/source node → lines 286-292, 373-379 (identical)
+4. Determine transport type → lines 294-313, 381-399 (identical)
+5. Create transport-specific pub/sub → lines 315-343, 401-432 (different only in pub vs sub)
+```
+
+**Consolidation Plan:**
+
+**Phase 1: Extract Topology Resolution (Week 1)**
+
+1. **Create shared resolver module** in `bus.rs`:
+   ```rust
+   // New internal module at end of bus.rs (before tests)
+   mod routing {
+       use super::*;
+       
+       /// Routing decision for a service-to-service connection
+       pub(super) struct RoutingDecision<'a> {
+           pub transport_type: TransportType,
+           pub target_node: &'a Node,
+       }
+       
+       /// Resolve how to route from current node to target service
+       pub(super) fn resolve_route<'a>(
+           topology: &'a Topology,
+           my_node: &str,
+           target_service: &str,
+       ) -> Result<RoutingDecision<'a>> {
+           // Lines 286-313 (extracted from publisher_to)
+           // Returns decision struct with transport type and target node
+       }
+   }
+   ```
+
+2. **Extract transport type determination**:
+   ```rust
+   // In routing module
+   fn determine_transport(
+       topology: &Topology,
+       my_node: &str,
+       target_node: &str,
+   ) -> Result<TransportType> {
+       // Lines 294-313 extracted and generalized
+   }
+   ```
+
+**Phase 2: Refactor publisher_to() (Week 1)**
+
+1. **Simplify method structure**:
+   ```
+   Before: 72 lines (272-344)
+   After: ~30 lines
+   
+   New structure:
+   - Call routing::resolve_route() → 15 lines saved
+   - Match on transport type → 3 cases
+   - Create appropriate publisher → ~10 lines per case
+   ```
+
+2. **Updated implementation**:
+   ```rust
+   pub async fn publisher_to<M>(&self, target_service: &str) -> Result<AnyPublisher<M>>
+   where
+       M: Message + zerocopy::AsBytes,
+   {
+       let topology = self.topology()?;  // Helper to reduce boilerplate
+       let my_node = self.node_name()?;
+       
+       let decision = routing::resolve_route(topology, my_node, target_service)?;
+       
+       match decision.transport_type {
+           TransportType::Local => Ok(AnyPublisher::Local(self.local.publisher())),
+           TransportType::Unix => {
+               let pub_ = self.unix_publisher(&decision.target_node.name).await
+                   .ok_or_else(|| error_helper("Unix", &decision.target_node.name))?;
+               Ok(AnyPublisher::Unix(pub_))
+           }
+           TransportType::Tcp => {
+               let pub_ = self.tcp_publisher(&decision.target_node.name).await
+                   .ok_or_else(|| error_helper("TCP", &decision.target_node.name))?;
+               Ok(AnyPublisher::Tcp(pub_))
+           }
+       }
+   }
+   ```
+
+**Phase 3: Refactor subscriber_from() (Week 1)**
+
+1. **Apply identical pattern**:
+   ```
+   Before: 75 lines (358-433)
+   After: ~30 lines
+   ```
+
+2. **Reuse routing logic**, only differ in final pub/sub creation
+
+**Phase 4: Add Helper Methods (Week 1)**
+
+```rust
+impl MessageBus {
+    // Reduce error handling boilerplate
+    fn topology(&self) -> Result<&Topology> {
+        self.topology.as_ref().ok_or_else(|| 
+            TransportError::ServiceNotFound("No topology configured".into())
+        )
+    }
+    
+    fn node_name(&self) -> Result<&str> {
+        self.node_name.as_deref().ok_or_else(||
+            TransportError::ServiceNotFound("No node name configured".into())
+        )
+    }
+}
+```
+
+**Testing Strategy:**
+- **Unit tests**: Add tests for `routing::resolve_route()` in isolation
+- **Integration tests**: Verify all existing MessageBus tests pass (lines 492-936)
+- **Test coverage**:
+  - Same node routing (test at line 750)
+  - Different node Unix routing (test at line 787)
+  - Different node TCP routing (test at line 830)
+  - Error cases (tests at lines 907, 916)
+
+**Risks:**
+- **Low risk**: Pure refactoring, no behavior change
+- **Testing risk**: Comprehensive test suite exists (445 lines of tests)
+- **Mitigation**: Run tests at each step, validate identical behavior
+
+**Metrics:**
+- Lines reduced: ~60 lines (937 → ~877, 6% reduction)
+- Complexity reduced: Eliminates 80 lines of duplicated logic
+- Maintainability: Single source of truth for topology resolution
+
+---
+
+### **AREA 4: Example Boilerplate (Optional Stretch Goal)**
+
+**Files Inspected:**
+- `examples/generic/game_server.rs` (177 lines)
+- `examples/generic/sensor_network.rs` (135 lines)
+- `examples/generic/managed_service.rs` (225 lines)
+
+**Boilerplate Patterns Identified:**
+
+| Pattern | game_server | sensor_network | managed_service |
+|---------|------------|----------------|-----------------|
+| Message struct definitions | 46 lines | 34 lines | 36 lines |
+| tokio::main setup | 4 lines | 4 lines | 4 lines |
+| MessageBus creation | 1 line | 1 line | 1 line |
+| tokio::spawn boilerplate | ~30 lines | ~40 lines | ~25 lines |
+| Sleep/timing coordination | ~10 lines | ~8 lines | ~15 lines |
+| Final summary printing | ~10 lines | ~4 lines | ~9 lines |
+
+**Total boilerplate per example**: ~50-60 lines (28-35% of each file)
+
+**Consolidation Plan:**
+
+**Phase 1: Create Example Utilities Crate (Week 2, optional)**
+
+1. **Create `examples/common/lib.rs`**:
+   ```
+   Purpose: Shared utilities for examples
+   Reduces: 50-60 lines per example (30% reduction)
+   ```
+
+2. **Define utility modules**:
+   ```rust
+   // examples/common/lib.rs
+   
+   pub mod helpers {
+       /// Create MessageBus and print initialization banner
+       pub fn setup_bus(name: &str, features: &[&str]) -> MessageBus {
+           println!("\n=== Mycelium: {} ===\n", name);
+           println!("Demonstrates:");
+           for (i, feature) in features.iter().enumerate() {
+               println!("  {}. {}", i + 1, feature);
+           }
+           println!();
+           MessageBus::new()
+       }
+       
+       /// Standard completion summary
+       pub fn print_summary(features: &[&str]) {
+           println!("\n=== Example Complete ===");
+           println!("✨ Generic pub/sub - no domain-specific terminology");
+           println!("   Demonstrates:");
+           for feature in features {
+               println!("   - {}", feature);
+           }
+       }
+   }
+   
+   pub mod macros {
+       /// Reduce tokio::spawn boilerplate
+       #[macro_export]
+       macro_rules! spawn_handler {
+           ($name:expr, $subscriber:expr, $handler:expr) => {
+               tokio::spawn(async move {
+                   while let Some(msg) = $subscriber.recv().await {
+                       $handler(msg).await;
+                   }
+               })
+           };
+       }
+   }
+   ```
+
+**Phase 2: Refactor Examples (Week 2, optional)**
+
+1. **Update `game_server.rs`**:
+   ```rust
+   use common::helpers::{setup_bus, print_summary};
+   use common::spawn_handler;
+   
+   #[tokio::main]
+   async fn main() {
+       let bus = setup_bus("Generic Game Server Example", &[
+           "Bounded channels for backpressure",
+           "Broadcast for state synchronization",
+       ]);
+       
+       // ... message definitions stay ...
+       
+       spawn_handler!("game_logic", action_recv, |action| async move {
+           // handler logic
+       });
+       
+       // ... rest of example ...
+       
+       print_summary(&[
+           "Bounded channels for backpressure",
+           "Low-latency message passing (<1ms local)",
+       ]);
+   }
+   ```
+
+2. **Apply similar patterns** to other examples
+
+**Benefits:**
+- **Consistency**: All examples follow same structure
+- **Maintainability**: Shared banner/summary format
+- **Onboarding**: New examples easier to create
+
+**Risks:**
+- **Abstraction cost**: Slightly harder to understand examples in isolation
+- **Limited reuse**: Only 3 examples currently
+- **Decision**: Consider this when adding more examples (threshold: 5+ examples)
+
+**Recommendation**: **DEFER** this consolidation until you have 5+ examples. Current duplication is acceptable for documentation/teaching purposes.
+
+---
+
+## **Summary & Sequencing**
+
+### **Recommended Implementation Order**
+
+```
+Week 1:
+├─ Area 1: ServiceRuntime (Phase 1-2) - 2 days
+│  └─ Low risk, clear boundaries, no external dependencies
+├─ Area 3: MessageBus routing (Full) - 2 days
+│  └─ Internal refactoring, extensive test coverage
+└─ Area 2: Stream transport (Phase 1) - 1 day
+   └─ Begin extraction, no behavioral changes yet
+
+Week 2:
+├─ Area 2: Stream transport (Phase 2-3) - 3 days
+│  └─ Refactor Unix and TCP sequentially
+└─ Area 1: ServiceRuntime (Phase 3) - 1 day
+   └─ Remove legacy files after validation
+
+Week 3:
+├─ Area 2: Stream transport (Phase 4) - 2 days
+│  └─ Type consolidation, final cleanup
+└─ Testing & Documentation - 3 days
+   └─ Integration tests, update docs, benchmarks
+
+[OPTIONAL - Future]
+Week 4+:
+└─ Area 4: Example boilerplate
+   └─ Only if 5+ examples exist
+```
+
+### **Risk Matrix**
+
+| Area | Risk Level | Impact | Mitigation |
+|------|-----------|---------|-----------|
+| ServiceRuntime removal | **Low** | Low | No external consumers found |
+| Stream transport refactor | **Medium** | High | Phased approach, extensive testing |
+| MessageBus routing | **Low** | Medium | Pure refactoring, test coverage exists |
+| Example boilerplate | **Low** | Low | Deferred until needed |
+
+### **Success Metrics**
+
+- **Lines reduced**: ~400 lines (2-3% of codebase)
+- **Duplication eliminated**: 4 major duplication areas → 0
+- **Test coverage**: Maintain 100% of existing tests passing
+- **Performance**: <1% overhead from abstractions
+- **Build time**: No increase in compilation time
+
+### **Dependencies & Prerequisites**
+
+1. **Before Stream Transport refactor**:
+   - Need to audit all consumers of Unix/TCP types
+   - Verify no external crates depend on specific signatures
+   - Run: `cargo tree --duplicates` to check dependency graph
+
+2. **Before ServiceRuntime removal**:
+   - Grep for all imports: `grep -r "crate::runtime" examples/ crates/`
+   - Check git history for recent usage
+
+3. **Type system considerations**:
+   - Rust 2021 edition required (already in use)
+   - async-trait might be needed for AcceptConnection trait
+   - Consider GATs (Generic Associated Types) for publisher/subscriber factories
+
+### **Documentation Updates Required**
+
+1. **After ServiceRuntime consolidation**:
+   - Update any internal docs mentioning `runtime.rs`
+   - Add migration guide if external crates exist
+
+2. **After Stream Transport refactor**:
+   - Document the generic stream transport architecture
+   - Add examples of extending to other stream types (QUIC, WebSocket)
+   - Update performance docs with any benchmark changes
+
+3. **After MessageBus refactor**:
+   - No public API changes, internal docs only
+
+---
+
+## **Files Referenced in Analysis**
+
+**Directly inspected:**
+- `crates/mycelium-transport/src/service_runtime.rs` (lines 1-194)
+- `crates/mycelium-transport/src/runtime.rs` (lines 1-179)
+- `crates/mycelium-transport/src/unix.rs` (lines 1-318)
+- `crates/mycelium-transport/src/tcp.rs` (lines 1-314)
+- `crates/mycelium-transport/src/stream.rs` (lines 1-298)
+- `crates/mycelium-transport/src/bus.rs` (lines 1-937, focus 272-433)
+- `crates/mycelium-transport/src/service_context.rs` (lines 1-200)
+- `crates/mycelium-transport/src/service_metrics.rs` (lines 1-238)
+- `crates/mycelium-transport/src/context.rs` (lines 1-200)
+- `crates/mycelium-transport/src/metrics.rs` (lines 1-238)
+- `crates/mycelium-transport/src/lib.rs` (lines 1-61)
+- `crates/mycelium-transport/src/config.rs` (lines 1-377)
+- `examples/generic/game_server.rs` (lines 1-177)
+- `examples/generic/sensor_network.rs` (lines 1-135)
+- `examples/generic/managed_service.rs` (lines 1-225)
+
+**Referenced for context:**
+- Git status showing modified files
+- Repository structure via Glob searches
+
+This plan provides concrete, sequenced steps with clear file references, risk assessment, and testing strategy for each consolidation area.

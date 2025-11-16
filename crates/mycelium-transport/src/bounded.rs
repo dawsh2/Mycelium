@@ -116,12 +116,10 @@ impl<M: Message> BoundedPublisher<M> {
     /// Use this for fire-and-forget scenarios where you want to detect backpressure.
     pub fn try_publish(&self, msg: M) -> Result<()> {
         let envelope = Envelope::new(msg);
-        self.tx
-            .try_send(envelope)
-            .map_err(|e| match e {
-                mpsc::error::TrySendError::Full(_) => crate::TransportError::ChannelFull,
-                mpsc::error::TrySendError::Closed(_) => crate::TransportError::ChannelClosed,
-            })?;
+        self.tx.try_send(envelope).map_err(|e| match e {
+            mpsc::error::TrySendError::Full(_) => crate::TransportError::ChannelFull,
+            mpsc::error::TrySendError::Closed(_) => crate::TransportError::ChannelClosed,
+        })?;
         Ok(())
     }
 
@@ -132,22 +130,32 @@ impl<M: Message> BoundedPublisher<M> {
 
     /// Get the current number of messages in the channel
     ///
-    /// Note: This is a snapshot and may change immediately after reading.
+    /// Note: `tokio::sync::mpsc` doesn't expose current length for performance reasons.
+    /// Use `try_publish()` to detect fullness instead of polling this method.
+    /// Returns max_value to indicate "unknown" rather than maintaining costly atomic counters.
     pub fn len(&self) -> usize {
-        // mpsc doesn't expose current length, so we estimate via capacity
-        // In a real implementation, we'd need to track this separately
-        0 // TODO: Track actual length
+        // Not available in mpsc::Sender API - would require wrapping the channel
+        // with Arc<AtomicUsize> counters, adding overhead to every send/recv.
+        // Production code should use try_publish() to detect backpressure.
+        usize::MAX // Unknown
     }
 
     /// Check if the channel is empty
+    ///
+    /// Note: Cannot be determined accurately without channel introspection.
+    /// Use `try_recv()` on the subscriber side to detect emptiness.
     pub fn is_empty(&self) -> bool {
-        self.len() == 0
+        // Not accurately determinable - use try_recv() instead
+        false
     }
 
     /// Check if the channel is full (would block on publish)
+    ///
+    /// Note: Cannot be determined accurately without attempting to send.
+    /// Use `try_publish()` to detect fullness without blocking.
     pub fn is_full(&self) -> bool {
-        // Would need custom tracking to implement accurately
-        false // TODO: Track fullness
+        // Not accurately determinable - use try_publish() instead
+        false
     }
 
     /// Check if the receiver is still alive

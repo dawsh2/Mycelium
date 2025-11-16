@@ -1,0 +1,1218 @@
+Now I'll create a comprehensive implementation plan. Since I cannot directly access the Torq terminal UI, I'll design a plan based on common terminal UI patterns and your stated requirements.
+
+## Implementation Plan: Polygon-Terminal Feature Parity with Torq Terminal UI
+
+### Phase 0: Discovery & Requirements Mapping
+
+**Objective**: Catalog Torq's terminal UI capabilities and establish baseline requirements.
+
+#### Tasks:
+1. **Manual Torq Terminal UI Audit** (requires manual review of `~/repos/torq/services/observability/terminal-ui`)
+   - Document all UI panels, widgets, and layouts
+   - List keyboard shortcuts and navigation patterns
+   - Catalog all statistics, metrics, and visualizations
+   - Document data refresh mechanisms (to be replaced)
+   - Capture color schemes, styling patterns
+   - Screenshot or diagram the complete layout
+
+2. **Create Feature Mapping Document**
+   ```markdown
+   # Torq → Polygon-Terminal Feature Map
+   
+   ## UI Panels
+   - Panel Name → polygon-terminal equivalent
+   - Data source in Torq → Event source in Bandit
+   
+   ## Metrics & Stats
+   - Metric name → Calculation logic → Event dependencies
+   
+   ## Interactions
+   - Keyboard shortcut → Action → Implementation approach
+   ```
+
+**Deliverable**: `docs/polygon-terminal-feature-map.md` with complete Torq UI catalog
+
+---
+
+### Phase 1: Project Scaffolding
+
+**Objective**: Create `crates/polygon-terminal` with core infrastructure.
+
+#### 1.1 Create Crate Structure
+```bash
+crates/polygon-terminal/
+├── Cargo.toml
+├── src/
+│   ├── main.rs              # Entry point, TUI event loop
+│   ├── app.rs               # Application state management
+│   ├── ui/
+│   │   ├── mod.rs
+│   │   ├── layout.rs        # Overall layout manager
+│   │   ├── panels/          # Individual panel widgets
+│   │   │   ├── mod.rs
+│   │   │   ├── pool_list.rs
+│   │   │   ├── swap_feed.rs
+│   │   │   ├── quotes.rs
+│   │   │   ├── stats.rs
+│   │   │   └── logs.rs
+│   │   └── theme.rs         # Colors and styling
+│   ├── state/
+│   │   ├── mod.rs
+│   │   ├── pools.rs         # Pool state tracking
+│   │   ├── swaps.rs         # Swap history
+│   │   ├── quotes.rs        # Quote tracking
+│   │   └── metrics.rs       # Aggregated statistics
+│   ├── events/
+│   │   ├── mod.rs
+│   │   ├── handler.rs       # Mycelium event processing
+│   │   └── aggregator.rs    # Real-time metric aggregation
+│   ├── redis/
+│   │   ├── mod.rs
+│   │   └── hydration.rs     # Warm-start loading
+│   └── config.rs            # Configuration management
+```
+
+#### 1.2 Dependencies (`Cargo.toml`)
+```toml
+[dependencies]
+mycelium-transport = { path = "../mycelium-transport" }
+mycelium-protocol = { path = "../mycelium-protocol" }
+
+# TUI Framework
+ratatui = "0.26"
+crossterm = "0.27"
+
+# Async Runtime
+tokio = { version = "1", features = ["full"] }
+async-trait = "0.1"
+
+# Redis (hydration only)
+redis = { version = "0.24", features = ["tokio-comp", "connection-manager"] }
+
+# Data Structures
+dashmap = "5.5"          # Concurrent HashMap for state
+indexmap = "2.0"         # Ordered map for sorted displays
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Utilities
+anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = "0.3"
+```
+
+#### 1.3 Core Application Structure (`src/main.rs` skeleton)
+```rust
+use anyhow::Result;
+use crossterm::event::{self, Event, KeyCode};
+use ratatui::{backend::CrosstermBackend, Terminal};
+use std::time::Duration;
+
+mod app;
+mod config;
+mod events;
+mod redis;
+mod state;
+mod ui;
+
+#[tokio::main]
+async fn main() -> Result<()> {
+    // 1. Initialize tracing
+    tracing_subscriber::fmt::init();
+    
+    // 2. Load configuration
+    let config = config::Config::load()?;
+    
+    // 3. Hydrate from Redis (warm start)
+    let initial_state = redis::hydrate_from_redis(&config).await?;
+    
+    // 4. Create MessageBus connection
+    let bus = mycelium_transport::MessageBus::new();
+    
+    // 5. Initialize application state
+    let mut app = app::App::new(initial_state, bus, config).await?;
+    
+    // 6. Setup terminal
+    let mut terminal = setup_terminal()?;
+    
+    // 7. Run event loop
+    run_event_loop(&mut terminal, &mut app).await?;
+    
+    // 8. Restore terminal
+    restore_terminal(&mut terminal)?;
+    
+    Ok(())
+}
+```
+
+**Files to create**:
+- `crates/polygon-terminal/Cargo.toml`
+- `crates/polygon-terminal/src/main.rs`
+- `crates/polygon-terminal/src/app.rs`
+- `crates/polygon-terminal/src/config.rs`
+
+---
+
+### Phase 2: State Management Architecture
+
+**Objective**: Build event-driven state management with Redis hydration.
+
+#### 2.1 State Structures (`src/state/`)
+
+**Key principle**: All state updates after startup MUST be event-driven.
+
+```rust
+// src/state/pools.rs
+use dashmap::DashMap;
+use mycelium_protocol::PoolStateUpdate;
+use std::sync::Arc;
+
+/// Pool state manager - updated via PoolStateUpdate events
+pub struct PoolStateManager {
+    // Concurrent map: pool_address -> latest state
+    pools: DashMap<[u8; 20], PoolSnapshot>,
+    
+    // Metrics
+    total_pools: AtomicU64,
+    last_update_time: Arc<RwLock<Instant>>,
+}
+
+#[derive(Clone, Debug)]
+pub struct PoolSnapshot {
+    pub address: [u8; 20],
+    pub venue_id: u16,
+    pub reserve0: Option<U256>,
+    pub reserve1: Option<U256>,
+    pub liquidity: Option<U256>,
+    pub sqrt_price_x96: Option<U256>,
+    pub tick: Option<i32>,
+    pub block_number: u64,
+    pub last_update: Instant,
+    pub update_count: u64,
+}
+
+impl PoolStateManager {
+    /// Hydrate from Redis at startup (one-time)
+    pub async fn from_redis(redis_client: &redis::Client) -> Result<Self> {
+        // Load pool snapshots from Redis
+        // This is the ONLY time we read from Redis
+    }
+    
+    /// Update pool state from event (runtime)
+    pub fn handle_pool_update(&self, update: Arc<PoolStateUpdate>) {
+        // Event-driven update - no Redis polling
+    }
+    
+    /// Get snapshot for UI rendering
+    pub fn get_pool(&self, address: &[u8; 20]) -> Option<PoolSnapshot> {
+        self.pools.get(address).map(|r| r.clone())
+    }
+    
+    /// List all pools (for UI table)
+    pub fn list_pools(&self) -> Vec<PoolSnapshot> {
+        self.pools.iter().map(|r| r.value().clone()).collect()
+    }
+}
+```
+
+```rust
+// src/state/swaps.rs
+use std::collections::VecDeque;
+
+/// Swap event tracker - updated via V2/V3 swap events
+pub struct SwapTracker {
+    // Ring buffer of recent swaps
+    recent_swaps: RwLock<VecDeque<SwapEvent>>,
+    max_history: usize,
+    
+    // Aggregated metrics
+    total_swaps: AtomicU64,
+    total_volume_usd: AtomicU64, // scaled by 1e6
+}
+
+#[derive(Clone, Debug)]
+pub struct SwapEvent {
+    pub pool_address: [u8; 20],
+    pub venue_id: u16,
+    pub amount_in: U256,
+    pub amount_out: U256,
+    pub timestamp: Instant,
+    pub block_number: u64,
+    pub tx_hash: [u8; 32],
+}
+
+impl SwapTracker {
+    pub fn handle_swap_event(&self, swap: SwapEvent) {
+        // Push to ring buffer, evict old
+        // Update aggregate metrics
+    }
+}
+```
+
+```rust
+// src/state/quotes.rs
+/// Quote request/response tracker
+pub struct QuoteTracker {
+    pending_quotes: DashMap<u64, QuoteRequest>,
+    completed_quotes: RwLock<VecDeque<CompletedQuote>>,
+    
+    // Metrics
+    total_requests: AtomicU64,
+    total_responses: AtomicU64,
+    avg_latency_us: AtomicU64,
+}
+```
+
+```rust
+// src/state/metrics.rs
+/// Real-time aggregated statistics
+pub struct MetricsAggregator {
+    // Updated incrementally from events
+    pub pools_active: AtomicU64,
+    pub swaps_last_minute: AtomicU64,
+    pub volume_last_minute_usd: AtomicU64,
+    pub quotes_per_second: AtomicF64,
+    pub avg_pool_update_latency_ms: AtomicF64,
+    
+    // Time-windowed metrics
+    swap_rate_tracker: RwLock<RateTracker>,
+}
+
+impl MetricsAggregator {
+    pub fn update_from_pool_event(&self, event: &PoolStateUpdate) {
+        // Increment counters, update rates
+    }
+    
+    pub fn update_from_swap_event(&self, event: &SwapEvent) {
+        // Update volume, swap rate
+    }
+}
+```
+
+**Files to create**:
+- `src/state/mod.rs`
+- `src/state/pools.rs`
+- `src/state/swaps.rs`
+- `src/state/quotes.rs`
+- `src/state/metrics.rs`
+
+---
+
+#### 2.2 Redis Hydration (Warm-Start Only)
+
+```rust
+// src/redis/hydration.rs
+use redis::AsyncCommands;
+
+/// Load initial state from Redis (called once at startup)
+pub async fn hydrate_from_redis(config: &Config) -> Result<InitialState> {
+    let client = redis::Client::open(config.redis_url.as_str())?;
+    let mut conn = client.get_async_connection().await?;
+    
+    tracing::info!("Hydrating pool snapshots from Redis...");
+    
+    // Load pool snapshots
+    let pool_keys: Vec<String> = conn.keys("pool:snapshot:*").await?;
+    let mut pools = Vec::new();
+    
+    for key in pool_keys {
+        let data: String = conn.get(&key).await?;
+        let snapshot: PoolSnapshot = serde_json::from_str(&data)?;
+        pools.push(snapshot);
+    }
+    
+    tracing::info!("Hydrated {} pools from Redis", pools.len());
+    
+    Ok(InitialState { pools })
+}
+
+pub struct InitialState {
+    pub pools: Vec<PoolSnapshot>,
+}
+```
+
+**Critical**: After `hydrate_from_redis()` completes, the Redis client is dropped. All subsequent updates come from Mycelium events.
+
+**Files to create**:
+- `src/redis/mod.rs`
+- `src/redis/hydration.rs`
+
+---
+
+### Phase 3: Event Subscription & Wiring
+
+**Objective**: Subscribe to Mycelium bus events and route to state managers.
+
+#### 3.1 Event Handler (`src/events/handler.rs`)
+
+```rust
+use mycelium_protocol::{PoolStateUpdate, ArbitrageSignal};
+use mycelium_transport::{MessageBus, Subscriber};
+use std::sync::Arc;
+
+pub struct EventHandler {
+    pool_manager: Arc<PoolStateManager>,
+    swap_tracker: Arc<SwapTracker>,
+    quote_tracker: Arc<QuoteTracker>,
+    metrics: Arc<MetricsAggregator>,
+}
+
+impl EventHandler {
+    pub fn new(
+        pool_manager: Arc<PoolStateManager>,
+        swap_tracker: Arc<SwapTracker>,
+        quote_tracker: Arc<QuoteTracker>,
+        metrics: Arc<MetricsAggregator>,
+    ) -> Self {
+        Self {
+            pool_manager,
+            swap_tracker,
+            quote_tracker,
+            metrics,
+        }
+    }
+    
+    /// Subscribe to all relevant events and spawn handler tasks
+    pub async fn start(self: Arc<Self>, bus: &MessageBus) -> Result<()> {
+        // Pool state updates
+        let pool_sub = bus.subscriber::<PoolStateUpdate>();
+        let handler = self.clone();
+        tokio::spawn(async move {
+            handler.handle_pool_updates(pool_sub).await;
+        });
+        
+        // V2 Swap events (would need to add to contracts.yaml)
+        // let swap_v2_sub = bus.subscriber::<UniswapV2Swap>();
+        // tokio::spawn(async move { ... });
+        
+        // V3 Swap events
+        // let swap_v3_sub = bus.subscriber::<UniswapV3Swap>();
+        // tokio::spawn(async move { ... });
+        
+        // Quote requests
+        // let quote_req_sub = bus.subscriber::<QuoteRequest>();
+        // tokio::spawn(async move { ... });
+        
+        // Quote responses
+        // let quote_res_sub = bus.subscriber::<QuoteResponse>();
+        // tokio::spawn(async move { ... });
+        
+        Ok(())
+    }
+    
+    async fn handle_pool_updates(&self, mut sub: Subscriber<PoolStateUpdate>) {
+        while let Some(update) = sub.recv().await {
+            let update = Arc::new(update);
+            
+            // Update pool state
+            self.pool_manager.handle_pool_update(update.clone());
+            
+            // Update metrics
+            self.metrics.update_from_pool_event(&update);
+        }
+    }
+    
+    async fn handle_swap_events(&self, mut sub: Subscriber<SwapEvent>) {
+        while let Some(swap) = sub.recv().await {
+            // Update swap tracker
+            self.swap_tracker.handle_swap_event(swap.clone());
+            
+            // Update metrics
+            self.metrics.update_from_swap_event(&swap);
+        }
+    }
+}
+```
+
+**Note**: You'll need to add swap event message types to `contracts.yaml` if they don't exist:
+
+```yaml
+# Add to contracts.yaml
+messages:
+  UniswapV2Swap:
+    tlv_type: 1012
+    domain: MarketData
+    fields:
+      pool_address: "[u8; 20]"
+      amount0_in: U256
+      amount1_in: U256
+      amount0_out: U256
+      amount1_out: U256
+      tx_hash: "[u8; 32]"
+      block_number: u64
+      
+  UniswapV3Swap:
+    tlv_type: 1013
+    domain: MarketData
+    fields:
+      pool_address: "[u8; 20]"
+      amount0: I256  # Can be negative
+      amount1: I256
+      sqrt_price_x96: U256
+      liquidity: U256
+      tick: i32
+      tx_hash: "[u8; 32]"
+      block_number: u64
+      
+  QuoteRequest:
+    tlv_type: 1014
+    domain: MarketData
+    fields:
+      request_id: u64
+      token_in: "[u8; 20]"
+      token_out: "[u8; 20]"
+      amount_in: U256
+      timestamp: u64
+      
+  QuoteResponse:
+    tlv_type: 1015
+    domain: MarketData
+    fields:
+      request_id: u64
+      amount_out: U256
+      route: "Vec<[u8; 20]>"  # Pool addresses
+      gas_estimate: U256
+      timestamp: u64
+```
+
+**Files to create**:
+- `src/events/mod.rs`
+- `src/events/handler.rs`
+- `src/events/aggregator.rs`
+
+**Files to modify**:
+- `examples/domain_specific/defi/contracts.yaml` (add swap/quote message types)
+
+---
+
+### Phase 4: UI Rendering with Ratatui
+
+**Objective**: Build terminal UI matching Torq's layout and widgets.
+
+#### 4.1 Layout Manager (`src/ui/layout.rs`)
+
+Based on typical terminal UI patterns, create a flexible layout:
+
+```rust
+use ratatui::{
+    layout::{Constraint, Direction, Layout, Rect},
+    Frame,
+};
+
+pub enum LayoutMode {
+    Default,      // Multi-panel view
+    PoolDetail,   // Focused on single pool
+    SwapFeed,     // Full-screen swap feed
+    Stats,        // Stats dashboard
+}
+
+pub struct LayoutManager {
+    mode: LayoutMode,
+}
+
+impl LayoutManager {
+    pub fn render(&self, frame: &mut Frame, area: Rect) -> LayoutAreas {
+        match self.mode {
+            LayoutMode::Default => self.render_default(frame, area),
+            LayoutMode::PoolDetail => self.render_pool_detail(frame, area),
+            LayoutMode::SwapFeed => self.render_swap_feed(frame, area),
+            LayoutMode::Stats => self.render_stats(frame, area),
+        }
+    }
+    
+    fn render_default(&self, frame: &mut Frame, area: Rect) -> LayoutAreas {
+        // Example layout (adjust based on Torq):
+        // +-------------------+-------------------+
+        // | Pool List (50%)   | Stats Panel (50%) |
+        // |                   |                   |
+        // +-------------------+-------------------+
+        // | Swap Feed (60%)                       |
+        // |                                       |
+        // +---------------------------------------+
+        // | Quotes (40%)                          |
+        // +---------------------------------------+
+        
+        let vertical = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Percentage(40),  // Top row
+                Constraint::Percentage(35),  // Swap feed
+                Constraint::Percentage(25),  // Quotes
+            ])
+            .split(area);
+        
+        let top_row = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([
+                Constraint::Percentage(50),
+                Constraint::Percentage(50),
+            ])
+            .split(vertical[0]);
+        
+        LayoutAreas {
+            pool_list: top_row[0],
+            stats: top_row[1],
+            swap_feed: vertical[1],
+            quotes: vertical[2],
+        }
+    }
+}
+
+pub struct LayoutAreas {
+    pub pool_list: Rect,
+    pub stats: Rect,
+    pub swap_feed: Rect,
+    pub quotes: Rect,
+}
+```
+
+#### 4.2 Panel Widgets
+
+**Pool List Panel** (`src/ui/panels/pool_list.rs`):
+```rust
+use ratatui::{
+    layout::Rect,
+    style::{Color, Modifier, Style},
+    widgets::{Block, Borders, Row, Table, TableState},
+    Frame,
+};
+
+pub struct PoolListPanel {
+    state: TableState,
+    sort_by: PoolSortField,
+    filter: Option<String>,
+}
+
+#[derive(Copy, Clone)]
+pub enum PoolSortField {
+    Address,
+    Venue,
+    Reserve0,
+    Reserve1,
+    LastUpdate,
+    UpdateCount,
+}
+
+impl PoolListPanel {
+    pub fn render(&mut self, frame: &mut Frame, area: Rect, pools: &[PoolSnapshot]) {
+        let mut sorted_pools = pools.to_vec();
+        self.sort_pools(&mut sorted_pools);
+        
+        let rows = sorted_pools.iter().map(|pool| {
+            Row::new(vec![
+                format!("{:02x}..{:02x}", pool.address[0], pool.address[19]),
+                format!("{}", pool.venue_id),
+                format_reserve(pool.reserve0),
+                format_reserve(pool.reserve1),
+                format!("{}s ago", pool.last_update.elapsed().as_secs()),
+                format!("{}", pool.update_count),
+            ])
+        });
+        
+        let table = Table::new(rows)
+            .header(
+                Row::new(vec!["Address", "Venue", "Reserve0", "Reserve1", "Updated", "Count"])
+                    .style(Style::default().add_modifier(Modifier::BOLD))
+            )
+            .block(Block::default().borders(Borders::ALL).title("Pools"))
+            .widths(&[
+                Constraint::Length(12),
+                Constraint::Length(6),
+                Constraint::Length(15),
+                Constraint::Length(15),
+                Constraint::Length(12),
+                Constraint::Length(8),
+            ])
+            .highlight_style(Style::default().bg(Color::DarkGray));
+        
+        frame.render_stateful_widget(table, area, &mut self.state);
+    }
+    
+    fn sort_pools(&self, pools: &mut [PoolSnapshot]) {
+        match self.sort_by {
+            PoolSortField::LastUpdate => {
+                pools.sort_by_key(|p| std::cmp::Reverse(p.last_update));
+            }
+            PoolSortField::UpdateCount => {
+                pools.sort_by_key(|p| std::cmp::Reverse(p.update_count));
+            }
+            // ... other sorts
+        }
+    }
+}
+```
+
+**Stats Panel** (`src/ui/panels/stats.rs`):
+```rust
+pub struct StatsPanel;
+
+impl StatsPanel {
+    pub fn render(&self, frame: &mut Frame, area: Rect, metrics: &MetricsAggregator) {
+        let text = vec![
+            Line::from(vec![
+                Span::styled("Active Pools: ", Style::default().fg(Color::Gray)),
+                Span::styled(
+                    format!("{}", metrics.pools_active.load(Ordering::Relaxed)),
+                    Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled("Swaps/min: ", Style::default().fg(Color::Gray)),
+                Span::styled(
+                    format!("{}", metrics.swaps_last_minute.load(Ordering::Relaxed)),
+                    Style::default().fg(Color::Cyan)
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled("Volume/min: ", Style::default().fg(Color::Gray)),
+                Span::styled(
+                    format!("${:.2}", metrics.volume_last_minute_usd.load(Ordering::Relaxed) as f64 / 1e6),
+                    Style::default().fg(Color::Yellow)
+                ),
+            ]),
+            // ... more metrics
+        ];
+        
+        let paragraph = Paragraph::new(text)
+            .block(Block::default().borders(Borders::ALL).title("Statistics"));
+        
+        frame.render_widget(paragraph, area);
+    }
+}
+```
+
+**Swap Feed Panel** (`src/ui/panels/swap_feed.rs`):
+```rust
+pub struct SwapFeedPanel {
+    auto_scroll: bool,
+}
+
+impl SwapFeedPanel {
+    pub fn render(&self, frame: &mut Frame, area: Rect, swaps: &VecDeque<SwapEvent>) {
+        let rows = swaps.iter().rev().take(50).map(|swap| {
+            Row::new(vec![
+                format!("{:02x}..{:02x}", swap.pool_address[0], swap.pool_address[19]),
+                format!("{}", swap.amount_in),
+                format!("{}", swap.amount_out),
+                format!("{}s ago", swap.timestamp.elapsed().as_secs()),
+            ])
+        });
+        
+        let table = Table::new(rows)
+            .header(Row::new(vec!["Pool", "Amount In", "Amount Out", "Time"]))
+            .block(Block::default().borders(Borders::ALL).title("Recent Swaps"))
+            .widths(&[
+                Constraint::Length(12),
+                Constraint::Length(20),
+                Constraint::Length(20),
+                Constraint::Length(10),
+            ]);
+        
+        frame.render_widget(table, area);
+    }
+}
+```
+
+**Quote Panel** (`src/ui/panels/quotes.rs`):
+```rust
+pub struct QuotePanel;
+
+impl QuotePanel {
+    pub fn render(&self, frame: &mut Frame, area: Rect, tracker: &QuoteTracker) {
+        // Show pending quotes, recent responses, latency stats
+    }
+}
+```
+
+**Files to create**:
+- `src/ui/mod.rs`
+- `src/ui/layout.rs`
+- `src/ui/panels/mod.rs`
+- `src/ui/panels/pool_list.rs`
+- `src/ui/panels/swap_feed.rs`
+- `src/ui/panels/quotes.rs`
+- `src/ui/panels/stats.rs`
+- `src/ui/theme.rs`
+
+---
+
+#### 4.3 Navigation & Keyboard Shortcuts
+
+```rust
+// src/app.rs
+impl App {
+    pub async fn handle_key_event(&mut self, key: KeyEvent) -> Result<bool> {
+        match key.code {
+            KeyCode::Char('q') => return Ok(true), // Quit
+            KeyCode::Char('1') => self.layout.mode = LayoutMode::Default,
+            KeyCode::Char('2') => self.layout.mode = LayoutMode::PoolDetail,
+            KeyCode::Char('3') => self.layout.mode = LayoutMode::SwapFeed,
+            KeyCode::Char('4') => self.layout.mode = LayoutMode::Stats,
+            
+            // Pool list navigation
+            KeyCode::Up => self.ui_state.pool_list.previous(),
+            KeyCode::Down => self.ui_state.pool_list.next(),
+            KeyCode::PageUp => self.ui_state.pool_list.page_up(),
+            KeyCode::PageDown => self.ui_state.pool_list.page_down(),
+            
+            // Sorting
+            KeyCode::Char('s') => self.cycle_pool_sort(),
+            
+            // Filtering
+            KeyCode::Char('/') => self.enter_filter_mode(),
+            
+            _ => {}
+        }
+        Ok(false)
+    }
+}
+```
+
+**Keyboard shortcuts to implement** (adjust based on Torq):
+- `q`: Quit
+- `1-4`: Switch layouts/views
+- `↑/↓`: Navigate lists
+- `PgUp/PgDn`: Scroll pages
+- `s`: Cycle sort fields
+- `/`: Enter filter mode
+- `f`: Toggle auto-scroll
+- `r`: Force refresh (no-op, for UX)
+- `h`: Help panel
+
+---
+
+### Phase 5: Integration & Testing
+
+**Objective**: Wire everything together and validate event flow.
+
+#### 5.1 Complete Application Assembly (`src/app.rs`)
+
+```rust
+pub struct App {
+    // State managers
+    pool_manager: Arc<PoolStateManager>,
+    swap_tracker: Arc<SwapTracker>,
+    quote_tracker: Arc<QuoteTracker>,
+    metrics: Arc<MetricsAggregator>,
+    
+    // Event handler
+    event_handler: Arc<EventHandler>,
+    
+    // UI state
+    layout: LayoutManager,
+    ui_state: UiState,
+    
+    // Config
+    config: Config,
+}
+
+impl App {
+    pub async fn new(
+        initial_state: InitialState,
+        bus: MessageBus,
+        config: Config,
+    ) -> Result<Self> {
+        // 1. Initialize state managers with hydrated data
+        let pool_manager = Arc::new(PoolStateManager::from_initial(initial_state.pools));
+        let swap_tracker = Arc::new(SwapTracker::new(1000)); // 1000 swap history
+        let quote_tracker = Arc::new(QuoteTracker::new());
+        let metrics = Arc::new(MetricsAggregator::new());
+        
+        // 2. Create event handler
+        let event_handler = Arc::new(EventHandler::new(
+            pool_manager.clone(),
+            swap_tracker.clone(),
+            quote_tracker.clone(),
+            metrics.clone(),
+        ));
+        
+        // 3. Start event subscriptions
+        event_handler.clone().start(&bus).await?;
+        
+        // 4. Initialize UI
+        let layout = LayoutManager::new(LayoutMode::Default);
+        let ui_state = UiState::default();
+        
+        Ok(Self {
+            pool_manager,
+            swap_tracker,
+            quote_tracker,
+            metrics,
+            event_handler,
+            layout,
+            ui_state,
+            config,
+        })
+    }
+    
+    pub fn render(&mut self, frame: &mut Frame) {
+        // Get layout areas
+        let areas = self.layout.render(frame, frame.size());
+        
+        // Render panels
+        let pools = self.pool_manager.list_pools();
+        self.ui_state.pool_list.render(frame, areas.pool_list, &pools);
+        
+        self.ui_state.stats.render(frame, areas.stats, &self.metrics);
+        
+        let swaps = self.swap_tracker.recent_swaps();
+        self.ui_state.swap_feed.render(frame, areas.swap_feed, &swaps);
+        
+        self.ui_state.quotes.render(frame, areas.quotes, &self.quote_tracker);
+    }
+}
+```
+
+#### 5.2 Testing Strategy
+
+**Unit Tests**:
+```rust
+// tests/state_management.rs
+#[tokio::test]
+async fn test_pool_update_handling() {
+    let manager = PoolStateManager::new();
+    
+    let update = PoolStateUpdate {
+        pool_address: [0x01; 20],
+        venue_id: 1,
+        reserve0: Some(U256::from(1000000)),
+        reserve1: Some(U256::from(2000000)),
+        block_number: 100,
+        // ...
+    };
+    
+    manager.handle_pool_update(Arc::new(update.clone()));
+    
+    let snapshot = manager.get_pool(&[0x01; 20]).unwrap();
+    assert_eq!(snapshot.reserve0, update.reserve0);
+}
+```
+
+**Integration Tests**:
+```rust
+// tests/event_flow.rs
+#[tokio::test]
+async fn test_event_to_ui_flow() {
+    // 1. Create bus
+    let bus = MessageBus::new();
+    
+    // 2. Create app with mocked Redis
+    let initial_state = InitialState { pools: vec![] };
+    let app = App::new(initial_state, bus.clone(), Config::default()).await.unwrap();
+    
+    // 3. Publish test event
+    let publisher = bus.publisher::<PoolStateUpdate>();
+    publisher.publish(create_test_pool_update()).await.unwrap();
+    
+    // 4. Wait for processing
+    tokio::time::sleep(Duration::from_millis(100)).await;
+    
+    // 5. Verify state updated
+    assert_eq!(app.pool_manager.list_pools().len(), 1);
+}
+```
+
+**Manual Testing Checklist**:
+```markdown
+## Manual Test Plan
+
+### Startup
+- [ ] Application starts without errors
+- [ ] Redis hydration completes successfully
+- [ ] Initial pools displayed in UI
+- [ ] No crashes or panics
+
+### Event Processing
+- [ ] Pool updates appear in real-time
+- [ ] Swap events populate feed
+- [ ] Quote requests/responses tracked
+- [ ] Metrics update correctly
+
+### UI Navigation
+- [ ] All keyboard shortcuts work
+- [ ] Panel switching is smooth
+- [ ] Scrolling works correctly
+- [ ] Sorting functions properly
+- [ ] Filtering works (if implemented)
+
+### Performance
+- [ ] No lag with 1000+ pools
+- [ ] Swap feed handles high throughput
+- [ ] Memory usage stable over time
+- [ ] CPU usage reasonable (<10% idle)
+
+### Edge Cases
+- [ ] Handles missing Redis data gracefully
+- [ ] Survives bus disconnection
+- [ ] Recovers from event parsing errors
+- [ ] Handles empty state correctly
+```
+
+**Files to create**:
+- `tests/state_management.rs`
+- `tests/event_flow.rs`
+- `tests/ui_rendering.rs`
+
+---
+
+### Phase 6: Data Differences & Torq Migration
+
+**Objective**: Document differences between Torq and Bandit data models.
+
+#### 6.1 Data Source Mapping
+
+Create a mapping document:
+
+```markdown
+# Torq vs Bandit Data Source Mapping
+
+## Pool State Updates
+
+| Torq Source | Bandit Source | Notes |
+|-------------|---------------|-------|
+| Custom polling service | `PoolStateUpdate` events from Pool State Manager | Bandit is event-driven, no polling |
+| Direct RPC calls | Enriched by upstream blockchain adapter | Bandit receives pre-validated data |
+| Torq's internal cache | Redis warm-start only | Bandit uses events after startup |
+
+## Swap Events
+
+| Torq Source | Bandit Source | Notes |
+|-------------|---------------|-------|
+| Event listener (direct Geth subscription) | Enriched swap events from listener service | Bandit receives parsed, validated swaps |
+| Stored in Torq DB | Ring buffer in memory | Bandit keeps recent history only |
+
+## Quote Data
+
+| Torq Source | Bandit Source | Notes |
+|-------------|---------------|-------|
+| Torq quote service | QuoteRequest/Response events on bus | Bandit subscribes to existing quote flow |
+| Custom routing | Uses Mycelium routing | Different message format |
+
+## Metrics
+
+| Torq Metric | Bandit Calculation | Implementation |
+|-------------|-------------------|----------------|
+| Total pools | Count of `PoolStateUpdate` events | `MetricsAggregator::pools_active` |
+| Swaps per minute | Rolling window of swap events | `RateTracker` with 60s window |
+| Volume (USD) | Aggregate from swap amounts + price data | Requires price oracle integration |
+| Avg latency | Event timestamp → processing time | Built into event handler |
+```
+
+#### 6.2 Missing Data & Gaps
+
+**Likely gaps to address**:
+
+1. **Price Data**: Torq may have built-in price oracles
+   - **Solution**: Subscribe to price feed events or add oracle service
+   
+2. **Historical Data**: Torq may have persistent storage
+   - **Solution**: Polygon-terminal is real-time focused; add persistence if needed
+   
+3. **User Sessions**: Torq may track user queries
+   - **Solution**: Add session tracking if required
+   
+4. **Alerts/Notifications**: Torq may have alerting
+   - **Solution**: Add alert events to contracts.yaml
+
+#### 6.3 Migration Considerations
+
+**For users migrating from Torq**:
+
+```markdown
+## Migration Guide: Torq Terminal UI → Polygon-Terminal
+
+### Prerequisites
+1. Redis instance with hydrated pool snapshots
+2. Mycelium bus running with appropriate services:
+   - Pool State Manager (publishes `PoolStateUpdate`)
+   - Swap Listener (publishes swap events)
+   - Quote Service (publishes quote events)
+
+### Configuration
+Create `config.toml`:
+```toml
+[redis]
+url = "redis://localhost:6379"
+# Only used for initial hydration
+
+[mycelium]
+bus_address = "unix:///tmp/mycelium.sock"
+# Or TCP: "tcp://127.0.0.1:9000"
+
+[ui]
+refresh_rate_ms = 100
+max_swap_history = 1000
+```
+
+### Startup Sequence
+1. Ensure Redis has current data (one-time sync)
+2. Start Mycelium bus and services
+3. Launch polygon-terminal
+4. Terminal hydrates from Redis (10-30s)
+5. Real-time events take over
+
+### Data Differences
+- **No historical playback**: Polygon-terminal shows current state + recent history
+- **No persistence**: Data is ephemeral (in-memory)
+- **Event-driven**: Updates appear as they happen (no polling lag)
+```
+
+---
+
+### Phase 7: Rollout & Deployment
+
+**Objective**: Production-ready deployment strategy.
+
+#### 7.1 Deployment Checklist
+
+```markdown
+## Polygon-Terminal Deployment
+
+### Pre-deployment
+- [ ] All features from Torq mapped and implemented
+- [ ] Unit tests passing
+- [ ] Integration tests passing
+- [ ] Manual testing complete
+- [ ] Performance benchmarks acceptable
+- [ ] Documentation written
+
+### Infrastructure
+- [ ] Redis configured and accessible
+- [ ] Mycelium bus deployed
+- [ ] Required services running:
+  - [ ] Pool State Manager
+  - [ ] Swap Listener
+  - [ ] Quote Service
+- [ ] Monitoring/logging configured
+
+### Deployment Steps
+1. Build release binary: `cargo build --release -p polygon-terminal`
+2. Test with staging environment
+3. Verify Redis hydration works
+4. Verify event subscriptions work
+5. Deploy to production
+6. Monitor for errors/crashes
+7. Validate metrics accuracy
+
+### Rollback Plan
+- Keep Torq terminal running in parallel for 1-2 weeks
+- Compare outputs side-by-side
+- Identify discrepancies
+- Fix issues before full cutover
+```
+
+#### 7.2 Configuration Management
+
+```rust
+// src/config.rs
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct Config {
+    pub redis: RedisConfig,
+    pub mycelium: MyceliumConfig,
+    pub ui: UiConfig,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct RedisConfig {
+    pub url: String,
+    #[serde(default = "default_timeout")]
+    pub timeout_secs: u64,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct MyceliumConfig {
+    pub bus_address: String,  // "unix:///path" or "tcp://host:port"
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct UiConfig {
+    #[serde(default = "default_refresh_rate")]
+    pub refresh_rate_ms: u64,
+    #[serde(default = "default_max_swap_history")]
+    pub max_swap_history: usize,
+}
+
+impl Config {
+    pub fn load() -> Result<Self> {
+        // Try config file first, then env vars, then defaults
+        let config = config::Config::builder()
+            .add_source(config::File::with_name("polygon-terminal.toml").required(false))
+            .add_source(config::Environment::with_prefix("POLYGON"))
+            .build()?;
+        
+        Ok(config.try_deserialize()?)
+    }
+}
+
+fn default_refresh_rate() -> u64 { 100 }
+fn default_max_swap_history() -> usize { 1000 }
+fn default_timeout() -> u64 { 5 }
+```
+
+#### 7.3 Monitoring & Observability
+
+**Add tracing spans**:
+```rust
+// src/events/handler.rs
+#[tracing::instrument(skip(self, sub))]
+async fn handle_pool_updates(&self, mut sub: Subscriber<PoolStateUpdate>) {
+    while let Some(update) = sub.recv().await {
+        let span = tracing::info_span!("pool_update", pool = ?update.pool_address);
+        let _enter = span.enter();
+        
+        self.pool_manager.handle_pool_update(Arc::new(update));
+        
+        tracing::debug!("Pool state updated");
+    }
+}
+```
+
+**Metrics to expose**:
+- Events received per second (by type)
+- Processing latency (event received → state updated)
+- UI render time
+- Memory usage
+- Pool count, swap count
+
+---
+
+## Summary of Phases
+
+| Phase | Deliverable | Key Files | Complexity |
+|-------|-------------|-----------|------------|
+| **0: Discovery** | Feature map document | `docs/polygon-terminal-feature-map.md` | Medium (requires Torq access) |
+| **1: Scaffolding** | Crate structure | `crates/polygon-terminal/Cargo.toml`, `src/main.rs` | Low |
+| **2: State Management** | Event-driven state | `src/state/*.rs`, `src/redis/hydration.rs` | High |
+| **3: Event Wiring** | Mycelium subscriptions | `src/events/handler.rs`, `contracts.yaml` | Medium |
+| **4: UI Rendering** | Ratatui panels | `src/ui/panels/*.rs` | High |
+| **5: Integration** | Tests & validation | `tests/*.rs` | Medium |
+| **6: Data Mapping** | Migration docs | `docs/migration.md` | Low |
+| **7: Rollout** | Production deploy | Config, monitoring | Medium |
+
+---
+
+## Key Principles Recap
+
+1. **Redis is warm-start only**: After `hydrate_from_redis()`, no more Redis reads
+2. **Events drive everything**: All runtime updates come from Mycelium bus
+3. **No polling**: State updates are push-based from upstream services
+4. **Mycelium-native**: Use `MessageBus`, `Subscriber`, `Publisher` patterns
+5. **Torq parity**: Match UI/UX, but replace data flow with events
+
+---
+
+## Next Steps
+
+1. **Access Torq terminal UI** to complete Phase 0 feature catalog
+2. **Review contracts.yaml**: Add missing message types (swaps, quotes)
+3. **Scaffold crate**: Create `crates/polygon-terminal/` structure
+4. **Prototype state managers**: Start with `PoolStateManager`
+5. **Build minimal UI**: Single panel to validate render loop
+6. **Wire first event**: Subscribe to `PoolStateUpdate` and display
+7. **Iterate**: Add panels, metrics, navigation incrementally
+
+This plan provides a clear path from the current Mycelium infrastructure to a production-ready terminal UI with feature parity to Torq, while maintaining event-driven architecture and avoiding polling patterns.

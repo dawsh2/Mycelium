@@ -1,0 +1,1094 @@
+[2025-11-10T19:34:33] OpenAI Codex v0.0.0 (research preview)
+--------
+workdir: /Users/daws/repos/mycelium
+model: gpt-5
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: high
+reasoning summaries: auto
+--------
+[2025-11-10T19:34:33] User instructions:
+Repo: /Users/daws/repos/mycelium. Goal: propose a concrete implementation plan to consolidate duplicated logic noted during review.
+
+Context summary (do not rely solely on this, inspect files as needed):
+1. There are two ServiceRuntime implementations: primary at crates/mycelium-transport/src/service_runtime.rs and a duplicate legacy version at crates/mycelium-transport/src/runtime.rs. Need plan to unify/deprecate one.
+2. Unix and TCP transports (crates/mycelium-transport/src/unix.rs and src/tcp.rs) share nearly identical code for channel management, publisher/subscriber creation, and client reader loops. Want a plan for extracting shared stream-transport utilities without losing clarity.
+3. MessageBus smart-routing helpers publisher_to() and subscriber_from() in crates/mycelium-transport/src/bus.rs repeat topology resolution logic. Need approach to factor shared pieces.
+4. Examples/generic/* repeat a lot of boilerplate for setup; optional stretch goal is to centralize common scaffolding.
+
+Deliverables expected from you: a step-by-step plan (not actual code) covering sequencing, affected files, testing strategy, and potential risks for each consolidation area. Highlight dependencies (e.g., need to move types first). Assume Rust 2021 workspace with async tokio. Do not implement—just plan.
+
+Provide references to file paths/sections you inspected so we can verify later.
+
+[Running in read-only mode - no modifications allowed]
+[2025-11-10T19:34:33] OpenAI Codex v0.0.0 (research preview)
+--------
+workdir: /Users/daws/repos/mycelium
+model: gpt-5
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: high
+reasoning summaries: auto
+--------
+[2025-11-10T19:34:33] User instructions:
+Repo: /Users/daws/repos/mycelium. Goal: propose a concrete implementation plan to consolidate duplicated logic noted during review.
+
+Context summary (do not rely solely on this, inspect files as needed):
+1. There are two ServiceRuntime implementations: primary at crates/mycelium-transport/src/service_runtime.rs and a duplicate legacy version at crates/mycelium-transport/src/runtime.rs. Need plan to unify/deprecate one.
+2. Unix and TCP transports (crates/mycelium-transport/src/unix.rs and src/tcp.rs) share nearly identical code for channel management, publisher/subscriber creation, and client reader loops. Want a plan for extracting shared stream-transport utilities without losing clarity.
+3. MessageBus smart-routing helpers publisher_to() and subscriber_from() in crates/mycelium-transport/src/bus.rs repeat topology resolution logic. Need approach to factor shared pieces.
+4. Examples/generic/* repeat a lot of boilerplate for setup; optional stretch goal is to centralize common scaffolding.
+
+Deliverables expected from you: a step-by-step plan (not actual code) covering sequencing, affected files, testing strategy, and potential risks for each consolidation area. Highlight dependencies (e.g., need to move types first). Assume Rust 2021 workspace with async tokio. Do not implement—just plan.
+
+Provide references to file paths/sections you inspected so we can verify later.
+
+[Running in read-only mode - no modifications allowed]
+
+[2025-11-10T19:34:38] thinking
+
+**Drafting implementation plan**
+
+I need to formulate a concrete plan to consolidate duplicated logic in the repository at /Users/daws/repos/mycelium. There seems to be a conflict since the environment indicates "full access," while the user notes it's running in "read-only mode." My intention is to respect this by not modifying files and only inspecting them instead. I’ll plan a step-by-step approach that covers affected files, testing, risks, and file references, ensuring only the start line is included. I'll use `rg` for file searching.
+**Planning repository exploration**
+
+I’m set to explore the repository and need to adhere to the preamble guidelines before tool calls. The goal is to scan multiple files in the transport crate for inspection purposes. Grouping actions makes sense here. There’s an update_plan tool available, but it’s not required since this is primarily a planning task rather than executing code changes. I'll decide to skip using it and will focus on opening the relevant files: crates/mycelium-transport/src/service_runtime.rs, runtime.rs, unix.rs, tcp.rs, bus.rs, and examples/generic/*.
+[2025-11-10T19:34:44] codex
+**Planning repository exploration**
+
+I’m set to explore the repository and need to adhere to the preamble guidelines before tool calls. The goal is to scan multiple files in the transport crate for inspection purposes. Grouping actions makes sense here. There’s an update_plan tool available, but it’s not required since this is primarily a planning task rather than executing code changes. I'll decide to skip using it and will focus on opening the relevant files: crates/mycelium-transport/src/service_runtime.rs, runtime.rs, unix.rs, tcp.rs, bus.rs, and examples/generic/*.
+[2025-11-10T19:34:44] codex
+
+I’m going to scan the transport crate files you mentioned to compare implementations and gather concrete references for the plan.
+[2025-11-10T19:34:45] exec bash -lc 'ls -la' in /Users/daws/repos/mycelium
+[2025-11-10T19:34:45] bash -lc 'ls -la' succeeded in 54ms:
+total 120
+drwxr-xr-x  17 daws  staff    544 Nov  5 18:38 .
+drwxr-xr-x  33 daws  staff   1056 Nov  4 10:18 ..
+drwxr-xr-x   3 daws  staff     96 Nov  3 14:41 .claude
+drwxr-xr-x   3 daws  staff     96 Nov  4 13:01 .code
+drwxr-xr-x  15 daws  staff    480 Nov 10 11:34 .git
+drwxr-xr-x   3 daws  staff     96 Nov  3 11:07 .github
+-rw-r--r--@  1 daws  staff      8 Nov  2 19:12 .gitignore
+drwxr-xr-x@  3 daws  staff     96 Nov  4 13:45 benches
+-rw-r--r--@  1 daws  staff  44266 Nov 10 10:15 Cargo.lock
+-rw-r--r--   1 daws  staff   2064 Nov 10 10:15 Cargo.toml
+drwxr-xr-x   5 daws  staff    160 Nov  4 12:24 crates
+drwxr-xr-x   8 daws  staff    256 Nov  5 19:37 docs
+drwxr-xr-x  13 daws  staff    416 Nov  4 13:45 examples
+-rw-r--r--   1 daws  staff   5674 Nov  4 15:27 README.md
+drwxr-xr-x   3 daws  staff     96 Nov  3 10:58 scripts
+drwxr-xr-x@  6 daws  staff    192 Nov  5 18:39 target
+drwx------   9 daws  staff    288 Nov  4 13:45 tests
+[2025-11-10T19:34:45] tokens used: 1,914
+[2025-11-10T19:34:48] exec bash -lc 'ls -la crates/mycelium-transport/src' in /Users/daws/repos/mycelium
+[2025-11-10T19:34:48] bash -lc 'ls -la crates/mycelium-transport/src' succeeded in 10ms:
+total 608
+drwxr-xr-x  32 daws  staff   1024 Nov  4 13:45 .
+drwxr-xr-x@  5 daws  staff    160 Nov  4 12:24 ..
+drwxr-xr-x@  7 daws  staff    224 Nov  4 13:45 actor
+-rw-r--r--   1 daws  staff   4439 Nov  4 13:45 any.rs
+-rw-r--r--@  1 daws  staff  12992 Nov  4 10:11 backpressure.rs
+-rw-r--r--@  1 daws  staff  13230 Nov  4 16:08 bounded.rs
+-rw-r--r--@  1 daws  staff  14783 Nov  4 16:33 buffer_pool.rs
+-rw-r--r--   1 daws  staff  32032 Nov  4 13:45 bus.rs
+-rw-r--r--@  1 daws  staff  12900 Nov  4 16:07 codec.rs
+-rw-r--r--@  1 daws  staff  10855 Nov  4 12:24 config.rs
+-rw-r--r--   1 daws  staff   5556 Nov  4 13:45 context.rs
+-rw-r--r--@  1 daws  staff   2750 Nov  4 16:31 error.rs
+-rw-r--r--@  1 daws  staff   5069 Nov  4 16:32 handler.rs
+-rw-r--r--@  1 daws  staff   2133 Nov  4 16:10 lib.rs
+-rw-r--r--   1 daws  staff   6465 Nov  4 13:45 local.rs
+-rw-r--r--@  1 daws  staff   6348 Nov  4 16:32 metrics.rs
+-rw-r--r--   1 daws  staff  12597 Nov  4 13:45 ordered.rs
+-rw-r--r--@  1 daws  staff   8153 Nov  4 10:11 pool.rs
+-rw-r--r--   1 daws  staff   4593 Nov  4 13:45 publisher.rs
+[2025-11-10T19:34:48] tokens used: 12,051
+[2025-11-10T19:34:50] exec bash -lc "sed -n '1,200p' crates/mycelium-transport/src/service_runtime.rs" in /Users/daws/repos/mycelium
+[2025-11-10T19:34:50] bash -lc "sed -n '1,200p' crates/mycelium-transport/src/service_runtime.rs" succeeded in 9ms:
+//! ServiceRuntime - Spawns and manages services with supervision
+
+use crate::bus::MessageBus;
+use crate::service_context::ServiceContext;
+use crate::service_metrics::ServiceMetrics;
+use anyhow::anyhow;
+use tokio::sync::{broadcast, Mutex, oneshot};
+
+/// ServiceRuntime manages service lifecycle and supervision
+pub struct ServiceRuntime {
+    bus: std::sync::Arc<MessageBus>,
+    shutdown_tx: broadcast::Sender<()>,
+    handles: Mutex<Vec<tokio::task::JoinHandle<()>>>,
+}
+
+impl ServiceRuntime {
+    /// Create a new ServiceRuntime with a MessageBus
+    pub fn new(bus: MessageBus) -> Self {
+        let (shutdown_tx, _) = broadcast::channel(16);
+
+[2025-11-10T19:34:50] tokens used: 13,464
+[2025-11-10T19:34:52] exec bash -lc "sed -n '1,220p' crates/mycelium-transport/src/runtime.rs" in /Users/daws/repos/mycelium
+[2025-11-10T19:34:52] bash -lc "sed -n '1,220p' crates/mycelium-transport/src/runtime.rs" succeeded in 9ms:
+//! ServiceRuntime - Spawns and manages services with supervision
+
+use crate::context::ServiceContext;
+use crate::metrics::ServiceMetrics;
+use mycelium_transport::MessageBus;
+use tokio::sync::broadcast;
+
+/// ServiceRuntime manages service lifecycle and supervision
+pub struct ServiceRuntime {
+    bus: std::sync::Arc<MessageBus>,
+    shutdown_tx: broadcast::Sender<()>,
+}
+
+impl ServiceRuntime {
+    /// Create a new ServiceRuntime with a MessageBus
+    pub fn new(bus: MessageBus) -> Self {
+        let (shutdown_tx, _) = broadcast::channel(16);
+
+        Self {
+            bus: std::sync::Arc::new(bus),
+[2025-11-10T19:34:52] tokens used: 16,704
+
+[2025-11-10T19:34:55] thinking
+
+**Examining module paths**
+
+I’m noticing duplication in the module paths for ServiceContext and metrics. For instance, `service_runtime.rs` is importing from `crate::service_context` and `service_metrics`, while `runtime.rs` pulls from `crate::context` and metrics, plus `mycelium_transport::MessageBus`, which seems a bit odd—maybe even circular? I’ll need to compare `context.rs` and `service_context.rs` to clarify their differences. Let’s take a closer look at both files to better understand what's going on.
+[2025-11-10T19:34:58] exec bash -lc "sed -n '1,220p' crates/mycelium-transport/src/service_context.rs" in /Users/daws/repos/mycelium
+[2025-11-10T19:34:58] bash -lc "sed -n '1,220p' crates/mycelium-transport/src/service_context.rs" succeeded in 11ms:
+//! ServiceContext - The infrastructure API provided to services
+
+use crate::bus::MessageBus;
+use crate::service_metrics::ServiceMetrics;
+use mycelium_protocol::Message;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
+use tokio::sync::broadcast;
+use tracing::Span;
+
+/// ServiceContext provides infrastructure APIs to services
+///
+/// This is the main interface services use to interact with Mycelium.
+/// Services receive this in their `run(&mut self, ctx: ServiceContext)` method.
+pub struct ServiceContext {
+    /// Message bus for publishing
+    bus: Arc<MessageBus>,
+
+    /// Trace ID for distributed tracing
+    trace_id: String,
+[2025-11-10T19:34:58] tokens used: 18,139
+[2025-11-10T19:35:00] exec bash -lc "sed -n '1,220p' crates/mycelium-transport/src/context.rs" in /Users/daws/repos/mycelium
+[2025-11-10T19:35:00] bash -lc "sed -n '1,220p' crates/mycelium-transport/src/context.rs" succeeded in 10ms:
+//! ServiceContext - The infrastructure API provided to services
+
+use crate::metrics::ServiceMetrics;
+use mycelium_protocol::Message;
+use mycelium_transport::MessageBus;
+use std::sync::Arc;
+use std::time::{Duration, Instant};
+use tokio::sync::broadcast;
+use tracing::Span;
+
+/// ServiceContext provides infrastructure APIs to services
+///
+/// This is the main interface services use to interact with Mycelium.
+/// Services receive this in their `run(&mut self, ctx: ServiceContext)` method.
+pub struct ServiceContext {
+    /// Message bus for publishing
+    bus: Arc<MessageBus>,
+
+    /// Trace ID for distributed tracing
+    trace_id: String,
+[2025-11-10T19:35:00] tokens used: 19,765
+
+[2025-11-10T19:35:02] thinking
+
+**Considering legacy module names**
+
+I’ve noticed there are some differences in legacy module names like crate::metrics versus crate::service_metrics and crate::context versus service_context. It's worth noting the mycelium_transport:: types, which could be awkward if used within the same crate. It seems like earlier architecture had cross-crate re-exports. I’ll also need to open service_metrics.rs and metrics.rs to further evaluate this structure. It’s definitely a bit complicated!
+[2025-11-10T19:35:05] exec bash -lc "sed -n '1,200p' crates/mycelium-transport/src/service_metrics.rs" in /Users/daws/repos/mycelium
+[2025-11-10T19:35:05] bash -lc "sed -n '1,200p' crates/mycelium-transport/src/service_metrics.rs" succeeded in 12ms:
+//! Simple metrics tracking for services
+//!
+//! This provides basic metrics collection without external dependencies.
+//! In production, these could be exported to Prometheus, StatsD, etc.
+
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
+
+/// Metrics collected for a service
+#[derive(Clone)]
+pub struct ServiceMetrics {
+    inner: Arc<ServiceMetricsInner>,
+}
+
+struct ServiceMetricsInner {
+    /// Total number of messages emitted
+    emits_total: AtomicU64,
+
+    /// Total emit latency in microseconds
+    emit_latency_us_total: AtomicU64,
+[2025-11-10T19:35:05] tokens used: 21,491
+[2025-11-10T19:35:06] exec bash -lc "sed -n '1,220p' crates/mycelium-transport/src/metrics.rs" in /Users/daws/repos/mycelium
+[2025-11-10T19:35:06] bash -lc "sed -n '1,220p' crates/mycelium-transport/src/metrics.rs" succeeded in 11ms:
+//! Simple metrics tracking for services
+//!
+//! This provides basic metrics collection without external dependencies.
+//! In production, these could be exported to Prometheus, StatsD, etc.
+
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
+
+/// Metrics collected for a service
+#[derive(Clone)]
+pub struct ServiceMetrics {
+    inner: Arc<ServiceMetricsInner>,
+}
+
+struct ServiceMetricsInner {
+    /// Total number of messages emitted
+    emits_total: AtomicU64,
+
+    /// Total emit latency in microseconds
+    emit_latency_us_total: AtomicU64,
+[2025-11-10T19:35:06] tokens used: 22,384
+[2025-11-10T19:35:09] exec bash -lc "sed -n '220,500p' crates/mycelium-transport/src/metrics.rs" in /Users/daws/repos/mycelium
+[2025-11-10T19:35:09] bash -lc "sed -n '220,500p' crates/mycelium-transport/src/metrics.rs" succeeded in 8ms:
+        metrics.record_error();
+
+        // Should not panic
+        metrics.print_summary("test_service");
+    }
+
+    #[test]
+    fn test_large_values() {
+        let metrics = ServiceMetrics::new();
+
+        for _ in 0..1_000_000 {
+            metrics.record_emit(1);
+        }
+
+        assert_eq!(metrics.emits_total(), 1_000_000);
+        assert_eq!(metrics.emit_latency_us_avg(), 1);
+    }
+}
+[2025-11-10T19:35:09] tokens used: 24,202
+
+[2025-11-10T19:35:11] thinking
+
+It looks like I'm noticing some duplicate definitions for ServiceContext and ServiceMetrics. I wonder if the later code is relying on the service_* versions. To clarify, I need to check out bus.rs to see how it's all tied together. Making sure everything is consistent is important. It’s a little tricky, but I'm hoping that checking bus.rs will help clear this up! Let's see what that file has to offer.
+[2025-11-10T19:35:13] exec bash -lc "sed -n '1,220p' crates/mycelium-transport/src/bus.rs" in /Users/daws/repos/mycelium
+[2025-11-10T19:35:13] bash -lc "sed -n '1,220p' crates/mycelium-transport/src/bus.rs" succeeded in 19ms:
+use crate::any::{AnyPublisher, AnySubscriber};
+use crate::bounded::{BoundedPublisher, BoundedSubscriber};
+use crate::config::{Topology, TransportConfig, TransportType};
+use crate::local::LocalTransport;
+use crate::tcp::{TcpPublisher, TcpSubscriber, TcpTransport};
+use crate::unix::{UnixPublisher, UnixSubscriber, UnixTransport};
+use crate::{Publisher, Result, Subscriber, TransportError};
+use mycelium_protocol::Message;
+use std::collections::HashMap;
+use std::net::SocketAddr;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+
+/// Message bus coordinator
+///
+/// Provides a unified interface for pub/sub messaging with support for:
+/// - Local transport (Arc<T>) for in-process/same-node communication
+/// - Unix socket transport for inter-node communication (same machine)
+/// - TCP transport for distributed communication (cross-machine)
+/// - Topology-aware transport selection
+[2025-11-10T19:35:13] tokens used: 25,308
+[2025-11-10T19:35:15] exec bash -lc "sed -n '220,500p' crates/mycelium-transport/src/bus.rs" in /Users/daws/repos/mycelium
+[2025-11-10T19:35:15] bash -lc "sed -n '220,500p' crates/mycelium-transport/src/bus.rs" succeeded in 25ms:
+    /// Returns None if no topology is configured or node address not found.
+    pub async fn tcp_publisher<M: Message>(&self, target_node: &str) -> Option<TcpPublisher<M>> {
+        let topology = self.topology.as_ref()?;
+
+        // Find node by name and build socket address
+        let node = topology.nodes.iter().find(|n| n.name == target_node)?;
+        let host = node.host.as_ref()?;
+        let port = node.port?;
+        let addr: SocketAddr = format!("{}:{}", host, port).parse().ok()?;
+
+        let transport =
+            Self::get_or_create_transport(&self.tcp_transports, target_node, || async move {
+                TcpTransport::connect(addr).await.ok()
+            })
+            .await?;
+
+        transport.publisher()
+    }
+
+    /// Get a TCP subscriber from a specific remote node
+[2025-11-10T19:35:15] tokens used: 27,501
+[2025-11-10T19:35:17] exec bash -lc "sed -n '500,1000p' crates/mycelium-transport/src/bus.rs" in /Users/daws/repos/mycelium
+[2025-11-10T19:35:17] bash -lc "sed -n '500,1000p' crates/mycelium-transport/src/bus.rs" succeeded in 14ms:
+    #[repr(C)]
+    struct TestEvent {
+        entity_id: u64,
+        value: u64,
+    }
+
+    impl_message!(TestEvent, 1, "test.events");
+
+    #[tokio::test]
+    async fn test_message_bus_basic() {
+        let bus = MessageBus::new();
+
+        let pub_ = bus.publisher::<TestEvent>();
+        let mut sub = bus.subscriber::<TestEvent>();
+
+        pub_.publish(TestEvent {
+            entity_id: 1,
+            value: 1000,
+        })
+        .await
+[2025-11-10T19:35:17] tokens used: 30,158
+
+[2025-11-10T19:35:20] thinking
+
+**Reviewing shared logic**
+
+I need to examine both tcp.rs and unix.rs to identify any shared logic between them. It's essential to ensure that I understand how they may interact or share functionalities. This might help me detect any redundancies or areas for improvement. I'll be diving into the code to see what aligns and what can be optimized, as that could streamline development and enhance overall performance. Let's see what insights I can gather!
+[2025-11-10T19:35:22] exec bash -lc "sed -n '1,240p' crates/mycelium-transport/src/tcp.rs" in /Users/daws/repos/mycelium
+[2025-11-10T19:35:22] bash -lc "sed -n '1,240p' crates/mycelium-transport/src/tcp.rs" succeeded in 19ms:
+use crate::buffer_pool::BufferPool;
+use crate::codec::write_message;
+use crate::error::Result;
+use crate::stream::{handle_stream_connection, StreamSubscriber};
+use dashmap::DashMap;
+use mycelium_protocol::{Envelope, Message};
+use std::marker::PhantomData;
+use std::net::SocketAddr;
+use std::sync::Arc;
+use tokio::io::AsyncWriteExt;
+use tokio::net::tcp::{OwnedReadHalf, OwnedWriteHalf};
+use tokio::net::{TcpListener, TcpStream};
+use tokio::sync::{broadcast, Mutex};
+
+/// TCP socket transport for distributed inter-process communication
+///
+/// Uses TCP sockets with TLV framing for message passing
+/// between services across different machines.
+///
+/// Performance: ~10-50μs per message (serialization + network overhead)
+[2025-11-10T19:35:22] tokens used: 33,954
+[2025-11-10T19:35:24] exec bash -lc "sed -n '240,520p' crates/mycelium-transport/src/tcp.rs" in /Users/daws/repos/mycelium
+[2025-11-10T19:35:24] bash -lc "sed -n '240,520p' crates/mycelium-transport/src/tcp.rs" succeeded in 8ms:
+        // Client publishes
+        let client = TcpTransport::connect(server_addr).await.unwrap();
+        let pub_ = client.publisher::<TestMsg>().unwrap();
+
+        let msg = TestMsg { value: 42 };
+        pub_.publish(msg.clone()).await.unwrap();
+
+        // Wait for message with timeout
+        let received = tokio::time::timeout(tokio::time::Duration::from_secs(1), sub.recv())
+            .await
+            .expect("Timeout waiting for message");
+
+        assert_eq!(received.unwrap().value, 42);
+    }
+
+    #[tokio::test]
+    async fn test_tcp_multiple_messages() {
+        let addr = "127.0.0.1:0".parse().unwrap();
+        let server = TcpTransport::bind(addr).await.unwrap();
+        let server_addr = server.local_addr();
+[2025-11-10T19:35:24] tokens used: 36,228
+[2025-11-10T19:35:27] exec bash -lc "sed -n '1,260p' crates/mycelium-transport/src/unix.rs" in /Users/daws/repos/mycelium
+[2025-11-10T19:35:27] bash -lc "sed -n '1,260p' crates/mycelium-transport/src/unix.rs" succeeded in 7ms:
+use crate::buffer_pool::BufferPool;
+use crate::codec::write_message;
+use crate::error::{Result, TransportError};
+use crate::stream::{handle_stream_connection, StreamSubscriber};
+use dashmap::DashMap;
+use mycelium_protocol::{Envelope, Message};
+use std::marker::PhantomData;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use tokio::io::AsyncWriteExt;
+use tokio::net::unix::{OwnedReadHalf, OwnedWriteHalf};
+use tokio::net::{UnixListener, UnixStream};
+use tokio::sync::{broadcast, Mutex};
+
+/// Unix socket transport for inter-process communication
+///
+/// Uses Unix domain sockets with TLV framing for message passing
+/// between services in different processes on the same machine.
+///
+/// Performance: ~2-5μs per message (serialization + socket overhead)
+[2025-11-10T19:35:27] tokens used: 37,071
+[2025-11-10T19:35:29] exec bash -lc "sed -n '260,560p' crates/mycelium-transport/src/unix.rs" in /Users/daws/repos/mycelium
+[2025-11-10T19:35:29] bash -lc "sed -n '260,560p' crates/mycelium-transport/src/unix.rs" succeeded in 7ms:
+        let dir = tempfile::tempdir().unwrap();
+        let socket_path = dir.path().join("test.sock");
+
+        // Bind server
+        let server = UnixTransport::bind(&socket_path).await.unwrap();
+        let mut sub = server.subscriber::<TestMsg>();
+
+        // Give server time to start
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+        // Client publishes
+        let client = UnixTransport::connect(&socket_path).await.unwrap();
+        let pub_ = client.publisher::<TestMsg>().unwrap();
+
+        let msg = TestMsg { value: 42 };
+        pub_.publish(msg.clone()).await.unwrap();
+
+        // Wait for message with timeout
+        let received = tokio::time::timeout(tokio::time::Duration::from_secs(1), sub.recv())
+            .await
+[2025-11-10T19:35:29] tokens used: 39,511
+[2025-11-10T19:35:32] exec bash -lc "sed -n '1,260p' crates/mycelium-transport/src/stream.rs" in /Users/daws/repos/mycelium
+[2025-11-10T19:35:32] bash -lc "sed -n '1,260p' crates/mycelium-transport/src/stream.rs" succeeded in 8ms:
+use crate::buffer_pool::BufferPool;
+use crate::codec::{deserialize_message, read_frame, read_frame_pooled};
+use crate::error::Result;
+use dashmap::DashMap;
+use mycelium_protocol::{codec::HEADER_SIZE, Envelope, Message};
+use std::any::Any;
+use std::marker::PhantomData;
+use std::sync::Arc;
+use tokio::io::AsyncReadExt;
+use tokio::sync::broadcast;
+
+/// Raw message frame stored after reading from stream
+///
+/// Used to share deserialized bytes across multiple subscribers
+/// without re-reading from the stream.
+#[derive(Clone)]
+pub struct RawFrame {
+    pub type_id: u16,
+    pub bytes: Arc<Vec<u8>>,
+}
+[2025-11-10T19:35:32] tokens used: 40,252
+[2025-11-10T19:35:35] exec bash -lc "sed -n '260,560p' crates/mycelium-transport/src/stream.rs" in /Users/daws/repos/mycelium
+[2025-11-10T19:35:35] bash -lc "sed -n '260,560p' crates/mycelium-transport/src/stream.rs" succeeded in 8ms:
+        let type_to_topic: Arc<DashMap<u16, String>> = Arc::new(DashMap::new());
+        let (tx, mut rx) = broadcast::channel(10);
+        channels.insert("test-stream".to_string(), tx);
+        type_to_topic.insert(123, "test-stream".to_string());
+
+        // Spawn server
+        let server_channels = Arc::clone(&channels);
+        let server_type_to_topic = Arc::clone(&type_to_topic);
+        let server_handle = tokio::spawn(async move {
+            let (stream, _) = listener.accept().await.unwrap();
+            handle_stream_connection(stream, server_channels, server_type_to_topic, None).await
+        });
+
+        // Give server time to start
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+        // Client writes message
+        let mut client = UnixStream::connect(&socket_path).await.unwrap();
+        let msg = TestMsg { value: 42 };
+        write_message(&mut client, &msg).await.unwrap();
+[2025-11-10T19:35:35] tokens used: 42,772
+
+[2025-11-10T19:35:38] thinking
+
+**Considering transport logic**
+
+I’m noticing that `stream.rs` already has shared logic for reading and a subscriber generic type. However, both `unix.rs` and `tcp.rs` have similar implementations for the accept loop and client reader loop logic, particularly the `get_or_create_channel` function. It seems like there’s an opportunity to abstract this further into a generic type that could be utilized for various stream-based transports. Next, I should examine the examples in `examples/generic/*` to see how this abstraction can be applied.
+[2025-11-10T19:35:40] exec bash -lc 'ls -la examples/generic' in /Users/daws/repos/mycelium
+[2025-11-10T19:35:40] bash -lc 'ls -la examples/generic' succeeded in 9ms:
+total 48
+drwxr-xr-x@  5 daws  staff   160 Nov  4 13:45 .
+drwxr-xr-x  13 daws  staff   416 Nov  4 13:45 ..
+-rw-r--r--   1 daws  staff  6067 Nov  4 13:45 game_server.rs
+-rw-r--r--   1 daws  staff  7975 Nov  4 13:45 managed_service.rs
+-rw-r--r--   1 daws  staff  4614 Nov  4 13:45 sensor_network.rs
+[2025-11-10T19:35:40] tokens used: 43,360
+[2025-11-10T19:35:43] exec bash -lc "sed -n '1,240p' examples/generic/managed_service.rs" in /Users/daws/repos/mycelium
+[2025-11-10T19:35:43] bash -lc "sed -n '1,240p' examples/generic/managed_service.rs" succeeded in 13ms:
+/// Generic managed service example - lifecycle management
+///
+/// Demonstrates ManagedService trait, BoundedPublisher, and OrderedSubscriber
+/// using generic domain-agnostic messages.
+///
+/// Run with: cargo run --example managed_service
+use mycelium_transport::{
+    BoundedPublisher, BoundedSubscriber, HealthStatus, ManagedService, MessageBus,
+    OrderedSubscriber,
+};
+use mycelium_protocol::{impl_message, Message};
+use std::sync::Arc;
+use zerocopy::{AsBytes, FromBytes, FromZeroes};
+
+/// Generic event with sequence number for ordering
+#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+#[repr(C)]
+struct DataEvent {
+    source_id: u64,
+    value: i64,
+[2025-11-10T19:35:43] tokens used: 43,645
+[2025-11-10T19:35:45] exec bash -lc "sed -n '1,200p' examples/generic/game_server.rs" in /Users/daws/repos/mycelium
+[2025-11-10T19:35:45] bash -lc "sed -n '1,200p' examples/generic/game_server.rs" succeeded in 10ms:
+/// Generic game server example - real-time multiplayer messaging
+///
+/// Demonstrates Mycelium for game state synchronization without DeFi terminology.
+/// Works for any multiplayer game: FPS, MMO, real-time strategy, etc.
+///
+/// Run with: cargo run --example game_server
+use mycelium_protocol::{impl_message, Message};
+use mycelium_transport::{BoundedPublisher, BoundedSubscriber, MessageBus};
+use zerocopy::{AsBytes, FromBytes, FromZeroes};
+
+/// Player action (movement, attack, etc.)
+#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+#[repr(C)]
+struct PlayerAction {
+    player_id: u64,
+    action_type: u64,  // 1=move, 2=attack, 3=use_item (u64 to avoid padding)
+    target_x: i64,     // i64 to avoid padding
+    target_y: i64,     // i64 to avoid padding
+    timestamp_ms: u64,
+}
+[2025-11-10T19:35:45] tokens used: 45,898
+[2025-11-10T19:35:48] exec bash -lc "sed -n '1,240p' examples/generic/sensor_network.rs" in /Users/daws/repos/mycelium
+[2025-11-10T19:35:48] bash -lc "sed -n '1,240p' examples/generic/sensor_network.rs" succeeded in 10ms:
+/// Generic sensor network example - domain-agnostic pub/sub
+///
+/// Demonstrates Mycelium for IoT/sensor data collection without DeFi terminology.
+/// This example works for any sensor network: temperature, motion, industrial IoT, etc.
+///
+/// Run with: cargo run --example sensor_network
+use mycelium_protocol::{impl_message, Message};
+use mycelium_transport::MessageBus;
+use zerocopy::{AsBytes, FromBytes, FromZeroes};
+
+/// Generic sensor reading - works for any sensor type
+#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+#[repr(C)]
+struct SensorReading {
+    sensor_id: u64,
+    value: i64,        // Raw sensor value (scaled to i64)
+    timestamp_ms: u64,
+    quality: u64,      // 0-100 quality indicator (u64 to avoid padding)
+}
+
+[2025-11-10T19:35:48] tokens used: 47,783
+
+[2025-11-10T19:35:52] thinking
+
+**Evaluating code structure**
+
+I'm noticing repeated patterns in the setup within the main function, like creating a MessageBus, defining messages, and spawning tasks. The objective is to centralize common scaffolding across examples. I’m considering an examples support module for shared functions like run_with_shutdown and init_logging. There’s also duplication in the MessageBus topology resolution—publishers and subscribers share similar logic. I think we could factor that out into private functions for routing decisions and transport types, simplifying things significantly.
+**Inspecting configuration**
+
+I need to examine the config.rs file to understand the Topology type better. I should also check for helper methods mentioned in the code, including same_node(), socket_path(), find_node(), and transport_between(). These methods are referenced, so it’ll be helpful to see how they fit into the overall structure. I wonder if there are any best practices I can implement by reviewing these methods closely to streamline the code further. Let's take a closer look at config.rs!
+[2025-11-10T19:35:56] codex
+**Inspecting configuration**
+
+I need to examine the config.rs file to understand the Topology type better. I should also check for helper methods mentioned in the code, including same_node(), socket_path(), find_node(), and transport_between(). These methods are referenced, so it’ll be helpful to see how they fit into the overall structure. I wonder if there are any best practices I can implement by reviewing these methods closely to streamline the code further. Let's take a closer look at config.rs!
+[2025-11-10T19:35:57] exec bash -lc "sed -n '1,260p' crates/mycelium-transport/src/config.rs" in /Users/daws/repos/mycelium
+[2025-11-10T19:35:57] bash -lc "sed -n '1,260p' crates/mycelium-transport/src/config.rs" succeeded in 11ms:
+use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::{Path, PathBuf};
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum ConfigError {
+    #[error("Failed to read config file: {0}")]
+    IoError(#[from] std::io::Error),
+
+    #[error("Failed to parse config: {0}")]
+    ParseError(#[from] toml::de::Error),
+
+    #[error("Bundle not found: {0}")]
+    BundleNotFound(String),
+
+    #[error("Service not found: {0}")]
+    ServiceNotFound(String),
+
+    #[error("Invalid configuration: {0}")]
+[2025-11-10T19:35:57] tokens used: 49,409
+[2025-11-10T19:36:00] exec bash -lc "sed -n '260,560p' crates/mycelium-transport/src/config.rs" in /Users/daws/repos/mycelium
+[2025-11-10T19:36:00] bash -lc "sed -n '260,560p' crates/mycelium-transport/src/config.rs" succeeded in 7ms:
+        "#;
+
+        let topology: Topology = toml::from_str(toml).unwrap();
+        assert!(topology.same_node("polygon-adapter", "ethereum-adapter"));
+        assert!(!topology.same_node("polygon-adapter", "flash-arbitrage"));
+    }
+
+    #[test]
+    fn test_transport_between_same_node() {
+        let toml = r#"
+            [[nodes]]
+            name = "adapters"
+            services = ["polygon-adapter", "ethereum-adapter"]
+        "#;
+
+        let topology: Topology = toml::from_str(toml).unwrap();
+
+        // Same node -> Local
+        assert_eq!(
+            topology.transport_between("polygon-adapter", "ethereum-adapter"),
+[2025-11-10T19:36:00] tokens used: 51,707
+[2025-11-10T19:36:15] exec bash -lc "sed -n '1,220p' crates/mycelium-transport/src/local.rs" in /Users/daws/repos/mycelium
+[2025-11-10T19:36:15] bash -lc "sed -n '1,220p' crates/mycelium-transport/src/local.rs" succeeded in 11ms:
+use crate::{config::TransportConfig, Publisher, Subscriber, ChannelManager};
+use mycelium_protocol::Message;
+
+/// Local transport using Arc<T> for zero-copy message passing
+///
+/// This transport is used when all services are in the same process.
+/// Messages are shared via Arc, avoiding serialization overhead.
+///
+/// Performance: ~50-200ns per message (just an Arc clone)
+#[derive(Clone)]
+pub struct LocalTransport {
+    channel_manager: ChannelManager,
+}
+
+impl LocalTransport {
+    /// Create a new local transport with default configuration
+    pub fn new() -> Self {
+        Self::with_config(TransportConfig::default())
+    }
+
+[2025-11-10T19:36:15] tokens used: 53,941
+[2025-11-10T19:36:23] exec bash -lc "sed -n '1,220p' crates/mycelium-transport/src/any.rs" in /Users/daws/repos/mycelium
+[2025-11-10T19:36:23] bash -lc "sed -n '1,220p' crates/mycelium-transport/src/any.rs" succeeded in 9ms:
+use crate::tcp::{TcpPublisher, TcpSubscriber};
+use crate::unix::{UnixPublisher, UnixSubscriber};
+use crate::{Publisher, Result, Subscriber};
+use mycelium_protocol::Message;
+
+/// Automatic transport-selecting publisher
+///
+/// Wraps any publisher type (Local/Unix/TCP) and provides a unified interface.
+/// The MessageBus automatically selects the correct transport based on topology.
+pub enum AnyPublisher<M: Message> {
+    /// In-process Arc<T> publisher (zero-copy)
+    Local(Publisher<M>),
+
+    /// Unix socket publisher (same machine, different process)
+    Unix(UnixPublisher<M>),
+
+    /// TCP publisher (different machine)
+    Tcp(TcpPublisher<M>),
+}
+
+[2025-11-10T19:36:23] tokens used: 56,268
+
+[2025-11-10T19:36:28] thinking
+
+**Consolidating service implementations**
+
+I need to focus on consolidating a couple of ServiceRuntime implementations: service_runtime.rs and runtime.rs. There's also duplication in ServiceContext and ServiceMetrics, with older names context.rs and metrics.rs. I think I should come up with a plan to unify these by choosing the service_* versions as the canonical ones and deprecating the older names. I'll confirm crate lib exports as well by checking lib.rs.
+[2025-11-10T19:36:30] exec bash -lc "sed -n '1,240p' crates/mycelium-transport/src/lib.rs" in /Users/daws/repos/mycelium
+[2025-11-10T19:36:30] bash -lc "sed -n '1,240p' crates/mycelium-transport/src/lib.rs" succeeded in 9ms:
+pub mod actor;
+pub mod any;
+pub mod bounded;
+pub mod buffer_pool;
+pub mod bus;
+pub mod codec;
+pub mod config;
+pub mod error;
+pub mod handler;
+pub mod local;
+pub mod ordered;
+pub mod publisher;
+pub mod qos;
+pub mod service;
+pub mod service_context;
+pub mod service_metrics;
+pub mod service_runtime;
+pub mod shared;
+pub mod stream;
+pub mod subscriber;
+[2025-11-10T19:36:30] tokens used: 58,370
+
+[2025-11-10T19:36:35] thinking
+
+**Evaluating module exports**
+
+I'm seeing that `lib.rs` re-exports the `service_*` modules, but not the `runtime.rs`, `context.rs`, or `metrics.rs`. It seems like those files are legacy duplicates that aren't being re-exported. They might still be referenced in tests, but since `lib.rs` doesn’t export the "context" module publicly, `runtime.rs` may not compile. Even though these files exist and are part of the crate, they won't be considered by the Rust module system unless explicitly included.
+**Planning code consolidation**
+
+I notice that despite the duplication in the code tree, the intention is to unify and deprecate some files. The officially exported modules are the `service_*` ones. So, the plan should either remove the legacy files (`runtime.rs`, `context.rs`, `metrics.rs`) or keep them with compile-time deprecation warnings. Since there are no references to these files, they shouldn't cause symbol conflicts. I need to ensure no other crate uses references like `mycelium_transport::runtime`. I'll also check for duplicate routing in `bus.rs` and see how to factor in the functionality of the Publisher/Subscriber. Finally, I’ll outline steps for consolidation, including dependencies.
+**Consolidating ServiceRuntime**
+
+I'm focusing on unifying `service_runtime.rs` and `runtime.rs` into one file. The first step is to audit usage by finding all references to `ServiceRuntime` throughout the repository. I can use `rg` for this, which should help me locate every instance quickly. Once I have that information, I'll be able to assess how deeply intertwined these files are and proceed with the consolidation plan effectively. This should help streamline the code and eliminate redundancy.
+[2025-11-10T19:36:43] codex
+**Planning code consolidation**
+
+I notice that despite the duplication in the code tree, the intention is to unify and deprecate some files. The officially exported modules are the `service_*` ones. So, the plan should either remove the legacy files (`runtime.rs`, `context.rs`, `metrics.rs`) or keep them with compile-time deprecation warnings. Since there are no references to these files, they shouldn't cause symbol conflicts. I need to ensure no other crate uses references like `mycelium_transport::runtime`. I'll also check for duplicate routing in `bus.rs` and see how to factor in the functionality of the Publisher/Subscriber. Finally, I’ll outline steps for consolidation, including dependencies.
+[2025-11-10T19:36:43] codex
+**Consolidating ServiceRuntime**
+
+I'm focusing on unifying `service_runtime.rs` and `runtime.rs` into one file. The first step is to audit usage by finding all references to `ServiceRuntime` throughout the repository. I can use `rg` for this, which should help me locate every instance quickly. Once I have that information, I'll be able to assess how deeply intertwined these files are and proceed with the consolidation plan effectively. This should help streamline the code and eliminate redundancy.
+[2025-11-10T19:36:43] exec bash -lc "rg -n \"\\bServiceRuntime\\b|\\bServiceContext\\b|\\bServiceMetrics\\b\"" in /Users/daws/repos/mycelium
+[2025-11-10T19:36:43] bash -lc "rg -n \"\\bServiceRuntime\\b|\\bServiceContext\\b|\\bServiceMetrics\\b\"" succeeded in 28ms:
+README.md:12:  `ServiceContext` that exposes async publishers/subscribers plus tracing and
+README.md:25:| `ServiceContext` | `crates/mycelium-transport/src/service.rs` | Runtime handle passed to every service method. Provides `emit`, `subscribe`, shutdown signals, metrics, and tracing spans. |
+README.md:27:| `ServiceRuntime` | `crates/mycelium-transport/src/runtime.rs` | Owns task supervision. Spawns `#[service]` actors, applies exponential backoff, and coordinates shutdown. |
+README.md:34:| All services in one binary (lowest latency) | `MessageBus::new()` (Arc) | Pass the same `Arc<MessageBus>` to every service and spawn them in one `ServiceRuntime`. |
+README.md:62:   use mycelium_transport::{service, ServiceContext};
+README.md:68:       async fn run(&mut self, ctx: &ServiceContext) -> Result<()> {
+README.md:83:   use mycelium_transport::{MessageBus, ServiceRuntime};
+README.md:88:       let runtime = ServiceRuntime::new(bus);
+README.md:100:- `ServiceContext::emit` attaches tracing spans and counters. The overhead is ~120
+README.md:120:- Integration tests often start a `ServiceRuntime` with the Arc transport to keep
+crates/mycelium-transport/src/context.rs:1://! ServiceContext - The infrastructure API provided to services
+crates/mycelium-transport/src/context.rs:3:use crate::metrics::ServiceMetrics;
+crates/mycelium-transport/src/context.rs:11:/// ServiceContext provides infrastructure APIs to services
+crates/mycelium-transport/src/context.rs:14:/// Services receive this in their `run(&mut self, ctx: ServiceContext)` method.
+crates/mycelium-transport/src/context.rs:15:pub struct ServiceContext {
+crates/mycelium-transport/src/context.rs:32:    metrics: ServiceMetrics,
+crates/mycelium-transport/src/context.rs:35:impl ServiceContext {
+crates/mycelium-transport/src/context.rs:36:    /// Create a new ServiceContext
+crates/mycelium-transport/src/context.rs:42:        metrics: ServiceMetrics,
+crates/mycelium-transport/src/context.rs:148:    pub fn metrics(&self) -> &ServiceMetrics {
+[2025-11-10T19:36:43] tokens used: 59,436
+[2025-11-10T19:36:57] exec bash -lc "rg -n \"fn spawn_accept_loop|fn spawn_client_reader|pub async fn publisher_to|pub async fn subscriber_from|pub struct ServiceRuntime|pub async fn connect\\(|pub async fn bind\\(|fn get_or_create_channel|pub fn publisher<|pub fn subscriber<\" crates/mycelium-transport/src/{tcp.rs,unix.rs,bus.rs,service_runtime.rs,runtime.rs}" in /Users/daws/repos/mycelium
+[2025-11-10T19:36:57] bash -lc "rg -n \"fn spawn_accept_loop|fn spawn_client_reader|pub async fn publisher_to|pub async fn subscriber_from|pub struct ServiceRuntime|pub async fn connect\\(|pub async fn bind\\(|fn get_or_create_channel|pub fn publisher<|pub fn subscriber<\" crates/mycelium-transport/src/{tcp.rs,unix.rs,bus.rs,service_runtime.rs,runtime.rs}" succeeded in 21ms:
+crates/mycelium-transport/src/runtime.rs:9:pub struct ServiceRuntime {
+crates/mycelium-transport/src/service_runtime.rs:10:pub struct ServiceRuntime {
+crates/mycelium-transport/src/tcp.rs:39:    pub async fn bind(addr: SocketAddr) -> Result<Self> {
+crates/mycelium-transport/src/tcp.rs:73:    pub async fn connect(addr: SocketAddr) -> Result<Self> {
+crates/mycelium-transport/src/tcp.rs:93:    fn spawn_accept_loop(&self) {
+crates/mycelium-transport/src/tcp.rs:125:    fn spawn_client_reader(&self, stream: OwnedReadHalf) {
+crates/mycelium-transport/src/tcp.rs:139:    fn get_or_create_channel(&self, topic: &str) -> broadcast::Sender<Envelope> {
+crates/mycelium-transport/src/tcp.rs:149:    pub fn publisher<M: Message>(&self) -> Option<TcpPublisher<M>> {
+crates/mycelium-transport/src/tcp.rs:160:    pub fn subscriber<M: Message>(&self) -> TcpSubscriber<M> {
+crates/mycelium-transport/src/bus.rs:135:    pub fn publisher<M: Message>(&self) -> Publisher<M> {
+crates/mycelium-transport/src/bus.rs:143:    pub fn subscriber<M: Message>(&self) -> Subscriber<M> {
+crates/mycelium-transport/src/bus.rs:272:    pub async fn publisher_to<M>(&self, target_service: &str) -> Result<AnyPublisher<M>>
+crates/mycelium-transport/src/bus.rs:358:    pub async fn subscriber_from<M>(&self, source_service: &str) -> Result<AnySubscriber<M>>
+crates/mycelium-transport/src/unix.rs:115:    fn spawn_accept_loop(&self) {
+crates/mycelium-transport/src/unix.rs:147:    fn spawn_client_reader(&self, stream: OwnedReadHalf) {
+crates/mycelium-transport/src/unix.rs:161:    fn get_or_create_channel(&self, topic: &str) -> broadcast::Sender<Envelope> {
+crates/mycelium-transport/src/unix.rs:171:    pub fn publisher<M: Message>(&self) -> Option<UnixPublisher<M>> {
+crates/mycelium-transport/src/unix.rs:182:    pub fn subscriber<M: Message>(&self) -> UnixSubscriber<M> {
+[2025-11-10T19:36:57] tokens used: 62,910
+
+[2025-11-10T19:37:09] thinking
+
+**Considering module updates**
+
+I’m looking into whether to delete or deprecate old modules, specifically the files `runtime.rs`, `context.rs`, and `metrics.rs`. Perhaps I can move these to a legacy directory or hide them behind a "legacy" feature to prevent breaking older code while providing deprecation warnings during compilation.
+
+In `service_runtime.rs`, I plan to unify differences by standardizing on the more robust primary version. I’ll ensure that it returns a completion result using the oneshot approach. I might provide a minimal bridging alias with a deprecated type alias to help maintain legacy names, but I’m not sure if it’s necessary. 
+
+Next, I’ll note affected files and outline a testing strategy to run examples and add new tests.
+**Planning for tests and module updates**
+
+I see that there aren’t many tests for the runtime, but I’m considering adding tests, possibly in the crates or as integration tests for spawning and shutting down. However, I was advised not to implement them just yet, even though they are part of the plan. 
+
+There are risks involved, particularly with breaking existing downstream code that expects certain imports like `crate::context` or `crate::metrics`. To mitigate this, I'll need a migration path with re-exports and deprecation warnings.
+
+Additionally, I’m thinking about creating a new module named `stream_transport.rs` and checking existing module names to avoid collisions, as there’s already a `stream.rs`. I might use `stream_util.rs` or `net.rs` instead.
+**Designing StreamShared structure**
+
+I'm outlining the design for a `struct StreamShared` that will have several fields, including `channels`, `type_to_topic`, `channel_capacity`, and an optional `buffer_pool`. 
+
+For methods within this struct, I plan to include a constructor `new` for initializing with `channel_capacity` and `buffer_pool`. There will also be a method to `get_or_create_channel` for topics, and `register_message_type` to map message types to topics.
+
+Additionally, I’m defining a generic function `spawn_accept_loop` that will handle accepting connections in a loop, along with a method `spawn_client_reader` to read from clients.
+
+Finally, I aim to provide a generic `StreamPublisher` that implements the publishing functionality for different writable types.
+**Reducing duplication in transport files**
+
+I’m looking to simplify the code in both `tcp.rs` and `unix.rs`. I plan to keep `TcpTransport` and `UnixTransport` to store a shared `StreamShared`, along with `listener` and `write_half`, possibly including an address or path. Their spawn loops will now be streamlined into one-liners that call `shared.spawn_accept_loop`.
+
+For message handling, `publisher<M>` will return a `StreamPublisher`, and `subscriber<M>` will register message types and create a new `StreamSubscriber`. The `get_or_create_channel` method will utilize the shared instance.
+
+For testing, I’ll re-run the tcp/unix/stream tests to ensure they pass, since the semantics are preserved. I’ll also add unit tests for `StreamShared` and `StreamPublisher`. However, I must be cautious with trait objects and lifetimes, as well as ensure log consistency to avoid confusion. Overall, dependencies are minimal aside from the existing modules.
+**Switching to Shared Structure**
+
+I’m switching `unix.rs` to utilize a shared structure step-by-step. This involves replacing `get_or_create_channel`, `subscriber`, and `spawn_client_reader` functions to leverage this shared instance, along with updating the accept loop. The `UnixPublisher<M>` will either be a type alias for `StreamPublisher<OwnedWriteHalf, M>` or wrapped in a newtype for backward compatibility. I’ll follow a similar process for `tcp.rs` and eliminate duplicated code.
+
+**API Compatibility and Testing**
+
+To maintain API compatibility, I’ll keep existing public structs as type aliases or newtypes around `StreamPublisher<W, M>`. I’ll run existing tests to ensure they compile and add explicit tests for the `StreamPublisher` generic.
+
+**Risks and Dependencies**
+
+I need to manage async write bounds and ensure type inference works well. Logging differences will be addressed by passing context strings for labeling. Dependencies will include reading paths from `stream.rs` and using `BufferPool`.
+
+**Routing Functionality**
+
+I’ll add private helpers for routing services and refactor associated methods while ensuring tests pass. Consistency in error messages will be maintained.
+
+**Examples and Testing**
+
+Creating a shared common module for examples is planned, with functions for demonstration and a structured `Demo` struct. I’ll build and run the examples while ensuring they remain independent.
+
+**References**
+
+Finally, I’ll compile a list of necessary file references with their starting lines. Here’s a summarized list of important files to check:
+
+- `service_runtime.rs:` lines 1 and 10
+- `runtime.rs:` lines 1 and 9
+- `service_context.rs:` line 1
+- `context.rs:` line 1
+- `service_metrics.rs:` line 1
+- `metrics.rs:` line 1
+- `tcp.rs:` lines 39, 73, 93, 125, 139, 149, 160
+- `unix.rs:` (similarly)
+- `stream.rs:` line 1
+- `bus.rs:` lines 272 and 358
+
+I’ll also note any README references that require updates. 
+
+This structured approach ensures clarity, smooth transitions, and thorough documentation throughout the process.
+[2025-11-10T19:38:00] codex
+**Planning for tests and module updates**
+
+I see that there aren’t many tests for the runtime, but I’m considering adding tests, possibly in the crates or as integration tests for spawning and shutting down. However, I was advised not to implement them just yet, even though they are part of the plan. 
+
+There are risks involved, particularly with breaking existing downstream code that expects certain imports like `crate::context` or `crate::metrics`. To mitigate this, I'll need a migration path with re-exports and deprecation warnings.
+
+Additionally, I’m thinking about creating a new module named `stream_transport.rs` and checking existing module names to avoid collisions, as there’s already a `stream.rs`. I might use `stream_util.rs` or `net.rs` instead.
+[2025-11-10T19:38:00] codex
+**Designing StreamShared structure**
+
+I'm outlining the design for a `struct StreamShared` that will have several fields, including `channels`, `type_to_topic`, `channel_capacity`, and an optional `buffer_pool`. 
+
+For methods within this struct, I plan to include a constructor `new` for initializing with `channel_capacity` and `buffer_pool`. There will also be a method to `get_or_create_channel` for topics, and `register_message_type` to map message types to topics.
+
+Additionally, I’m defining a generic function `spawn_accept_loop` that will handle accepting connections in a loop, along with a method `spawn_client_reader` to read from clients.
+
+Finally, I aim to provide a generic `StreamPublisher` that implements the publishing functionality for different writable types.
+[2025-11-10T19:38:00] codex
+**Reducing duplication in transport files**
+
+I’m looking to simplify the code in both `tcp.rs` and `unix.rs`. I plan to keep `TcpTransport` and `UnixTransport` to store a shared `StreamShared`, along with `listener` and `write_half`, possibly including an address or path. Their spawn loops will now be streamlined into one-liners that call `shared.spawn_accept_loop`.
+
+For message handling, `publisher<M>` will return a `StreamPublisher`, and `subscriber<M>` will register message types and create a new `StreamSubscriber`. The `get_or_create_channel` method will utilize the shared instance.
+
+For testing, I’ll re-run the tcp/unix/stream tests to ensure they pass, since the semantics are preserved. I’ll also add unit tests for `StreamShared` and `StreamPublisher`. However, I must be cautious with trait objects and lifetimes, as well as ensure log consistency to avoid confusion. Overall, dependencies are minimal aside from the existing modules.
+[2025-11-10T19:38:00] codex
+**Switching to Shared Structure**
+
+I’m switching `unix.rs` to utilize a shared structure step-by-step. This involves replacing `get_or_create_channel`, `subscriber`, and `spawn_client_reader` functions to leverage this shared instance, along with updating the accept loop. The `UnixPublisher<M>` will either be a type alias for `StreamPublisher<OwnedWriteHalf, M>` or wrapped in a newtype for backward compatibility. I’ll follow a similar process for `tcp.rs` and eliminate duplicated code.
+
+**API Compatibility and Testing**
+
+To maintain API compatibility, I’ll keep existing public structs as type aliases or newtypes around `StreamPublisher<W, M>`. I’ll run existing tests to ensure they compile and add explicit tests for the `StreamPublisher` generic.
+
+**Risks and Dependencies**
+
+I need to manage async write bounds and ensure type inference works well. Logging differences will be addressed by passing context strings for labeling. Dependencies will include reading paths from `stream.rs` and using `BufferPool`.
+
+**Routing Functionality**
+
+I’ll add private helpers for routing services and refactor associated methods while ensuring tests pass. Consistency in error messages will be maintained.
+
+**Examples and Testing**
+
+Creating a shared common module for examples is planned, with functions for demonstration and a structured `Demo` struct. I’ll build and run the examples while ensuring they remain independent.
+
+**References**
+
+Finally, I’ll compile a list of necessary file references with their starting lines. Here’s a summarized list of important files to check:
+
+- `service_runtime.rs:` lines 1 and 10
+- `runtime.rs:` lines 1 and 9
+- `service_context.rs:` line 1
+- `context.rs:` line 1
+- `service_metrics.rs:` line 1
+- `metrics.rs:` line 1
+- `tcp.rs:` lines 39, 73, 93, 125, 139, 149, 160
+- `unix.rs:` (similarly)
+- `stream.rs:` line 1
+- `bus.rs:` lines 272 and 358
+
+I’ll also note any README references that require updates. 
+
+This structured approach ensures clarity, smooth transitions, and thorough documentation throughout the process.
+[2025-11-10T19:38:00] codex
+
+Below is a concrete, step-by-step consolidation plan with sequencing, affected files, tests, risks, and cross-area dependencies. I’ve inspected and referenced the specific files/sections so you can verify quickly.
+
+**Overview**
+- Keep the “service_*” modules as canonical; deprecate/remove legacy “runtime/context/metrics”.
+- Extract generic stream-transport utilities and reuse in TCP and Unix transports.
+- Factor MessageBus smart-routing into a shared helper to remove repeated topology logic.
+- Optionally add a small “examples/common” helper to de-boilerplate generic examples.
+
+**1) ServiceRuntime Consolidation**
+Goal: Unify on `service_runtime.rs` and deprecate/retire the legacy `runtime.rs` (and its associated legacy `context.rs`/`metrics.rs` duplicates).
+
+- Design
+  - Canonicalize `ServiceRuntime`, `ServiceContext`, `ServiceMetrics` from the already-exported modules.
+  - Remove legacy modules (or temporarily re-export with deprecation to ease migration).
+  - Keep the stronger semantics from `service_runtime.rs` (oneshot completion, supervised restart loop, tracked join handles).
+
+- Steps (sequence)
+  1) Confirm public API surface: `lib.rs` already exports `service_*` and not the legacy modules.
+  2) Update docs that still point to legacy paths. Then (option A) delete legacy files; (option B) add deprecated re-exports for one release:
+     - `pub use service_runtime::ServiceRuntime as Runtime` (deprecated)
+     - `pub use service_context::ServiceContext as Context` (deprecated)
+     - `pub use service_metrics::ServiceMetrics as Metrics` (deprecated)
+  3) Keep `service_runtime.rs` behavior as the source of truth (oneshot completion, shutdown handling).
+  4) Sweep examples/docs to ensure they import `ServiceRuntime`, `ServiceContext`, `ServiceMetrics` from `mycelium_transport` top-level.
+
+- Affected files
+  - Canonical: `crates/mycelium-transport/src/service_runtime.rs:1`, `crates/mycelium-transport/src/service_context.rs:1`, `crates/mycelium-transport/src/service_metrics.rs:1`, `crates/mycelium-transport/src/lib.rs:1`
+  - Legacy to deprecate/remove: `crates/mycelium-transport/src/runtime.rs:1`, `crates/mycelium-transport/src/context.rs:1`, `crates/mycelium-transport/src/metrics.rs:1`
+  - Docs: `README.md:27` (references old path)
+
+- Testing strategy
+  - Build + run examples that use the runtime: `examples/simple_service.rs:1`, `examples/ping_pong_service.rs:1`, `examples/pure_emit_test.rs:1`.
+  - Add a focused unit/integration test for “supervised restart” and “graceful shutdown” (optional, if missing).
+
+- Risks
+  - Downstream users importing legacy module paths will break; mitigate with a temporary deprecated re-export and a CHANGELOG migration note.
+  - README and docs drift (fix early in the cycle).
+
+- Dependencies
+  - None. The macro crate already targets `::mycelium_transport::ServiceContext` (see `crates/mycelium-macro/src/lib.rs:1`).
+
+**2) Unix/TCP Transport Consolidation**
+Goal: Extract repeated stream-transport logic (accept loop, client reader, channel maps, publisher write code) into a shared utility used by both TCP and Unix.
+
+- Design
+  - Add new internal module `stream_transport.rs` (name flexible) that provides:
+    - Shared state: channels map, type→topic map, channel capacity, optional `BufferPool`.
+    - Generic helpers:
+      - `spawn_accept_loop(listener, shared, label)` where `listener.accept()` yields a stream implementing `AsyncRead + Unpin + Send`. Use small newtype wrappers to implement a simple `Accept` trait for `UnixListener` and `TcpListener`.
+      - `spawn_client_reader(read_half, shared, label)`.
+      - `StreamPublisher<W, M>` where `W: AsyncWrite + Unpin + Send` implements `publish()` via `write_message() + flush()`; keep transport-specific type aliases:
+        - `type UnixPublisher<M> = StreamPublisher<tokio::net::unix::OwnedWriteHalf, M>`
+        - `type TcpPublisher<M>  = StreamPublisher<tokio::net::tcp::OwnedWriteHalf, M>`
+    - Continue to use the already-shared `StreamSubscriber<M>` and `handle_stream_connection()` in `stream.rs`.
+
+- Steps (sequence)
+  1) Introduce `stream_transport.rs` with the shared state, accept/reader spawners, and generic publisher.
+  2) Refactor Unix transport to use shared pieces:
+     - Replace local `spawn_accept_loop`, `spawn_client_reader`, `get_or_create_channel`, and publisher struct with calls/aliases to shared utilities.
+     - Preserve public API names via type aliases so no external breakage.
+  3) Refactor TCP transport identically.
+  4) Remove now-dead private code in `unix.rs`/`tcp.rs`.
+
+- Affected files (key sections I inspected)
+  - Shared foundation: `crates/mycelium-transport/src/stream.rs:1` (already generic read path)
+  - Unix: `crates/mycelium-transport/src/unix.rs:115` (accept loop), `:147` (client reader), `:161` (channel getter), `:171` (publisher), `:182` (subscriber)
+  - TCP: `crates/mycelium-transport/src/tcp.rs:93` (accept loop), `:125` (client reader), `:139` (channel getter), `:149` (publisher), `:160` (subscriber)
+  - Buffer pool: `crates/mycelium-transport/src/buffer_pool.rs:1` (for pooled reads)
+
+- Testing strategy
+  - Re-run all existing transport tests:
+    - Unix: `crates/mycelium-transport/src/unix.rs:1` tests
+    - TCP: `crates/mycelium-transport/src/tcp.rs:1` tests
+    - Stream: `crates/mycelium-transport/src/stream.rs:1` tests
+  - Add a small unit test on the new `StreamPublisher` generic (mirrors current Unix/TCP publisher tests) to ensure identical behavior.
+
+- Risks
+  - Trait bounds drift: ensure `write_message()` works with generic `W: AsyncWrite + Unpin + Send`.
+  - Logging/message differences; pass a `&'static str` label (“tcp”/“unix”) into the shared spawners for consistent logs.
+  - Minor typing friction in public API; use type aliases to keep `UnixPublisher<M>`/`TcpPublisher<M>` names stable.
+
+- Dependencies
+  - None beyond `stream.rs` and `BufferPool`.
+
+**3) MessageBus Smart-Routing (publisher_to/subscriber_from)**
+Goal: Factor repeated topology resolution and transport selection into a single private helper.
+
+- Design
+  - Add `MessageBus::resolve_route(&self, peer_service: &str) -> Result<(TransportType, String)>`, returning the transport and the peer node name.
+  - Keep the current behavior of using “first service in each node” when calling `Topology::transport_between()` to avoid changing `Topology` API now. Optionally, later add a `Topology::transport_between_nodes()`.
+
+- Steps (sequence)
+  1) Implement `resolve_route()` inside `bus.rs`.
+  2) Rewrite `publisher_to()` and `subscriber_from()` to:
+     - Call `resolve_route()`.
+     - Local → use `self.local.publisher()/subscriber()`.
+     - Unix/TCP → delegate to existing `unix_publisher()/unix_subscriber()` and `tcp_publisher()/tcp_subscriber()`.
+  3) Keep error messages and types identical to avoid test changes.
+
+- Affected files (key sections I inspected)
+  - `crates/mycelium-transport/src/bus.rs:272` (`publisher_to`)
+  - `crates/mycelium-transport/src/bus.rs:358` (`subscriber_from`)
+  - `crates/mycelium-transport/src/config.rs:1` (Topology/TransportType helpers)
+
+- Testing strategy
+  - Re-run existing bus tests that cover same-node, Unix, TCP, and error paths:
+    - `crates/mycelium-transport/src/bus.rs:500+` (multiple tests already exist)
+  - Optionally add a unit test for `resolve_route()` (private) by indirect coverage via the public methods.
+
+- Risks
+  - Behavioral parity must be exact (especially error strings). Copy current error text into the helper.
+
+- Dependencies
+  - None. Uses existing `tcp_*`/`unix_*` helpers and `Topology`.
+
+**4) Examples/Generic Scaffolding (stretch)**
+Goal: Reduce repetitive example setup while keeping examples readable.
+
+- Design
+  - Add `examples/common/mod.rs` (internal-only) with:
+    - `init_tracing()` (one place to configure logging for examples).
+    - `banner(title: &str)` to print standard headers.
+    - Tiny helpers for sleeping and message bus creation.
+  - Keep example message definitions in each example to stay domain-agnostic.
+
+- Steps (sequence)
+  1) Create `examples/common/mod.rs` with a minimal, zero-dependency API.
+  2) Update `examples/generic/*` to use the helpers for banner/logging/sleep and reuse `MessageBus::new()` wrapper where helpful.
+  3) Keep example logic unchanged (business logic and message definitions stay local).
+
+- Affected files
+  - `examples/generic/managed_service.rs:1`
+  - `examples/generic/game_server.rs:1`
+  - `examples/generic/sensor_network.rs:1`
+  - New: `examples/common/mod.rs` (or `examples/common.rs`)
+
+- Testing strategy
+  - `cargo run --example managed_service`, `game_server`, `sensor_network` to verify output and behavior unchanged.
+  - Ensure the helpers do not pull extra dependencies.
+
+- Risks
+  - Over-abstracting can obscure example pedagogy; keep helpers tiny and optional.
+
+**Cross-Area Sequencing and Dependencies**
+- Do first: 1) Update docs to reference canonical modules (avoids confusion), 2) Add routing helper (small, low-risk), 3) Extract stream-transport utilities (largest change), 4) Clean up legacy runtime/context/metrics and remove code duplication.
+- Optional: Keep a short-lived deprecation phase for legacy re-exports if downstream users import old paths.
+
+**References (inspected)**
+- Service runtime
+  - `crates/mycelium-transport/src/service_runtime.rs:1` (canonical ServiceRuntime)
+  - `crates/mycelium-transport/src/runtime.rs:1` (legacy duplicate)
+  - `crates/mycelium-transport/src/service_context.rs:1` (canonical ServiceContext)
+  - `crates/mycelium-transport/src/context.rs:1` (legacy duplicate)
+  - `crates/mycelium-transport/src/service_metrics.rs:1` (canonical ServiceMetrics)
+  - `crates/mycelium-transport/src/metrics.rs:1` (legacy duplicate)
+  - `crates/mycelium-transport/src/lib.rs:1` (exports)
+  - `README.md:27` (docs still point to legacy path)
+- Stream transports
+  - `crates/mycelium-transport/src/stream.rs:1` (shared read/subscriber path)
+  - `crates/mycelium-transport/src/unix.rs:115` `:147` `:161` `:171` `:182`
+  - `crates/mycelium-transport/src/tcp.rs:93` `:125` `:139` `:149` `:160`
+- MessageBus routing
+  - `crates/mycelium-transport/src/bus.rs:272` (`publisher_to`)
+  - `crates/mycelium-transport/src/bus.rs:358` (`subscriber_from`)
+  - `crates/mycelium-transport/src/config.rs:1` (Topology/TransportType)
+- Examples
+  - `examples/generic/managed_service.rs:1`
+  - `examples/generic/game_server.rs:1`
+  - `examples/generic/sensor_network.rs:1`
+
+**Potential Risks Summary**
+- API drift for downstream users of legacy modules; mitigate with deprecated re-exports for one release and clear migration notes.
+- Genericization of stream publishers/readers must match trait bounds of `write_message()`; use type aliases to keep public types stable.
+- Preserve current error messages in smart-routing to keep tests green.
+- Keep example refactors minimal to retain clarity.
+
+If you want, I can draft the exact module skeleton for `stream_transport.rs` and the `resolve_route()` signature next, without changing any behavior.
+[2025-11-10T19:38:26] tokens used: 70,061

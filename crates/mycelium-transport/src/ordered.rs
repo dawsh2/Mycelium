@@ -319,10 +319,14 @@ mod tests {
         let mut ordered = OrderedSubscriber::new(sub, 0);
 
         // Send messages OUT of order: 0, 2, 1, 3
-        tx.send(Envelope::with_sequence(TestMsg { value: 0 }, 0)).unwrap();
-        tx.send(Envelope::with_sequence(TestMsg { value: 2 }, 2)).unwrap();
-        tx.send(Envelope::with_sequence(TestMsg { value: 1 }, 1)).unwrap();
-        tx.send(Envelope::with_sequence(TestMsg { value: 3 }, 3)).unwrap();
+        tx.send(Envelope::with_sequence(TestMsg { value: 0 }, 0))
+            .unwrap();
+        tx.send(Envelope::with_sequence(TestMsg { value: 2 }, 2))
+            .unwrap();
+        tx.send(Envelope::with_sequence(TestMsg { value: 1 }, 1))
+            .unwrap();
+        tx.send(Envelope::with_sequence(TestMsg { value: 3 }, 3))
+            .unwrap();
 
         // Should receive IN order: 0, 1, 2, 3
         for i in 0..4 {
@@ -347,10 +351,14 @@ mod tests {
         let mut ordered = OrderedSubscriber::new(sub, 0);
 
         // Send messages with a gap: 0, 3, 1, 2
-        tx.send(Envelope::with_sequence(TestMsg { value: 0 }, 0)).unwrap();
-        tx.send(Envelope::with_sequence(TestMsg { value: 3 }, 3)).unwrap();
-        tx.send(Envelope::with_sequence(TestMsg { value: 1 }, 1)).unwrap();
-        tx.send(Envelope::with_sequence(TestMsg { value: 2 }, 2)).unwrap();
+        tx.send(Envelope::with_sequence(TestMsg { value: 0 }, 0))
+            .unwrap();
+        tx.send(Envelope::with_sequence(TestMsg { value: 3 }, 3))
+            .unwrap();
+        tx.send(Envelope::with_sequence(TestMsg { value: 1 }, 1))
+            .unwrap();
+        tx.send(Envelope::with_sequence(TestMsg { value: 2 }, 2))
+            .unwrap();
 
         // Should receive in order: 0, 1, 2, 3
         for i in 0..4 {

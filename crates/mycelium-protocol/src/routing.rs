@@ -40,7 +40,7 @@ pub struct ActorId(pub u64);
 impl ActorId {
     /// Create a new random actor ID
     pub fn new() -> Self {
-        Self(rand::random())
+        Self(random_u64())
     }
 
     /// Create actor ID from a specific value
@@ -76,7 +76,7 @@ pub struct CorrelationId(pub u128);
 impl CorrelationId {
     /// Generate a new random correlation ID
     pub fn new() -> Self {
-        Self(rand::random())
+        Self(random_u128())
     }
 
     /// Create correlation ID from a specific value
@@ -124,7 +124,7 @@ pub struct TraceId(pub u128);
 impl TraceId {
     /// Generate a new random trace ID
     pub fn new() -> Self {
-        Self(rand::random())
+        Self(random_u128())
     }
 
     /// Create trace ID from a specific value
@@ -148,6 +148,18 @@ impl std::fmt::Display for TraceId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:032x}", self.0)
     }
+}
+
+fn random_u64() -> u64 {
+    let mut bytes = [0u8; 8];
+    getrandom::getrandom(&mut bytes).expect("failed to pull randomness");
+    u64::from_le_bytes(bytes)
+}
+
+fn random_u128() -> u128 {
+    let mut bytes = [0u8; 16];
+    getrandom::getrandom(&mut bytes).expect("failed to pull randomness");
+    u128::from_le_bytes(bytes)
 }
 
 #[cfg(test)]

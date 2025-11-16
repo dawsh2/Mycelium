@@ -1,7 +1,8 @@
 use crate::any::{AnyPublisher, AnySubscriber};
 use crate::bounded::{BoundedPublisher, BoundedSubscriber};
-use crate::config::{Topology, TransportConfig, TransportType};
+use crate::config::{EndpointKind, Node, Topology, TransportConfig, TransportType};
 use crate::local::LocalTransport;
+use crate::socket_endpoint::{bind_tcp_endpoint, bind_unix_endpoint, SocketEndpointHandle};
 use crate::tcp::{TcpPublisher, TcpSubscriber, TcpTransport};
 use crate::unix::{UnixPublisher, UnixSubscriber, UnixTransport};
 use crate::{Publisher, Result, Subscriber, TransportError};
@@ -47,6 +48,117 @@ impl MessageBus {
     /// All messages are passed via Arc<T> for zero-copy performance.
     pub fn new() -> Self {
         Self::with_config(TransportConfig::default())
+    }
+
+    /// Bind a Unix domain socket endpoint that mirrors all local bus messages.
+    ///
+    /// External clients (e.g. polygon-terminal) can connect using `UnixTransport::connect`
+    /// and receive TLV-framed messages directly from the in-process bus.
+    pub async fn bind_unix_endpoint<P: AsRef<std::path::Path>>(
+        &self,
+        socket_path: P,
+    ) -> Result<SocketEndpointHandle> {
+        bind_unix_endpoint(socket_path.as_ref().to_path_buf(), self.local.clone()).await
+    }
+
+    /// Bind a TCP endpoint (e.g. 127.0.0.1:9091) that mirrors all local bus messages.
+    ///
+    /// Returns the handle plus the actual bound address (useful when passing port 0).
+    pub async fn bind_tcp_endpoint(
+        &self,
+        addr: SocketAddr,
+    ) -> Result<(SocketEndpointHandle, SocketAddr)> {
+        bind_tcp_endpoint(addr, self.local.clone()).await
+    }
+
+    /// Automatically bind socket endpoints based on topology configuration.
+    ///
+    /// This reads the `endpoint` field from the node configuration in the topology
+    /// and binds the appropriate endpoint (TCP or Unix) if configured.
+    ///
+    /// Returns `Ok(Some(handle))` if an endpoint was bound, `Ok(None)` if no endpoint
+    /// is configured, or an error if binding fails.
+    ///
+    /// # Examples
+    ///
+    /// ```toml
+    /// [[nodes]]
+    /// name = "polygon-adapter"
+    /// services = ["polygon-adapter"]
+    /// endpoint = { kind = "tcp", addr = "127.0.0.1:9091" }
+    /// ```
+    ///
+    /// ```rust
+    /// let topology = Topology::load("topology.toml")?;
+    /// let bus = MessageBus::from_topology(topology, "polygon-adapter");
+    /// let _handle = bus.bind_configured_endpoints().await?;
+    /// ```
+    pub async fn bind_configured_endpoints(&self) -> Result<Option<SocketEndpointHandle>> {
+        let topology = self.topology.as_ref().ok_or_else(|| {
+            TransportError::ServiceNotFound(
+                "No topology configured - use bind_tcp_endpoint() or bind_unix_endpoint() manually"
+                    .to_string(),
+            )
+        })?;
+
+        let node_name = self.node_name.as_ref().ok_or_else(|| {
+            TransportError::ServiceNotFound("No node name configured".to_string())
+        })?;
+
+        // Find this node in the topology
+        let node = topology
+            .nodes
+            .iter()
+            .find(|n| &n.name == node_name)
+            .ok_or_else(|| {
+                TransportError::ServiceNotFound(format!("Node '{}' not found in topology", node_name))
+            })?;
+
+        // Check if endpoint is configured
+        let endpoint_config = match &node.endpoint {
+            Some(cfg) => cfg,
+            None => {
+                tracing::debug!("Node '{}' has no endpoint configuration", node_name);
+                return Ok(None);
+            }
+        };
+
+        // Bind the appropriate endpoint type
+        match endpoint_config.kind {
+            EndpointKind::Tcp => {
+                let addr_str = endpoint_config.addr.as_ref().ok_or_else(|| {
+                    TransportError::ServiceNotFound(format!(
+                        "Node '{}' has TCP endpoint but no addr specified",
+                        node_name
+                    ))
+                })?;
+
+                let addr: SocketAddr = addr_str.parse().map_err(|e| {
+                    TransportError::ServiceNotFound(format!(
+                        "Invalid TCP address '{}' for node '{}': {}",
+                        addr_str, node_name, e
+                    ))
+                })?;
+
+                let (handle, bound_addr) = self.bind_tcp_endpoint(addr).await?;
+                tracing::info!(
+                    "✓ TCP endpoint listening on {} for node '{}' (configured via topology)",
+                    bound_addr,
+                    node_name
+                );
+                Ok(Some(handle))
+            }
+            EndpointKind::Unix => {
+                let socket_path = topology.socket_path(node_name);
+                let handle = self.bind_unix_endpoint(&socket_path).await?;
+                tracing::info!(
+                    "✓ Unix endpoint listening on {} for node '{}' (configured via topology)",
+                    socket_path.display(),
+                    node_name
+                );
+                Ok(Some(handle))
+            }
+        }
     }
 
     /// Create a message bus with custom configuration
@@ -283,34 +395,8 @@ impl MessageBus {
             TransportError::ServiceNotFound("No node name configured".to_string())
         })?;
 
-        // Find target node
-        let target_node = topology.find_node(target_service).ok_or_else(|| {
-            TransportError::ServiceNotFound(format!(
-                "Service '{}' not found in topology",
-                target_service
-            ))
-        })?;
-
-        // Determine transport type using topology's method
-        let transport = if topology.same_node(my_node, &target_node.name) {
-            TransportType::Local
-        } else {
-            // Get first service from each node for transport determination
-            let my_service = topology
-                .nodes
-                .iter()
-                .find(|n| &n.name == my_node)
-                .and_then(|n| n.services.first())
-                .ok_or_else(|| {
-                    TransportError::ServiceNotFound("No services in my node".to_string())
-                })?;
-
-            let target_service_name = target_node.services.first().ok_or_else(|| {
-                TransportError::ServiceNotFound("No services in target node".to_string())
-            })?;
-
-            topology.transport_between(my_service, target_service_name)
-        };
+        let (target_node, transport) =
+            Self::resolve_route(topology, my_node, target_service, "target")?;
 
         match transport {
             TransportType::Local => {
@@ -369,34 +455,8 @@ impl MessageBus {
             TransportError::ServiceNotFound("No node name configured".to_string())
         })?;
 
-        // Find source node
-        let source_node = topology.find_node(source_service).ok_or_else(|| {
-            TransportError::ServiceNotFound(format!(
-                "Service '{}' not found in topology",
-                source_service
-            ))
-        })?;
-
-        // Determine transport type using topology's method
-        let transport = if topology.same_node(my_node, &source_node.name) {
-            TransportType::Local
-        } else {
-            // Get first service from each node for transport determination
-            let my_service = topology
-                .nodes
-                .iter()
-                .find(|n| &n.name == my_node)
-                .and_then(|n| n.services.first())
-                .ok_or_else(|| {
-                    TransportError::ServiceNotFound("No services in my node".to_string())
-                })?;
-
-            let source_service_name = source_node.services.first().ok_or_else(|| {
-                TransportError::ServiceNotFound("No services in source node".to_string())
-            })?;
-
-            topology.transport_between(my_service, source_service_name)
-        };
+        let (source_node, transport) =
+            Self::resolve_route(topology, my_node, source_service, "source")?;
 
         match transport {
             TransportType::Local => {
@@ -430,6 +490,41 @@ impl MessageBus {
                 Ok(AnySubscriber::Tcp(sub))
             }
         }
+    }
+
+    fn resolve_route<'a>(
+        topology: &'a Topology,
+        my_node: &'a str,
+        peer_service: &str,
+        peer_role: &'static str,
+    ) -> Result<(&'a Node, TransportType)> {
+        let peer_node = topology.find_node(peer_service).ok_or_else(|| {
+            TransportError::ServiceNotFound(format!(
+                "Service '{}' not found in topology",
+                peer_service
+            ))
+        })?;
+
+        let transport = if topology.same_node(my_node, &peer_node.name) {
+            TransportType::Local
+        } else {
+            let my_service = topology
+                .nodes
+                .iter()
+                .find(|n| n.name == my_node)
+                .and_then(|n| n.services.first())
+                .ok_or_else(|| {
+                    TransportError::ServiceNotFound("No services in my node".to_string())
+                })?;
+
+            let peer_service_name = peer_node.services.first().ok_or_else(|| {
+                TransportError::ServiceNotFound(format!("No services in {} node", peer_role))
+            })?;
+
+            topology.transport_between(my_service, peer_service_name)
+        };
+
+        Ok((peer_node, transport))
     }
 
     /// Get the number of active subscribers for a message type
@@ -492,6 +587,8 @@ impl Default for MessageBus {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::tcp::TcpTransport;
+    use crate::unix::UnixTransport;
     use mycelium_protocol::impl_message;
     use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
@@ -504,6 +601,213 @@ mod tests {
     }
 
     impl_message!(TestEvent, 1, "test.events");
+
+    #[tokio::test]
+    async fn test_unix_endpoint_broadcasts() {
+        let bus = MessageBus::new();
+        let dir = tempfile::tempdir().unwrap();
+        let socket_path = dir.path().join("bus.sock");
+
+        let handle = bus
+            .bind_unix_endpoint(&socket_path)
+            .await
+            .expect("bind unix endpoint");
+
+        // Allow listener to start
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+        let client = UnixTransport::connect(&socket_path)
+            .await
+            .expect("connect to unix endpoint");
+        let mut remote_sub = client.subscriber::<TestEvent>();
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+        let publisher = bus.publisher::<TestEvent>();
+        publisher
+            .publish(TestEvent {
+                entity_id: 42,
+                value: 1337,
+            })
+            .await
+            .unwrap();
+
+        let received = tokio::time::timeout(tokio::time::Duration::from_secs(1), remote_sub.recv())
+            .await
+            .expect("timed out waiting for unix bridge message")
+            .expect("unix bridge stream closed");
+
+        assert_eq!(received.value, 1337);
+
+        handle.shutdown().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_tcp_endpoint_broadcasts() {
+        let bus = MessageBus::new();
+
+        let (handle, addr) = bus
+            .bind_tcp_endpoint("127.0.0.1:0".parse().unwrap())
+            .await
+            .expect("bind tcp endpoint");
+
+        // Allow listener to start
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+        let client = TcpTransport::connect(addr)
+            .await
+            .expect("connect to tcp endpoint");
+        let mut remote_sub = client.subscriber::<TestEvent>();
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+        let publisher = bus.publisher::<TestEvent>();
+        publisher
+            .publish(TestEvent {
+                entity_id: 7,
+                value: 9,
+            })
+            .await
+            .unwrap();
+
+        let received = tokio::time::timeout(tokio::time::Duration::from_secs(1), remote_sub.recv())
+            .await
+            .expect("timed out waiting for tcp bridge message")
+            .expect("tcp bridge closed");
+
+        assert_eq!(received.entity_id, 7);
+        assert_eq!(received.value, 9);
+
+        handle.shutdown().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_unix_endpoint_remote_publish_to_local() {
+        let bus = MessageBus::new();
+        let dir = tempfile::tempdir().unwrap();
+        let socket_path = dir.path().join("bus.sock");
+
+        let handle = bus
+            .bind_unix_endpoint(&socket_path)
+            .await
+            .expect("bind unix endpoint");
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+        let mut local_sub = bus.subscriber::<TestEvent>();
+
+        let client = UnixTransport::connect(&socket_path)
+            .await
+            .expect("connect remote publisher");
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+        let publisher = client.publisher::<TestEvent>().expect("remote publisher");
+        publisher
+            .publish(TestEvent {
+                entity_id: 500,
+                value: 777,
+            })
+            .await
+            .unwrap();
+
+        let received = tokio::time::timeout(tokio::time::Duration::from_secs(1), local_sub.recv())
+            .await
+            .expect("timeout waiting for remote publish")
+            .expect("local subscriber closed");
+
+        assert_eq!(received.entity_id, 500);
+        assert_eq!(received.value, 777);
+
+        handle.shutdown().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_unix_endpoint_remote_rebroadcast() {
+        let bus = MessageBus::new();
+        let dir = tempfile::tempdir().unwrap();
+        let socket_path = dir.path().join("bus.sock");
+
+        let handle = bus
+            .bind_unix_endpoint(&socket_path)
+            .await
+            .expect("bind unix endpoint");
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+        // Ensure type registry knows about TestEvent even if no local subscribers remain
+        drop(bus.publisher::<TestEvent>());
+
+        let publisher_client = UnixTransport::connect(&socket_path)
+            .await
+            .expect("connect pub client");
+        let subscriber_client = UnixTransport::connect(&socket_path)
+            .await
+            .expect("connect sub client");
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+        let remote_publisher = publisher_client
+            .publisher::<TestEvent>()
+            .expect("remote publisher");
+        let mut remote_subscriber = subscriber_client.subscriber::<TestEvent>();
+
+        remote_publisher
+            .publish(TestEvent {
+                entity_id: 321,
+                value: 654,
+            })
+            .await
+            .unwrap();
+
+        let received = tokio::time::timeout(
+            tokio::time::Duration::from_secs(1),
+            remote_subscriber.recv(),
+        )
+        .await
+        .expect("timeout waiting for remote rebroadcast")
+        .expect("remote subscriber closed");
+
+        assert_eq!(received.entity_id, 321);
+        assert_eq!(received.value, 654);
+
+        handle.shutdown().await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_tcp_endpoint_remote_publish_to_local() {
+        let bus = MessageBus::new();
+
+        let (handle, addr) = bus
+            .bind_tcp_endpoint("127.0.0.1:0".parse().unwrap())
+            .await
+            .expect("bind tcp endpoint");
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+        let mut local_sub = bus.subscriber::<TestEvent>();
+
+        let client = TcpTransport::connect(addr)
+            .await
+            .expect("connect remote publisher");
+        tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
+
+        let publisher = client.publisher::<TestEvent>().expect("remote publisher");
+        publisher
+            .publish(TestEvent {
+                entity_id: 999,
+                value: 1,
+            })
+            .await
+            .unwrap();
+
+        let received = tokio::time::timeout(tokio::time::Duration::from_secs(1), local_sub.recv())
+            .await
+            .expect("timeout waiting for tcp remote publish")
+            .expect("local subscriber closed");
+
+        assert_eq!(received.entity_id, 999);
+        assert_eq!(received.value, 1);
+
+        handle.shutdown().await.unwrap();
+    }
 
     #[tokio::test]
     async fn test_message_bus_basic() {

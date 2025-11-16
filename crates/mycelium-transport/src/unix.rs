@@ -1,15 +1,15 @@
 use crate::buffer_pool::BufferPool;
-use crate::codec::write_message;
 use crate::error::{Result, TransportError};
-use crate::stream::{handle_stream_connection, StreamSubscriber};
-use dashmap::DashMap;
-use mycelium_protocol::{Envelope, Message};
-use std::marker::PhantomData;
+use crate::stream::StreamSubscriber;
+use crate::stream_transport::{spawn_client_reader, StreamPublisher, StreamTransportState};
+use mycelium_protocol::Message;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use tokio::io::AsyncWriteExt;
+use tokio::net::unix::OwnedWriteHalf;
 use tokio::net::{UnixListener, UnixStream};
-use tokio::sync::{broadcast, Mutex};
+use tokio::sync::Mutex;
+
+const DEFAULT_CHANNEL_CAPACITY: usize = 1000;
 
 /// Unix socket transport for inter-process communication
 ///
@@ -23,14 +23,8 @@ pub struct UnixTransport {
     socket_path: PathBuf,
     listener: Option<Arc<UnixListener>>,
     /// Client-side persistent connection (for publishers)
-    connection: Option<Arc<Mutex<UnixStream>>>,
-    /// Topic → broadcast channel mapping
-    channels: Arc<DashMap<String, broadcast::Sender<Envelope>>>,
-    /// Type ID → Topic mapping (for efficient routing)
-    type_to_topic: Arc<DashMap<u16, String>>,
-    channel_capacity: usize,
-    /// Optional buffer pool for zero-allocation reading
-    buffer_pool: Option<Arc<BufferPool>>,
+    write_half: Option<Arc<Mutex<OwnedWriteHalf>>>,
+    state: StreamTransportState,
 }
 
 impl UnixTransport {
@@ -51,30 +45,23 @@ impl UnixTransport {
     ) -> Result<Self> {
         let socket_path = socket_path.as_ref().to_path_buf();
 
-        // Create parent directory if needed
         if let Some(parent) = socket_path.parent() {
             tokio::fs::create_dir_all(parent).await?;
         }
 
-        // Remove old socket if it exists
         let _ = tokio::fs::remove_file(&socket_path).await;
 
-        // Bind listener
         let listener = UnixListener::bind(&socket_path)?;
+        let state = StreamTransportState::new(DEFAULT_CHANNEL_CAPACITY, buffer_pool);
 
         let transport = Self {
             socket_path,
             listener: Some(Arc::new(listener)),
-            connection: None,
-            channels: Arc::new(DashMap::new()),
-            type_to_topic: Arc::new(DashMap::new()),
-            channel_capacity: 1000,
-            buffer_pool: buffer_pool.map(Arc::new),
+            write_half: None,
+            state: state.clone(),
         };
 
-        // Spawn accept loop
         transport.spawn_accept_loop();
-
         Ok(transport)
     }
 
@@ -84,51 +71,38 @@ impl UnixTransport {
     pub async fn connect<P: AsRef<Path>>(socket_path: P) -> Result<Self> {
         let socket_path = socket_path.as_ref().to_path_buf();
 
-        // Verify socket exists
         if !socket_path.exists() {
             return Err(TransportError::ServiceNotFound(
                 socket_path.display().to_string(),
             ));
         }
 
-        // Establish persistent connection
         let stream = UnixStream::connect(&socket_path).await?;
+        let (reader, writer) = stream.into_split();
+        let state = StreamTransportState::new(DEFAULT_CHANNEL_CAPACITY, None);
+
+        spawn_client_reader(reader, state.clone(), "Unix");
 
         Ok(Self {
             socket_path,
             listener: None,
-            connection: Some(Arc::new(Mutex::new(stream))),
-            channels: Arc::new(DashMap::new()),
-            type_to_topic: Arc::new(DashMap::new()),
-            channel_capacity: 1000,
-            buffer_pool: None,
+            write_half: Some(Arc::new(Mutex::new(writer))),
+            state,
         })
     }
 
-    /// Spawn the accept loop for incoming connections
     fn spawn_accept_loop(&self) {
         let Some(listener) = self.listener.clone() else {
             return;
         };
-
-        let channels = Arc::clone(&self.channels);
-        let type_to_topic = Arc::clone(&self.type_to_topic);
-        let buffer_pool = self.buffer_pool.clone();
+        let state = self.state.clone();
 
         tokio::spawn(async move {
             loop {
                 match listener.accept().await {
                     Ok((stream, _addr)) => {
                         tracing::debug!("Accepted Unix socket connection");
-                        let channels = Arc::clone(&channels);
-                        let type_to_topic = Arc::clone(&type_to_topic);
-                        let buffer_pool = buffer_pool.clone();
-                        tokio::spawn(async move {
-                            let pool_ref = buffer_pool.as_ref().map(|p| p.as_ref());
-                            if let Err(e) = handle_stream_connection(stream, channels, type_to_topic, pool_ref).await {
-                                tracing::error!("Connection error: {}", e);
-                            }
-                        });
+                        spawn_client_reader(stream, state.clone(), "Unix");
                     }
                     Err(e) => {
                         tracing::error!("Accept error: {}", e);
@@ -138,65 +112,28 @@ impl UnixTransport {
         });
     }
 
-    /// Get or create a broadcast channel for a topic
-    fn get_or_create_channel(&self, topic: &str) -> broadcast::Sender<Envelope> {
-        self.channels
-            .entry(topic.to_string())
-            .or_insert_with(|| broadcast::channel(self.channel_capacity).0)
-            .clone()
-    }
-
     /// Create a publisher for a message type
     ///
     /// Returns None if this is a server-side transport (no client connection).
     pub fn publisher<M: Message>(&self) -> Option<UnixPublisher<M>> {
-        let connection = self.connection.as_ref()?.clone();
-        Some(UnixPublisher {
-            connection,
-            _phantom: PhantomData,
-        })
+        let write_half = self.write_half.as_ref()?.clone();
+        Some(StreamPublisher::new(write_half))
     }
 
     /// Create a subscriber for a message type
     ///
     /// Registers the type_id → topic mapping for efficient routing.
     pub fn subscriber<M: Message>(&self) -> UnixSubscriber<M> {
-        // Register type_id → topic mapping
-        self.type_to_topic.insert(M::TYPE_ID, M::TOPIC.to_string());
+        self.state.register_type::<M>();
 
-        let tx = self.get_or_create_channel(M::TOPIC);
+        let tx = self.state.get_or_create_channel(M::TOPIC);
         let rx = tx.subscribe();
         UnixSubscriber::new(rx)
     }
 }
 
 /// Publisher for Unix socket transport with persistent connection
-pub struct UnixPublisher<M> {
-    connection: Arc<Mutex<UnixStream>>,
-    _phantom: PhantomData<M>,
-}
-
-impl<M: Message> UnixPublisher<M>
-where
-    M: zerocopy::AsBytes,
-{
-    /// Publish a message over Unix socket using the persistent connection
-    ///
-    /// The connection is shared across all publishers from the same transport,
-    /// protected by a mutex. This eliminates the overhead of creating a new
-    /// connection for each message.
-    pub async fn publish(&self, msg: M) -> Result<()> {
-        let mut stream = self.connection.lock().await;
-
-        // Write message to persistent connection
-        write_message(&mut *stream, &msg).await?;
-
-        // Flush to ensure message is sent
-        stream.flush().await?;
-
-        Ok(())
-    }
-}
+pub type UnixPublisher<M> = StreamPublisher<M, OwnedWriteHalf>;
 
 /// Subscriber for Unix socket transport (re-exported from stream module)
 pub type UnixSubscriber<M> = StreamSubscriber<M>;
@@ -220,8 +157,8 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let socket_path = dir.path().join("test.sock");
 
-        let _transport = UnixTransport::bind(&socket_path).await.unwrap();
-        assert!(socket_path.exists());
+        let transport = UnixTransport::bind(&socket_path).await.unwrap();
+        assert!(transport.listener.is_some());
     }
 
     #[tokio::test]
@@ -229,11 +166,10 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let socket_path = dir.path().join("test.sock");
 
-        // Bind server
         let _server = UnixTransport::bind(&socket_path).await.unwrap();
 
-        // Connect client
-        let _client = UnixTransport::connect(&socket_path).await.unwrap();
+        let client = UnixTransport::connect(&socket_path).await.unwrap();
+        assert!(client.publisher::<TestMsg>().is_some());
     }
 
     #[tokio::test]
@@ -241,25 +177,43 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let socket_path = dir.path().join("test.sock");
 
-        // Bind server
         let server = UnixTransport::bind(&socket_path).await.unwrap();
         let mut sub = server.subscriber::<TestMsg>();
 
-        // Give server time to start
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-        // Client publishes
         let client = UnixTransport::connect(&socket_path).await.unwrap();
         let pub_ = client.publisher::<TestMsg>().unwrap();
 
         let msg = TestMsg { value: 42 };
         pub_.publish(msg.clone()).await.unwrap();
 
-        // Wait for message with timeout
         let received = tokio::time::timeout(tokio::time::Duration::from_secs(1), sub.recv())
             .await
             .expect("Timeout waiting for message");
 
         assert_eq!(received.unwrap().value, 42);
+    }
+
+    #[tokio::test]
+    async fn test_unix_subscriber() {
+        let dir = tempfile::tempdir().unwrap();
+        let socket_path = dir.path().join("test.sock");
+
+        let server = UnixTransport::bind(&socket_path).await.unwrap();
+        let mut sub = server.subscriber::<TestMsg>();
+
+        tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+
+        let client = UnixTransport::connect(&socket_path).await.unwrap();
+        let pub_ = client.publisher::<TestMsg>().unwrap();
+
+        pub_.publish(TestMsg { value: 55 }).await.unwrap();
+
+        let received = tokio::time::timeout(tokio::time::Duration::from_secs(1), sub.recv())
+            .await
+            .expect("Timeout waiting for message");
+
+        assert_eq!(received.unwrap().value, 55);
     }
 }

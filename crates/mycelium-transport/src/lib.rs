@@ -1,6 +1,7 @@
 pub mod actor;
 pub mod any;
 pub mod bounded;
+mod bridge;
 pub mod buffer_pool;
 pub mod bus;
 pub mod codec;
@@ -16,14 +17,18 @@ pub mod service_context;
 pub mod service_metrics;
 pub mod service_runtime;
 pub mod shared;
+mod socket_endpoint;
 pub mod stream;
+mod stream_transport;
 pub mod subscriber;
 pub mod tcp;
 pub mod topics;
 pub mod unix;
 pub mod zerocopy;
 
-// TODO: Fix compilation errors in these advanced modules
+// Note: These advanced modules are available but not currently exported due to compilation issues.
+// They require refactoring to work with the current API (mpsc doesn't expose .len(), missing config types, etc.)
+// Future work: Fix and re-export these modules for advanced use cases.
 // pub mod backpressure;
 // pub mod pool;
 
@@ -50,6 +55,7 @@ pub use service_runtime::{Service, ServiceHandle, ServiceRuntime};
 // Re-export proc macros
 pub use mycelium_macro::{routing_config, service};
 pub use shared::{BufferSizes, ChannelManager, ConnectionInfo, TransportType};
+pub use socket_endpoint::SocketEndpointHandle;
 pub use stream::{handle_stream_connection, StreamSubscriber};
 pub use subscriber::Subscriber;
 pub use tcp::{TcpPublisher, TcpSubscriber, TcpTransport};

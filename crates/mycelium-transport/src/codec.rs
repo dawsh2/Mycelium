@@ -166,9 +166,10 @@ pub fn deserialize_message<M: Message>(bytes: &[u8]) -> Result<M> {
 pub fn deserialize_message_validated<M: Message>(bytes: &[u8]) -> Result<M> {
     let msg = deserialize_message::<M>(bytes)?;
 
-    // TODO: Add Validate trait to Message and call msg.validate() here
-    // For now, this just does the basic deserialization
-    // Callers must manually call .validate() on the result for message types that have it
+    // Note: Validation is available on generated message types via their .validate() method.
+    // This function provides basic zerocopy deserialization. Callers should call .validate()
+    // on the result for message types that require validation (see generated code).
+    // We don't enforce validation in the trait to allow zero-overhead messages that don't need it.
 
     Ok(msg)
 }

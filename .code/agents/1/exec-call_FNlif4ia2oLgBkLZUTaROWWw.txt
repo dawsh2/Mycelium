@@ -1,0 +1,365 @@
+/Users/daws/repos/torq/services/infrastructure/redis-state-subscriber/src/main.rs:366:/// Persist pool state to Redis (same format as terminal-UI for compatibility)
+/Users/daws/repos/torq/services/infrastructure/redis-state-subscriber/src/main.rs:415:                "update_count": 1,  // Terminal-UI tracks this, we just initialize
+/Users/daws/repos/torq/Cargo.toml:38:    "services/monitor/terminal-ui",
+/Users/daws/repos/torq/scripts/log_manager.sh:153:    for service in polygon_composite polygon_arbitrage market_data_relay signal_relay terminal-ui dashboard torq-dashboard-websocket api-server; do
+/Users/daws/repos/torq/scripts/monitor_pipeline_metrics.sh:132:    echo -e "${CYAN}Tip: Launch Terminal UI for real-time event viewing${NC}"
+/Users/daws/repos/torq/services/monitor/validation/src/main.rs:1://! Validation Monitor - System-wide TLV Validation with TUI
+/Users/daws/repos/torq/services/monitor/validation/src/main.rs:15:    ValidationTui,
+/Users/daws/repos/torq/services/monitor/validation/src/main.rs:20:#[command(about = "System-wide TLV validation monitor with terminal UI", long_about = None)]
+/Users/daws/repos/torq/services/monitor/validation/src/main.rs:63:    // Create and run TUI
+/Users/daws/repos/torq/services/monitor/validation/src/main.rs:64:    let mut tui = ValidationTui::new(Arc::new(())); // Pass dummy Arc
+/Users/daws/repos/torq/services/monitor/validation/src/main.rs:66:    info!("🖥️  Starting Terminal UI dashboard");
+/Users/daws/repos/torq/services/monitor/validation/src/main.rs:69:    if let Err(e) = tui.run().await {
+/Users/daws/repos/torq/services/monitor/validation/src/main.rs:70:        error!("TUI error: {}", e);
+/Users/daws/repos/torq/services/monitor/validation/src/lib.rs:3://! Terminal UI dashboard for real-time validation metrics. The core validation
+/Users/daws/repos/torq/services/monitor/validation/src/lib.rs:7://! - **Real-Time TUI Dashboard**: htop-style monitoring interface
+/Users/daws/repos/torq/services/monitor/validation/src/lib.rs:16:pub mod validation_tui;
+/Users/daws/repos/torq/services/monitor/validation/src/lib.rs:23:pub use validation_tui::ValidationTui;
+/Users/daws/repos/torq/services/monitor/validation/src/validation_tui.rs:1://! Terminal UI for Real-Time Validation Monitoring
+/Users/daws/repos/torq/services/monitor/validation/src/validation_tui.rs:13:    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+/Users/daws/repos/torq/services/monitor/validation/src/validation_tui.rs:15:use ratatui::{
+/Users/daws/repos/torq/services/monitor/validation/src/validation_tui.rs:21:    Frame, Terminal,
+/Users/daws/repos/torq/services/monitor/validation/src/validation_tui.rs:26:/// TUI application state
+/Users/daws/repos/torq/services/monitor/validation/src/validation_tui.rs:27:pub struct ValidationTui {
+/Users/daws/repos/torq/services/monitor/validation/src/validation_tui.rs:33:impl ValidationTui {
+/Users/daws/repos/torq/services/monitor/validation/src/validation_tui.rs:43:    /// Run the TUI event loop
+/Users/daws/repos/torq/services/monitor/validation/src/validation_tui.rs:45:        // Setup terminal
+/Users/daws/repos/torq/services/monitor/validation/src/validation_tui.rs:50:        let mut terminal = Terminal::new(backend)?;
+/Users/daws/repos/torq/services/monitor/validation/src/validation_tui.rs:53:        let res = self.run_app(&mut terminal).await;
+/Users/daws/repos/torq/services/monitor/validation/src/validation_tui.rs:55:        // Restore terminal
+/Users/daws/repos/torq/services/monitor/validation/src/validation_tui.rs:58:            terminal.backend_mut(),
+/Users/daws/repos/torq/services/monitor/validation/src/validation_tui.rs:62:        terminal.show_cursor()?;
+/Users/daws/repos/torq/services/monitor/validation/src/validation_tui.rs:73:        terminal: &mut Terminal<CrosstermBackend<io::Stdout>>,
+/Users/daws/repos/torq/services/monitor/validation/src/validation_tui.rs:76:            terminal.draw(|f| self.ui(f))?;
+/Users/daws/repos/torq/services/monitor/validation/Cargo.toml:5:description = "System-wide TLV validation and monitoring with terminal UI"
+/Users/daws/repos/torq/services/monitor/validation/Cargo.toml:26:# TUI dependencies
+/Users/daws/repos/torq/services/monitor/validation/Cargo.toml:27:ratatui = "0.26"
+/Users/daws/repos/torq/services/monitor/log-manager/log_manager.sh:106:        terminal-ui)
+/Users/daws/repos/torq/services/monitor/log-manager/log_manager.sh:107:            echo "${PROJECT_ROOT}/config/services/monitor/terminal-ui.toml"
+/Users/daws/repos/torq/services/monitor/log-manager/log_manager.sh:269:    if [[ "$filename" =~ ^(polygon_composite|polygon_arbitrage|flash_arbitrage|terminal-ui|dashboard|market_data_relay|signal_relay|execution_relay) ]]; then
+/Users/daws/repos/torq/services/monitor/log-manager/log_manager.sh:335:    for service in polygon_composite polygon_arbitrage flash_arbitrage market_data_relay signal_relay execution_relay terminal-ui dashboard torq-dashboard-websocket; do
+/Users/daws/repos/torq/scripts/start_live_arbitrage_pipeline.sh:2:# Start Complete Arbitrage Pipeline with Terminal UI Monitoring
+/Users/daws/repos/torq/scripts/start_live_arbitrage_pipeline.sh:3:# Full E2E: Polygon → Adapter → Market Data → Arbitrage → Signals → Terminal
+/Users/daws/repos/torq/scripts/start_live_arbitrage_pipeline.sh:69:echo -e "  Terminal UI (real-time monitoring)"
+/Users/daws/repos/torq/scripts/start_live_arbitrage_pipeline.sh:191:# Step 6: Launch Terminal UI
+/Users/daws/repos/torq/scripts/start_live_arbitrage_pipeline.sh:192:echo -e "${YELLOW}[6/6] Launching Terminal UI...${NC}"
+/Users/daws/repos/torq/scripts/start_live_arbitrage_pipeline.sh:211:echo -e "${GREEN}Launching Terminal UI for real-time monitoring...${NC}"
+/Users/daws/repos/torq/scripts/start_live_arbitrage_pipeline.sh:219:echo -e "${YELLOW}Press 'q' in terminal UI to stop pipeline${NC}"
+/Users/daws/repos/torq/scripts/start_live_arbitrage_pipeline.sh:222:# Launch terminal UI (this blocks)
+/Users/daws/repos/torq/scripts/start_live_arbitrage_pipeline.sh:226:# When terminal UI exits, cleanup runs automatically via trap
+/Users/daws/repos/torq/services/monitor/log-manager/README.md:41:## Integration with Terminal-UI
+/Users/daws/repos/torq/services/monitor/log-manager/README.md:43:Terminal-UI creates **timestamped log files** on each service start:
+/Users/daws/repos/torq/services/adapters/polygon-legacy/src/listener.rs:1177:                                // Also save to Redis for fast lookup by terminal UI and other services
+/Users/daws/repos/torq/README.md:14:6. **Dashboard** - Terminal UI consumes from relays for real-time observability
+/Users/daws/repos/torq/README.md:123:   - **Terminal UI** (optional) - HTTP API server on `http://localhost:3030`
+/Users/daws/repos/torq/README.md:131:   ./target/release/terminal-ui
+/Users/daws/repos/torq/README.md:151:   **Terminal UI (interactive):**
+/Users/daws/repos/torq/README.md:153:   # Open the TUI in a separate terminal (connects to same data sources)
+/Users/daws/repos/torq/README.md:154:   cargo run --release --bin terminal-ui
+/Users/daws/repos/torq/README.md:175:   - Press `Ctrl+C` in the startup script terminal
+/Users/daws/repos/torq/README.md:177:   - Or use terminal-ui Services tab to stop individual services
+/Users/daws/repos/torq/README.md:252:    %% Terminal UI consuming from both relays
+/Users/daws/repos/torq/README.md:253:    subgraph UI["Terminal UI<br/>Live observability"]
+/Users/daws/repos/torq/README.md:255:        TUI[Interactive TUI]
+/Users/daws/repos/torq/README.md:811:                        │ Terminal UI     │
+/Users/daws/repos/torq/README.md:860:Arbitrage      Terminal UI
+/Users/daws/repos/torq/README.md:865:Terminal UI / Future Execution
+/Users/daws/repos/torq/README.md:872:- **Observability**: Structured JSON logging, distributed tracing via trace_id, terminal UI dashboard
+/Users/daws/repos/torq/scripts/DEPRECATED_LOG_SCRIPTS.md:59:- `terminal-ui` - Interactive monitoring
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/api_server.rs:1://! HTTP API server for querying terminal-ui state
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/api_server.rs:74:        "service": "terminal-ui",
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/views/market_data.rs:4:use ratatui::{
+/Users/daws/repos/torq/services/monitor/ui-core/src/lib.rs:4://! for both web and terminal user interfaces. It contains NO business logic - only
+/Users/daws/repos/torq/services/monitor/ui-core/src/lib.rs:27://! Web/Terminal UI (pure rendering)
+/Users/daws/repos/torq/scripts/tui.sh:3:# Start Terminal UI for Torq Trading System
+/Users/daws/repos/torq/scripts/tui.sh:4:# Pure terminal interface for monitoring arbitrage opportunities
+/Users/daws/repos/torq/scripts/tui.sh:8:echo "🚀 Starting Torq Terminal UI..."
+/Users/daws/repos/torq/scripts/tui.sh:30:# Run the terminal UI
+/Users/daws/repos/torq/scripts/tui.sh:31:exec ./target/release/terminal-ui
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/views/validation.rs:7:use ratatui::{
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/views/validation.rs:559:                    format!("API request failed: {}\n\nMake sure the terminal-ui API server is running.", e),
+/Users/daws/repos/torq/services/monitor/ui-core/src/config.rs:1://! Configuration for monitor UIs (web and terminal)
+/Users/daws/repos/torq/services/monitor/ui-core/src/config.rs:14:    pub terminal_ui: Option<TerminalUiConfig>,
+/Users/daws/repos/torq/services/monitor/ui-core/src/config.rs:21:    pub terminal_fallback: bool,
+/Users/daws/repos/torq/services/monitor/ui-core/src/config.rs:29:    Terminal,
+/Users/daws/repos/torq/services/monitor/ui-core/src/config.rs:87:/// Terminal UI specific configuration
+/Users/daws/repos/torq/services/monitor/ui-core/src/config.rs:89:pub struct TerminalUiConfig {
+/Users/daws/repos/torq/services/monitor/ui-core/src/config.rs:120:                terminal_fallback: true,
+/Users/daws/repos/torq/services/monitor/ui-core/src/config.rs:153:            terminal_ui: Some(TerminalUiConfig {
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/views/mod.rs:1://! Terminal UI views
+/Users/daws/repos/torq/services/monitor/ui-core/Cargo.toml:6:description = "Shared UI foundation for web and terminal dashboards"
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/views/services.rs:3://! Launch and monitor Torq services from within the terminal UI
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/views/services.rs:6:use ratatui::{
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/views/pools.rs:5:use ratatui::{
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/views/arbitrage.rs:7:use ratatui::{
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/views/arbitrage.rs:156:            let placeholder = ratatui::widgets::Paragraph::new(
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/app.rs:8:use ratatui::{
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/app.rs:89:                    .title("Torq Monitor | q: Quit | Q: Kill API+TUI"),
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/main.rs:1://! Legacy main.rs - redirects to bin/terminal-ui.rs
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/main.rs:5://! - src/bin/terminal-ui.rs (TUI + HTTP)
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/main.rs:11:    eprintln!("  cargo build --bin terminal-ui");
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/lib.rs:1://! Shared library for terminal-ui and api-server binaries
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/lib.rs:27:            // Return default config - this is fine for terminal UI
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/lib.rs:35:    let config_path = std::path::PathBuf::from("config/services/monitor/terminal-ui.toml");
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/bin/api-server.rs:9://! This is the headless version - no terminal UI, just HTTP API.
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/bin/api-server.rs:17:    if let Err(e) = terminal_ui::init_logging("api-server") {
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/bin/api-server.rs:27:    let _config = terminal_ui::load_config()?;
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/bin/api-server.rs:33:    terminal_ui::api_server::start_api_server().await;
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/bin/terminal-ui.rs:1://! Terminal UI for Torq Trading System
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/bin/terminal-ui.rs:3://! Multi-view terminal interface for monitoring:
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/bin/terminal-ui.rs:15:    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/bin/terminal-ui.rs:17:use ratatui::{backend::CrosstermBackend, Terminal};
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/bin/terminal-ui.rs:19:use terminal_ui::{app::App, load_config};
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/bin/terminal-ui.rs:25:    // Note: Terminal UI logs to file (not stdout/stderr which interferes with TUI)
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/bin/terminal-ui.rs:26:    if let Err(e) = terminal_ui::init_logging("terminal-ui") {
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/bin/terminal-ui.rs:33:    info!("Starting Torq Terminal UI");
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/bin/terminal-ui.rs:40:        terminal_ui::api_server::start_api_server().await;
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/bin/terminal-ui.rs:43:    // Setup terminal WITHOUT mouse capture initially (allows text selection)
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/bin/terminal-ui.rs:52:    let mut terminal = Terminal::new(backend)?;
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/bin/terminal-ui.rs:56:    let res = run_app(&mut terminal, app).await;
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/bin/terminal-ui.rs:58:    // Restore terminal
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/bin/terminal-ui.rs:60:    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/bin/terminal-ui.rs:61:    terminal.show_cursor()?;
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/bin/terminal-ui.rs:64:        error!("Terminal UI error: {:?}", err);
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/bin/terminal-ui.rs:67:        info!("Terminal UI exited successfully");
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/bin/terminal-ui.rs:72:/// Run the terminal UI application
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/bin/terminal-ui.rs:74:    terminal: &mut Terminal<CrosstermBackend<std::io::Stdout>>,
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/bin/terminal-ui.rs:78:        terminal.draw(|f| app.render(f))?;
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/bin/terminal-ui.rs:90:                        info!("User requested immediate shutdown (API server + TUI)");
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/bin/terminal-ui.rs:94:                        // Toggle mouse capture at terminal level
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/bin/terminal-ui.rs:97:                            execute!(terminal.backend_mut(), crossterm::event::EnableMouseCapture)?;
+/Users/daws/repos/torq/services/monitor/terminal-ui/src/bin/terminal-ui.rs:101:                                terminal.backend_mut(),
+/Users/daws/repos/torq/services/monitor/dashboard-legacy/extracted-dashboard/RUST_INTEGRATION_COMPLETE.md:74:   # Terminal 1 - Signal Relay
+/Users/daws/repos/torq/services/monitor/dashboard-legacy/extracted-dashboard/RUST_INTEGRATION_COMPLETE.md:77:   # Terminal 2 - Dashboard WebSocket Bridge  
+/Users/daws/repos/torq/services/monitor/dashboard-legacy/extracted-dashboard/RUST_INTEGRATION_COMPLETE.md:81:   # Terminal 3 - Flash Arbitrage Strategy
+/Users/daws/repos/torq/services/monitor/dashboard-legacy/extracted-dashboard/RUST_INTEGRATION_COMPLETE.md:85:   # Terminal 4 - Dashboard Frontend
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:1:# Terminal UI - Unified Monitoring & Control Interface
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:3:**Purpose**: Human-readable TUI with programmatic API access for monitoring and controlling the Torq trading system.
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:5:**Philosophy**: One interface that serves both humans (interactive terminal) and machines (HTTP API). View the same data, control the same services, from terminal or code.
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:11:### Interactive Mode (TUI)
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:14:cargo build --release --bin terminal-ui
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:15:./target/release/terminal-ui
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:18:cargo run --release --bin terminal-ui
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:32:# Start terminal-ui (includes API server on :3030)
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:33:./target/release/terminal-ui &
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:47:Terminal UI Process
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:48:├── Interactive TUI (optional - requires TTY)
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:49:│   ├── Ratatui rendering (60 FPS)
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:232:  "service": "terminal-ui"
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:513:mode = "terminal"  # or "web"
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:528:[terminal_ui]
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:537:- **Terminal Refresh**: 250ms
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:547:export TORQ_TERMINAL_UI_PORT=8080
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:581:│ Arbitrage  │ │ Terminal   │ │  Other     │
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:597:    │ Terminal   │
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:695:# Check terminal-ui health
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:697:    echo "❌ Terminal UI not responding"
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:724:1. Launch terminal-ui in TTY
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:738:# /etc/systemd/system/torq-terminal-ui.service
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:740:Description=Torq Terminal UI (API Mode)
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:748:ExecStart=/opt/torq/target/release/terminal-ui
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:759:sudo systemctl start torq-terminal-ui
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:772:### Issue: Terminal UI won't start
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:778:3. Verify target/release exists: `ls -la target/release/terminal-ui`
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:783:cargo build --release --bin terminal-ui
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:784:./target/release/terminal-ui
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:791:1. Verify terminal-ui is running: `ps aux | grep terminal-ui`
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:796:- Ensure terminal-ui process is running
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:835:# Try starting from terminal first to see errors
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:840:**Symptoms**: terminal-ui using >50% CPU
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:850:[terminal_ui]
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:861:cargo build --release --bin terminal-ui
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:864:cargo build --bin terminal-ui
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:867:cargo build --release --bin terminal-ui --features "extra-validation"
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:873:cargo test --package terminal-ui
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:876:cargo test --package terminal-ui --test integration_tests
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:887:   - `render()` - Ratatui drawing
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:917:- **TUI Rendering**: Ratatui 0.26 (formerly tui-rs)
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:918:- **Terminal Backend**: Crossterm 0.27
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:935:├── TUI Event Loop (keyboard, mouse, terminal resize)
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:936:├── Ratatui Rendering (60 FPS)
+/Users/daws/repos/torq/services/monitor/terminal-ui/README.md:969:- [ ] Remote terminal-ui instances (multi-node)
+/Users/daws/repos/torq/services/monitor/terminal-ui/Cargo.toml:2:name = "terminal-ui"
+/Users/daws/repos/torq/services/monitor/terminal-ui/Cargo.toml:6:description = "Terminal UI for monitoring Torq trading system"
+/Users/daws/repos/torq/services/monitor/terminal-ui/Cargo.toml:9:name = "terminal_ui"
+/Users/daws/repos/torq/services/monitor/terminal-ui/Cargo.toml:13:name = "terminal-ui"
+/Users/daws/repos/torq/services/monitor/terminal-ui/Cargo.toml:14:path = "src/bin/terminal-ui.rs"
+/Users/daws/repos/torq/services/monitor/terminal-ui/Cargo.toml:30:# Terminal UI framework
+/Users/daws/repos/torq/services/monitor/terminal-ui/Cargo.toml:31:ratatui = "0.26"
+/Users/daws/repos/torq/services/adapters/polygon/src/listener.rs:1730:                                // Also save to Redis for fast lookup by terminal UI and other services
+/Users/daws/repos/torq/docs/todos/pool-state-shared-library-refactoring.md:117:**terminal-ui** (if/when it uses PoolStateManager):
+/Users/daws/repos/torq/docs/todos/pool-state-shared-library-refactoring.md:142:   - Terminal-UI, API server, etc. can share state logic
+/Users/daws/repos/torq/docs/todo/per-service-introspection.md:480:### Phase 6: Terminal-UI Integration
+/Users/daws/repos/torq/docs/todo/per-service-introspection.md:486:**File: `services/monitor/terminal-ui/src/introspection_client.rs`**
+/Users/daws/repos/torq/docs/todo/per-service-introspection.md:508:#### 6.2 Update terminal-UI views
+/Users/daws/repos/torq/docs/todo/per-service-introspection.md:510:**File: `services/monitor/terminal-ui/src/views/pools.rs`**
+/Users/daws/repos/torq/docs/todo/per-service-introspection.md:521:**File: `services/monitor/terminal-ui/src/views/arbitrage.rs`**
+/Users/daws/repos/torq/docs/todo/per-service-introspection.md:531:**File: `services/monitor/terminal-ui/src/views/services.rs`**
+/Users/daws/repos/torq/docs/todo/per-service-introspection.md:543:- [ ] `services/monitor/terminal-ui/src/introspection_client.rs` - Client implementation
+/Users/daws/repos/torq/docs/todo/per-service-introspection.md:544:- [ ] Update `services/monitor/terminal-ui/src/views/pools.rs` - Use introspection
+/Users/daws/repos/torq/docs/todo/per-service-introspection.md:545:- [ ] Update `services/monitor/terminal-ui/src/views/arbitrage.rs` - Use introspection
+/Users/daws/repos/torq/docs/todo/per-service-introspection.md:546:- [ ] Update `services/monitor/terminal-ui/src/views/services.rs` - Health checks
+/Users/daws/repos/torq/docs/todo/per-service-introspection.md:662:- Terminal-UI queries all services successfully
+/Users/daws/repos/torq/docs/todo/per-service-introspection.md:672:- [ ] Terminal-UI uses introspection instead of relay consumption
+/Users/daws/repos/torq/docs/todo/per-service-introspection.md:687:4. **Phase 5-6**: Registry + Terminal-UI integration
+/Users/daws/repos/torq/docs/todo/per-service-introspection.md:721:- **Phase 6**: 3-4 hours (Terminal-UI integration)
+/Users/daws/repos/torq/docs/todo/relays.md:622:**Add to terminal-ui or logs**:
+/Users/daws/repos/torq/docs/defi/pipeline-guide.md:5:### 1. Start Complete Pipeline with Terminal UI
+/Users/daws/repos/torq/docs/defi/pipeline-guide.md:17:- ✅ Launches Terminal UI for real-time monitoring
+/Users/daws/repos/torq/docs/defi/pipeline-guide.md:21:In a separate terminal:
+/Users/daws/repos/torq/docs/defi/pipeline-guide.md:33:## Terminal UI Navigation
+/Users/daws/repos/torq/docs/defi/pipeline-guide.md:103:│ Arbitrage Service│            │   Terminal UI    │
+/Users/daws/repos/torq/docs/defi/pipeline-guide.md:122:              │ Terminal UI │
+/Users/daws/repos/torq/docs/defi/pipeline-guide.md:207:### Stage 5: Real-Time Visualization (Terminal UI)
+/Users/daws/repos/torq/docs/defi/pipeline-guide.md:275:   - Check Validation tab in Terminal UI
+/Users/daws/repos/torq/docs/defi/pipeline-guide.md:298:   - Check Arbitrage tab in Terminal UI
+/Users/daws/repos/torq/docs/defi/pipeline-guide.md:319:**Terminal UI shows "Disconnected"**:
+/Users/daws/repos/torq/docs/defi/pipeline-guide.md:422:- [x] Terminal UI monitoring
+/Users/daws/repos/torq/docs/defi/system-architecture.md:221:│ Polygon Arbitrage│            │   Terminal UI    │
+/Users/daws/repos/torq/docs/defi/system-architecture.md:239:   │ Arbitrage Restart │          │  Terminal Restart │
+/Users/daws/repos/torq/docs/defi/system-architecture.md:319:| **Terminal UI** | 2-5 minutes | < 1 second | **99.7% faster** |
+/Users/daws/repos/torq/docs/defi/system-architecture.md:343:- Multiple services (arbitrage, terminal UI) share the same Redis cache
+/Users/daws/repos/torq/docs/defi/system-architecture.md:463:│ Adapter │  │ Arbitrage│  │Terminal │   │  Other   │
+/Users/daws/repos/torq/docs/defi/system-architecture.md:498:# 7. Start terminal UI (also reads cached state)
+/Users/daws/repos/torq/docs/operations/log-management.md:58:/tmp/torq/logs/terminal-ui_2025-10-22_14-25-12.log
+/Users/daws/repos/torq/docs/operations/log-management.md:67:- Terminal-ui creates new log files on each service start (no appending)
+/Users/daws/repos/torq/docs/operations/log-management.md:95:## Terminal-UI Integration
+/Users/daws/repos/torq/docs/operations/log-management.md:99:Services started via terminal-ui now create **timestamped log files**:
+/Users/daws/repos/torq/docs/operations/log-management.md:102:# Start a service via terminal-ui
+/Users/daws/repos/torq/docs/operations/log-management.md:103:./target/release/terminal-ui
+/Users/daws/repos/torq/docs/operations/log-management.md:115:- ✅ Log file path shown in terminal-ui status messages
+/Users/daws/repos/torq/docs/operations/log-management.md:366:- [Terminal UI README](../../services/monitor/terminal-ui/README.md) - UI features including debug mode
+/Users/daws/repos/torq/docs/V2_SYNC_FIX_SUMMARY.md:300:**Add to terminal-ui diagnostics**:
+/Users/daws/repos/torq/docs/V2_SYNC_FIX_SUMMARY.md:430:2. Add subscription health monitoring to terminal-ui
+/Users/daws/repos/torq/services/monitor/dashboard/extracted-dashboard/RUST_INTEGRATION_COMPLETE.md:74:   # Terminal 1 - Signal Relay
+/Users/daws/repos/torq/services/monitor/dashboard/extracted-dashboard/RUST_INTEGRATION_COMPLETE.md:77:   # Terminal 2 - Dashboard WebSocket Bridge  
+/Users/daws/repos/torq/services/monitor/dashboard/extracted-dashboard/RUST_INTEGRATION_COMPLETE.md:81:   # Terminal 3 - Flash Arbitrage Strategy
+/Users/daws/repos/torq/services/monitor/dashboard/extracted-dashboard/RUST_INTEGRATION_COMPLETE.md:85:   # Terminal 4 - Dashboard Frontend
+/Users/daws/repos/torq/services/strategies/polygon_arbitrage/src/pool_state.rs:329:        // Phase 2: Hydrate dynamic state from pool_state:137:* keys (written by terminal-UI/redis-state-subscriber)
+/Users/daws/repos/torq/services/strategies/polygon_arbitrage/src/pool_state.rs:1168:/// Parse pool dynamic state from Redis JSON (written by terminal-UI/redis-state-subscriber)
+/Users/daws/repos/torq/docs/examples/defi-arbitrage/services.md:197:- Terminal UI: All market data TLVs (for monitoring)
+/Users/daws/repos/torq/docs/examples/defi-arbitrage/data-flow.md:279:│  4. Fire-and-forget Redis write (optional, for terminal UI)  │
+/Users/daws/repos/torq/docs/examples/defi-arbitrage/README.md:491:# Terminal 1: Adapter
+/Users/daws/repos/torq/docs/examples/defi-arbitrage/README.md:495:# Terminal 2: Strategy
+/Users/daws/repos/torq/docs/examples/defi-arbitrage/README.md:499:# Terminal 3: Signal Relay
+/Users/daws/repos/torq/docs/examples/defi-arbitrage/topology.md:188:│ Polygon Arbitrage│            │   Terminal UI    │
+/Users/daws/repos/torq/docs/examples/defi-arbitrage/topology.md:206:   │ Arbitrage Restart │          │  Terminal Restart │
+/Users/daws/repos/torq/docs/examples/defi-arbitrage/topology.md:289:| **Terminal UI Startup** | 2-5 minutes | < 1 second | **99.7% faster** |
+/Users/daws/repos/torq/docs/examples/defi-arbitrage/topology.md:336:│ Adapter │  │ Arbitrage│  │Terminal │   │  Other   │
+/Users/daws/repos/torq/docs/guides/onboarding.md:63:# Terminal 1: Start Redis
+/Users/daws/repos/torq/docs/guides/onboarding.md:66:# Terminal 2: Start Postgres
+/Users/daws/repos/torq/docs/diagrams/high-level-architecture.mmd:23:            UI["Terminal UI<br/>实时监控界面"]
+/Users/daws/repos/torq/docs/diagrams/high-level-architecture.mmd:24:            click UI "terminal-ui.html" "Click to explore Terminal UI"
+/Users/daws/repos/torq/libs/monitor/streaming/src/lib.rs:3://! Provides shared components for both api-server and terminal-ui to consume
+/Users/daws/repos/torq/docs/architecture/observability.md:116:Consumers (Dashboard, Terminal UI) subscribe to TLV relays and tail log files, computing metrics on-the-fly:
+/Users/daws/repos/torq/docs/architecture/observability.md:484:   - Terminal UI shows trace_id for signal tracking
+/Users/daws/repos/torq/docs/architecture/data-flow.md:273:│ Polygon Arbitrage│            │   Terminal UI    │
+/Users/daws/repos/torq/docs/architecture/data-flow.md:291:   │ Arbitrage Restart │          │  Terminal Restart │
+/Users/daws/repos/torq/docs/architecture/data-flow.md:371:| **Terminal UI** | 2-5 minutes | < 1 second | **99.7% faster** |
+/Users/daws/repos/torq/docs/diagrams/runtime-data-flow.mmd:39:    %% Terminal UI consuming from both relays
+/Users/daws/repos/torq/docs/diagrams/runtime-data-flow.mmd:40:    subgraph UI["Terminal UI<br/>Live observability"]
+/Users/daws/repos/torq/docs/diagrams/runtime-data-flow.mmd:42:        TUI[Interactive TUI]
+/Users/daws/repos/torq/docs/diagrams/runtime-data-flow.mmd:93:    class API,TUI ui
+/Users/daws/repos/torq/docs/architecture/index.html:115:                            UI["Terminal UI<br/>实时监控界面"]
+/Users/daws/repos/torq/docs/architecture/index.html:116:                            click UI "terminal-ui.html" "Click to explore Terminal UI"
+/Users/daws/repos/torq/docs/architecture/README.md:21:- **[`terminal-ui.html`](terminal-ui.html)** - Monitoring interface (coming soon)
+/Users/daws/repos/torq/docs/architecture/README.md:65:- **Terminal UI** - Real-time observability dashboard
+/Users/daws/repos/torq/docs/architecture/pool_validation_rpc.md:8:service authoritative while the terminal UI and CLI act as thin clients.
+/Users/daws/repos/torq/docs/architecture/pool_validation_rpc.md:36:1. Terminal UI packages the currently selected pair(s) into a
+/Users/daws/repos/torq/docs/emergency-recovery/relay-vs-actor-architecture.md:28:Dashboard (terminal-ui / torq-dashboard-websocket)
+/Users/daws/repos/torq/docs/emergency-recovery/relay-vs-actor-architecture.md:37:| `terminal-ui` | services/monitor/terminal-ui | TUI monitoring/control | ✅ PRODUCTION |
+/Users/daws/repos/torq/docs/emergency-recovery/relay-vs-actor-architecture.md:206:- Terminal UI not configured to launch actor bundles
+/Users/daws/repos/torq/docs/emergency-recovery/relay-vs-actor-architecture.md:280:   cargo build --release --bin terminal-ui
+/Users/daws/repos/torq/docs/emergency-recovery/relay-vs-actor-architecture.md:285:   # Option 1: Using terminal UI
+/Users/daws/repos/torq/docs/emergency-recovery/relay-vs-actor-architecture.md:286:   ./target/release/terminal-ui
+/Users/daws/repos/torq/docs/emergency-recovery/relay-vs-actor-architecture.md:296:   ./target/release/terminal-ui &
+/Users/daws/repos/torq/docs/emergency-recovery/relay-vs-actor-architecture.md:307:   # Check terminal UI shows data flowing
+/Users/daws/repos/torq/docs/emergency-recovery/relay-vs-actor-architecture.md:358:# Terminal 1: Relay-based
+/Users/daws/repos/torq/docs/emergency-recovery/relay-vs-actor-architecture.md:361:# Terminal 2: Actor-based (when ready)
+/Users/daws/repos/torq/docs/emergency-recovery/relay-vs-actor-architecture.md:538:2. Update terminal UI:
+/Users/daws/repos/torq/docs/emergency-recovery/relay-vs-actor-architecture.md:642:✅ **Run polygon_composite + polygon_arbitrage + terminal-ui**
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:16:- ✅ Terminal UI displays real-time data (pools, swaps, arbitrage signals)
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:18:- ✅ User can start/stop/monitor via terminal-ui
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:22:## Collaboration Interface: Terminal UI
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:24:**Primary entry point**: `./target/release/terminal-ui`
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:26:**Documentation**: See `services/monitor/terminal-ui/README.md` for complete API reference
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:28:### Why Terminal UI?
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:36:### Terminal UI Capabilities
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:54:**See**: `services/monitor/terminal-ui/README.md` for complete API documentation and examples
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:56:### Extending Terminal UI
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:66:// services/monitor/terminal-ui/src/api_server.rs
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:77:3. Implement `render()` with Ratatui
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:80:**Principle**: If terminal-ui lacks needed functionality, ADD IT. Don't create separate tools.
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:114:- ✅ Terminal UI (monitoring, service management)
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:145:cargo build --release --bin terminal-ui
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:148:### Start via Terminal UI (Recommended)
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:150:./target/release/terminal-ui
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:172:ps aux | grep -E "polygon|arbitrage|terminal"
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:179:pkill -f "terminal-ui"
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:211:### Terminal UI Config
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:213:services/monitor/terminal-ui/config/
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:228:3. **Restart service via terminal-ui**:
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:232:4. **Monitor results** in terminal-ui tabs
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:238:**Example: Add gas price monitoring to terminal-ui**
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:240:1. **Backend**: Add endpoint to `services/monitor/terminal-ui/src/api_server.rs`:
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:248:2. **Frontend**: Add tab to terminal UI (TUI library: ratatui):
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:250:   // services/monitor/terminal-ui/src/main.rs
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:259:   cargo build --release --bin terminal-ui
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:260:   ./target/release/terminal-ui
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:307:3. ✅ Start via terminal-ui
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:362:4. **Terminal UI as interface** ("we collaborate through terminal-ui endpoints")
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:372:Collaboration interface: terminal-ui (add API endpoints as needed).
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:381:**With Terminal UI as Interface**:
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:382:- ✅ AI can query terminal-ui API endpoints for system state
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:384:- ✅ Human and AI both see the same data (terminal-ui tabs)
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:389:2. AI reads code, checks terminal-ui state
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:392:5. Human rebuilds and tests via terminal-ui
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:393:6. Both verify results in terminal-ui
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:410:❌ **Working around terminal-ui limitations**
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:411:- If terminal-ui lacks functionality, ADD IT
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:427:- "No data in terminal-ui" → Check logs, verify relay traffic
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:438:- Terminal-ui "Data Flow" tab shows TLV messages streaming
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:443:- Terminal-ui "Pools" tab shows discovered pools
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:448:- Terminal-ui "Arbitrage" tab shows opportunities
+/Users/daws/repos/torq/docs/emergency-recovery/current-session-context.md:464:- Terminal UI gets significant new features
+/Users/daws/repos/torq/docs/GUARDRAILS/specs/pool-metadata.md:173:### terminal-ui (monitor)
+/Users/daws/repos/torq/docs/emergency-recovery/README.md:33:terminal-ui              # services/monitor/terminal-ui/
+/Users/daws/repos/torq/docs/emergency-recovery/README.md:48:cargo build --release --bin terminal-ui
+/Users/daws/repos/torq/docs/emergency-recovery/README.md:55:./target/release/terminal-ui
+/Users/daws/repos/torq/docs/emergency-recovery/quick-reference.md:12:| **Production Binaries** | polygon_composite, polygon_arbitrage, terminal-ui |
+/Users/daws/repos/torq/docs/emergency-recovery/quick-reference.md:23:# Option 1: Terminal UI (recommended)
+/Users/daws/repos/torq/docs/emergency-recovery/quick-reference.md:24:./target/release/terminal-ui
+/Users/daws/repos/torq/docs/emergency-recovery/quick-reference.md:33:./target/release/terminal-ui &
+/Users/daws/repos/torq/docs/emergency-recovery/quick-reference.md:45:ps aux | grep -E "polygon|arbitrage|terminal-ui"
+/Users/daws/repos/torq/docs/emergency-recovery/quick-reference.md:52:pkill -f "terminal-ui"
+/Users/daws/repos/torq/docs/emergency-recovery/quick-reference.md:132:cargo build --release --bin terminal-ui
+/Users/daws/repos/torq/docs/architecture/patterns/ipc_messaging_design.md:257:This design provides the best of both worlds: a simple and intuitive public API, with a clean, modular, and high-performance implementation.
+/Users/daws/repos/torq/config/services/registry.toml:2:# Defines all services that can be monitored and managed by the Terminal UI
+/Users/daws/repos/torq/config/services/registry.toml:34:description = "HTTP API and TUI for monitoring and control (terminal-ui binary)"
+/Users/daws/repos/torq/config/services/registry.toml:35:binary = "./target/release/terminal-ui"
+/Users/daws/repos/torq/config/services/registry.toml:37:config_path = "config/services/monitor/terminal-ui.toml"
+/Users/daws/repos/torq/docs/GUARDRAILS/MIGRATIONS/M001-remove-is-dex-pool.md:20:After clean slate (empty Redis/Postgres), terminal-ui showed only 4-5 pools instead of the expected 85+ pools within 2 minutes.
+/Users/daws/repos/torq/docs/GUARDRAILS/MIGRATIONS/M001-remove-is-dex-pool.md:152:# Check terminal-ui shows increasing pool count
+/Users/daws/repos/torq/docs/GUARDRAILS/MIGRATIONS/M001-remove-is-dex-pool.md:168:Terminal-ui: Nearly empty pools list
+/Users/daws/repos/torq/docs/GUARDRAILS/MIGRATIONS/M001-remove-is-dex-pool.md:175:Terminal-ui: Steadily populating with pools
+/Users/daws/repos/torq/docs/GUARDRAILS/MIGRATIONS/M001-remove-is-dex-pool.md:249:- ✅ `terminal-ui` - Improved (shows full pool list)
+/Users/daws/repos/torq/docs/GUARDRAILS/MIGRATIONS/M001-remove-is-dex-pool.md:278:- **User Report**: "Terminal-ui now only shows like 4-5 pools, whereas before it was hundreds"
+/Users/daws/repos/torq/config/monitor.toml.template:3:# This file defines configuration for Torq monitoring UIs (web dashboard and terminal UI).
+/Users/daws/repos/torq/config/monitor.toml.template:12:# UI mode: "web", "terminal", "both", or "none"
+/Users/daws/repos/torq/config/monitor.toml.template:14:# - terminal: Launch terminal UI only
+/Users/daws/repos/torq/config/monitor.toml.template:19:# Fallback to terminal if web dashboard fails to start
+/Users/daws/repos/torq/config/monitor.toml.template:20:terminal_fallback = true
+/Users/daws/repos/torq/config/monitor.toml.template:86:# Color scheme (terminal UI)
+/Users/daws/repos/torq/config/monitor.toml.template:116:# Terminal UI Configuration (when ui.mode = "terminal" or "both")
+/Users/daws/repos/torq/config/monitor.toml.template:118:[terminal_ui]
+/Users/daws/repos/torq/config/monitor.toml.template:148:# Example: Terminal-Only Mode (for production servers without browser)
+/Users/daws/repos/torq/config/monitor.toml.template:151:# mode = "terminal"
+/Users/daws/repos/torq/config/monitor.toml.template:152:# terminal_fallback = false
+/Users/daws/repos/torq/config/monitor.toml.template:154:# [terminal_ui]
+/Users/daws/repos/torq/config/monitor.toml.template:169:# [terminal_ui]
+/Users/daws/repos/torq/libs/examples/src/rustdoc_mermaid.rs:34://!     subgraph UI["Terminal UI<br/>Live observability"]
+/Users/daws/repos/torq/libs/examples/src/rustdoc_mermaid.rs:36://!         TUI[Interactive TUI]
+/Users/daws/repos/torq/config/services/monitor/terminal-ui.toml:1:# Terminal UI / API Server Configuration
+/Users/daws/repos/torq/config/services/monitor/terminal-ui.toml:2:# This service provides both the interactive TUI and HTTP API on :3030
+/Users/daws/repos/torq/config/services/monitor/terminal-ui.toml:5:name = "terminal-ui"
+/Users/daws/repos/torq/config/services/monitor/terminal-ui.toml:11:file_prefix = "terminal-ui"

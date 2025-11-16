@@ -1,0 +1,946 @@
+[2025-11-10T22:17:36] OpenAI Codex v0.0.0 (research preview)
+--------
+workdir: /Users/daws/repos/mycelium
+model: gpt-5
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: high
+reasoning summaries: auto
+--------
+[2025-11-10T22:17:36] User instructions:
+Design an implementation plan to bring polygon-terminal (Bandit repo: crates/polygon-terminal) to feature parity with Torq's terminal UI (~/repos/torq/services/observability/terminal-ui). Polygon-terminal already hydrates pool snapshots from Redis at startup and subscribes to Mycelium bus events (pool snapshots, V2/V3 swaps, quote requests/responses). We need a plan that:
+- Catalogs Torq terminal UI capabilities (layout, widgets, navigation, stats) and maps them to polygon-terminal.
+- Uses Redis only for warm-start hydration; runtime updates must be event-driven (Pool State Manager, enriched listener events, etc.), no polling.
+- Covers state management, subscription wiring, and UI rendering changes to match Torq.
+- Notes data differences: polygon-terminal should rely on existing Bandit services for updates, ignoring Torq's custom data flow.
+- Includes migration/testing steps and rollout considerations.
+Produce a clear, phased plan referencing relevant components/files where helpful.
+
+[Running in read-only mode - no modifications allowed]
+[2025-11-10T22:17:36] OpenAI Codex v0.0.0 (research preview)
+--------
+workdir: /Users/daws/repos/mycelium
+model: gpt-5
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: high
+reasoning summaries: auto
+--------
+[2025-11-10T22:17:36] User instructions:
+Design an implementation plan to bring polygon-terminal (Bandit repo: crates/polygon-terminal) to feature parity with Torq's terminal UI (~/repos/torq/services/observability/terminal-ui). Polygon-terminal already hydrates pool snapshots from Redis at startup and subscribes to Mycelium bus events (pool snapshots, V2/V3 swaps, quote requests/responses). We need a plan that:
+- Catalogs Torq terminal UI capabilities (layout, widgets, navigation, stats) and maps them to polygon-terminal.
+- Uses Redis only for warm-start hydration; runtime updates must be event-driven (Pool State Manager, enriched listener events, etc.), no polling.
+- Covers state management, subscription wiring, and UI rendering changes to match Torq.
+- Notes data differences: polygon-terminal should rely on existing Bandit services for updates, ignoring Torq's custom data flow.
+- Includes migration/testing steps and rollout considerations.
+Produce a clear, phased plan referencing relevant components/files where helpful.
+
+[Running in read-only mode - no modifications allowed]
+[2025-11-10T22:17:41] codex
+
+I’ll scan both repos to catalog Torq’s terminal UI features and polygon-terminal’s current structure, so I can map capabilities and propose phased changes.
+[2025-11-10T22:17:42] exec bash -lc 'ls -la' in /Users/daws/repos/mycelium
+[2025-11-10T22:17:42] bash -lc 'ls -la' succeeded in 15ms:
+total 120
+drwxr-xr-x  17 daws  staff    544 Nov  5 18:38 .
+drwxr-xr-x  34 daws  staff   1088 Nov 10 12:06 ..
+drwxr-xr-x   3 daws  staff     96 Nov  3 14:41 .claude
+drwxr-xr-x   3 daws  staff     96 Nov  4 13:01 .code
+drwxr-xr-x  15 daws  staff    480 Nov 10 14:17 .git
+drwxr-xr-x   3 daws  staff     96 Nov  3 11:07 .github
+-rw-r--r--@  1 daws  staff      8 Nov  2 19:12 .gitignore
+drwxr-xr-x@  3 daws  staff     96 Nov  4 13:45 benches
+-rw-r--r--@  1 daws  staff  44266 Nov 10 10:15 Cargo.lock
+-rw-r--r--   1 daws  staff   2064 Nov 10 10:15 Cargo.toml
+drwxr-xr-x   6 daws  staff    192 Nov 10 13:27 crates
+drwxr-xr-x   8 daws  staff    256 Nov  5 19:37 docs
+drwxr-xr-x  13 daws  staff    416 Nov  4 13:45 examples
+-rw-r--r--   1 daws  staff   5690 Nov 10 11:46 README.md
+drwxr-xr-x   3 daws  staff     96 Nov  3 10:58 scripts
+drwxr-xr-x@  6 daws  staff    192 Nov  5 18:39 target
+drwx------   9 daws  staff    288 Nov  4 13:45 tests
+[2025-11-10T22:17:42] tokens used: 1,778
+[2025-11-10T22:17:43] exec bash -lc 'ls -la crates && rg -n "polygon-terminal|terminal" -S crates -n --max-columns 200' in /Users/daws/repos/mycelium
+[2025-11-10T22:17:43] bash -lc 'ls -la crates && rg -n "polygon-terminal|terminal" -S crates -n --max-columns 200' exited 1 in 43ms:
+total 0
+drwxr-xr-x   6 daws  staff  192 Nov 10 13:27 .
+drwxr-xr-x  17 daws  staff  544 Nov  5 18:38 ..
+drwxr-xr-x   3 daws  staff   96 Nov 10 13:12 bandit-metrics-export
+drwxr-xr-x@  4 daws  staff  128 Nov  4 12:24 mycelium-macro
+drwxr-xr-x   8 daws  staff  256 Nov  4 13:45 mycelium-protocol
+drwxr-xr-x@  5 daws  staff  160 Nov  4 12:24 mycelium-transport
+
+ERROR
+[2025-11-10T22:17:43] tokens used: 2,422
+[2025-11-10T22:17:47] exec bash -lc "rg -n --hidden --no-ignore-vcs -S \"polygon-terminal\" /Users/daws/repos -g '"'!**/target/**'"' -g '"'!**/node_modules/**'"'" in /Users/daws/repos/mycelium
+[2025-11-10T22:17:49] bash -lc "rg -n --hidden --no-ignore-vcs -S \"polygon-terminal\" /Users/daws/repos -g '"'!**/target/**'"' -g '"'!**/node_modules/**'"'" succeeded in 1s:
+/Users/daws/repos/Bandit/STARTME.md:18:`polygon-terminal` | TUI/log-centric monitor: ingests swaps/quotes, polls Redis, tail-reads metrics JSON. Prints 1 Hz summaries. | log output only
+/Users/daws/repos/Bandit/STARTME.md:91:### Terminal UI (`polygon-terminal`)
+/Users/daws/repos/Bandit/.git/logs/refs/heads/main:28:c9024802234a11ffe9b7a5daba0ed10365433ef2 7b91633d28909f30a1b9ce2855f3bc2bb9dea19d dawsh2 <104176151+dawsh2@users.noreply.github.com> 1762803271 -0800	commit: Make polygon-terminal interactive with ratatui
+/Users/daws/repos/Bandit/.git/logs/HEAD:33:c9024802234a11ffe9b7a5daba0ed10365433ef2 7b91633d28909f30a1b9ce2855f3bc2bb9dea19d dawsh2 <104176151+dawsh2@users.noreply.github.com> 1762803271 -0800	commit: Make polygon-terminal interactive with ratatui
+/Users/daws/repos/mycelium/.code/agents/6151d356-ce43-4093-beee-dcbbc985b027/result.txt:407:I can use git to read the code, which is good. Now, I need to check the `polygon-terminal/src/lib.rs` file. My goal is to compare the boot scaffolding to see if there’s any duplication. It’s always helpful to verify how things are structured and ensure there's no unnecessary repetition in the code. Clarity in code is key! Let's dive into that comparison.
+/Users/daws/repos/mycelium/.code/agents/6151d356-ce43-4093-beee-dcbbc985b027/result.txt:408:[2025-11-10T20:11:38] exec bash -lc "git show HEAD:crates/polygon-terminal/src/lib.rs | sed -n '1,220p'" in /Users/daws/repos/bandit
+/Users/daws/repos/mycelium/.code/agents/6151d356-ce43-4093-beee-dcbbc985b027/result.txt:409:[2025-11-10T20:11:38] bash -lc "git show HEAD:crates/polygon-terminal/src/lib.rs | sed -n '1,220p'" succeeded in 27ms:
+/Users/daws/repos/mycelium/.code/agents/6151d356-ce43-4093-beee-dcbbc985b027/result.txt:431:[2025-11-10T20:11:40] exec bash -lc "git show HEAD:crates/polygon-terminal/src/lib.rs | sed -n '220,550p'" in /Users/daws/repos/bandit
+/Users/daws/repos/mycelium/.code/agents/6151d356-ce43-4093-beee-dcbbc985b027/result.txt:432:[2025-11-10T20:11:40] bash -lc "git show HEAD:crates/polygon-terminal/src/lib.rs | sed -n '220,550p'" succeeded in 34ms:
+/Users/daws/repos/mycelium/.code/agents/6151d356-ce43-4093-beee-dcbbc985b027/result.txt:454:[2025-11-10T20:11:42] exec bash -lc "git show HEAD:crates/polygon-terminal/src/lib.rs | sed -n '550,999p'" in /Users/daws/repos/bandit
+/Users/daws/repos/mycelium/.code/agents/6151d356-ce43-4093-beee-dcbbc985b027/result.txt:455:[2025-11-10T20:11:42] bash -lc "git show HEAD:crates/polygon-terminal/src/lib.rs | sed -n '550,999p'" succeeded in 23ms:
+/Users/daws/repos/mycelium/.code/agents/32/exec-call_mU6DiahFWvYZAsh9zKVVc4CU.txt:555:Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs:166:
+/Users/daws/repos/mycelium/.code/agents/32/exec-call_mU6DiahFWvYZAsh9zKVVc4CU.txt:574:Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs:186:
+/Users/daws/repos/mycelium/.code/agents/32/exec-call_mU6DiahFWvYZAsh9zKVVc4CU.txt:593:Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs:198:
+/Users/daws/repos/mycelium/.code/agents/32/exec-call_mU6DiahFWvYZAsh9zKVVc4CU.txt:606:Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs:225:
+/Users/daws/repos/mycelium/.code/agents/32/exec-call_mU6DiahFWvYZAsh9zKVVc4CU.txt:620:Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs:271:
+/Users/daws/repos/mycelium/.code/agents/32/exec-call_mU6DiahFWvYZAsh9zKVVc4CU.txt:657:Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs:283:
+/Users/daws/repos/mycelium/.code/agents/32/exec-call_mU6DiahFWvYZAsh9zKVVc4CU.txt:669:Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs:289:
+/Users/daws/repos/mycelium/.code/agents/32/exec-call_mU6DiahFWvYZAsh9zKVVc4CU.txt:695:Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs:298:
+/Users/daws/repos/mycelium/.code/agents/32/exec-call_mU6DiahFWvYZAsh9zKVVc4CU.txt:707:Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs:428:
+[2025-11-10T22:17:49] tokens used: 2,953
+
+[2025-11-10T22:17:51] thinking
+
+**Exploring repo structures**
+
+I’ve located the Bandit repository at /Users/daws/repos/Bandit. Next, I need to dive into the polygon-terminal crate files to understand how its structure works. I also want to check the torq terminal-ui at /repos/torq/services/observability/terminal-ui. I'll make sure to list the relevant components from both paths to get a clearer picture of how everything fits together. Let’s figure this out!
+[2025-11-10T22:17:54] exec bash -lc "ls -la /Users/daws/repos/torq/services/observability/terminal-ui || true && rg -n --glob '"'!**/target/**'"' --glob '"'!**/node_modules/**'"' -S \"ratatui|tui|terminal|widget|layout|App|Event\" /Users/daws/repos/torq/services/observability/terminal-ui -n --max-columns 200 || true" in /Users/daws/repos/mycelium
+[2025-11-10T22:17:54] bash -lc "ls -la /Users/daws/repos/torq/services/observability/terminal-ui || true && rg -n --glob '"'!**/target/**'"' --glob '"'!**/node_modules/**'"' -S \"ratatui|tui|terminal|widget|layout|App|Event\" /Users/daws/repos/torq/services/observability/terminal-ui -n --max-columns 200 || true" succeeded in 40ms:
+[2025-11-10T22:17:54] tokens used: 12,004
+
+[2025-11-10T22:17:56] thinking
+
+**Exploring the repo path**
+
+I see that the path isn't present, so the user might have their torq repository located in /repos/torq. I should go ahead and list the contents of /Users/daws/repos to check if torq is there. This will give me a clearer idea of what I'm working with! Let's see what I can find in that directory, as it's important to locate the right files for the user.
+[2025-11-10T22:17:57] exec bash -lc "ls -la /Users/daws/repos | sed -n '1,220p'" in /Users/daws/repos/mycelium
+[2025-11-10T22:17:57] bash -lc "ls -la /Users/daws/repos | sed -n '1,220p'" succeeded in 11ms:
+total 96
+drwxr-xr-x   34 daws  staff   1088 Nov 10 12:06 .
+drwxr-x---+ 190 daws  staff   6080 Nov 10 14:17 ..
+drwx------    3 daws  staff     96 Oct 28 13:39 .claude
+drwxr-xr-x    3 daws  staff     96 Oct 29 15:46 .code
+-rw-r--r--@   1 daws  staff  10244 Oct 30 15:41 .DS_Store
+-rw-------    1 daws  staff    763 Nov 10 12:06 .env
+-rw-r--r--@   1 daws  staff   1264 Oct 17 15:10 #dev.org#
+drwxr-xr-x    2 daws  staff     64 Nov  2 15:04 agentics
+drwxr-xr-x    8 daws  staff    256 Nov  4 09:54 alphapulse-site
+drwxr-xr-x   37 daws  staff   1184 Oct 28 16:31 atom
+drwxr-xr-x   21 daws  staff    672 Nov 10 13:32 Bandit
+drwxr-xr-x   42 daws  staff   1344 Oct 29 13:58 code
+-rw-r--r--    1 daws  staff   2274 Nov  2 10:26 FOLD_TEST_PLAN.md
+drwxr-xr-x   20 daws  staff    640 Nov  3 14:37 gpui-component
+drwxr-xr-x   47 daws  staff   1504 Nov  3 11:59 mermaid-live-editor
+drwxr-xr-x   33 daws  staff   1056 Nov  3 11:59 mermaid-preview
+-rw-r--r--    1 daws  staff   8712 Oct 30 19:10 mermaid-preview.md
+drwxr-xr-x   17 daws  staff    544 Nov  5 18:38 mycelium
+-rw-r--r--    1 daws  staff     84 Oct 28 14:49 package-lock.json
+[2025-11-10T22:17:57] tokens used: 12,297
+[2025-11-10T22:17:59] exec bash -lc "ls -la /Users/daws/repos/torq/services/observability | sed -n '1,240p'" in /Users/daws/repos/mycelium
+[2025-11-10T22:17:59] bash -lc "ls -la /Users/daws/repos/torq/services/observability | sed -n '1,240p'" succeeded in 21ms:
+total 0
+drwx------   3 daws  staff   96 Oct 16 14:24 .
+drwxr-xr-x  12 daws  staff  384 Nov  5 16:45 ..
+drwx------   3 daws  staff   96 Oct 16 14:24 dashboard
+[2025-11-10T22:17:59] tokens used: 13,382
+
+[2025-11-10T22:18:01] thinking
+
+I noticed that the terminal UI might not be where I expected it to be, so I'm considering that it could be in a different path within the Torq repository. To clarify my next steps, I'll search for "terminal" within the Torq repo. This could help me locate it, and I'm curious to see what comes up! Let's see if that leads me in the right direction.
+[2025-11-10T22:18:03] exec bash -lc "rg -n --glob '"'!**/target/**'"' --glob '"'!**/node_modules/**'"' -S \"terminal|ratatui|tui\" /Users/daws/repos/torq -n --max-columns 200" in /Users/daws/repos/mycelium
+[2025-11-10T22:18:03] bash -lc "rg -n --glob '"'!**/target/**'"' --glob '"'!**/node_modules/**'"' -S \"terminal|ratatui|tui\" /Users/daws/repos/torq -n --max-columns 200" succeeded in 76ms:
+/Users/daws/repos/torq/services/infrastructure/redis-state-subscriber/src/main.rs:366:/// Persist pool state to Redis (same format as terminal-UI for compatibility)
+/Users/daws/repos/torq/services/infrastructure/redis-state-subscriber/src/main.rs:415:                "update_count": 1,  // Terminal-UI tracks this, we just initialize
+/Users/daws/repos/torq/Cargo.toml:38:    "services/monitor/terminal-ui",
+/Users/daws/repos/torq/scripts/log_manager.sh:153:    for service in polygon_composite polygon_arbitrage market_data_relay signal_relay terminal-ui dashboard torq-dashboard-websocket api-server; do
+/Users/daws/repos/torq/scripts/monitor_pipeline_metrics.sh:132:    echo -e "${CYAN}Tip: Launch Terminal UI for real-time event viewing${NC}"
+/Users/daws/repos/torq/services/monitor/validation/src/main.rs:1://! Validation Monitor - System-wide TLV Validation with TUI
+/Users/daws/repos/torq/services/monitor/validation/src/main.rs:15:    ValidationTui,
+/Users/daws/repos/torq/services/monitor/validation/src/main.rs:20:#[command(about = "System-wide TLV validation monitor with terminal UI", long_about = None)]
+/Users/daws/repos/torq/services/monitor/validation/src/main.rs:63:    // Create and run TUI
+/Users/daws/repos/torq/services/monitor/validation/src/main.rs:64:    let mut tui = ValidationTui::new(Arc::new(())); // Pass dummy Arc
+/Users/daws/repos/torq/services/monitor/validation/src/main.rs:66:    info!("🖥️  Starting Terminal UI dashboard");
+/Users/daws/repos/torq/services/monitor/validation/src/main.rs:69:    if let Err(e) = tui.run().await {
+/Users/daws/repos/torq/services/monitor/validation/src/main.rs:70:        error!("TUI error: {}", e);
+/Users/daws/repos/torq/services/monitor/validation/src/lib.rs:3://! Terminal UI dashboard for real-time validation metrics. The core validation
+/Users/daws/repos/torq/services/monitor/validation/src/lib.rs:7://! - **Real-Time TUI Dashboard**: htop-style monitoring interface
+/Users/daws/repos/torq/services/monitor/validation/src/lib.rs:16:pub mod validation_tui;
+/Users/daws/repos/torq/services/monitor/validation/src/lib.rs:23:pub use validation_tui::ValidationTui;
+/Users/daws/repos/torq/services/monitor/validation/src/validation_tui.rs:1://! Terminal UI for Real-Time Validation Monitoring
+/Users/daws/repos/torq/services/monitor/validation/src/validation_tui.rs:13:    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
+/Users/daws/repos/torq/services/monitor/validation/src/validation_tui.rs:15:use ratatui::{
+[2025-11-10T22:18:03] tokens used: 14,637
+
+[2025-11-10T22:18:07] thinking
+
+**Inspecting terminal-ui structure**
+
+I'm looking at the Torq terminal UI located at services/monitor/terminal-ui. I need to check its structure, which includes files like app.rs, views, lib.rs, and api_server.rs. My next step is to catalog its features—like layout, widgets, navigation, and stats. I'll dive into the core files to get a better understanding of how everything's organized. It's important to gather all these details!
+[2025-11-10T22:18:09] exec bash -lc "sed -n '1,220p' /Users/daws/repos/torq/services/monitor/terminal-ui/src/app.rs; echo '---'; sed -n '1,220p' /Users/daws/repos/torq/services/monitor/terminal-ui/src/lib.rs; echo '---'; sed -n '1,220p' /Users/daws/repos/torq/services/monitor/terminal-ui/src/bin/terminal-ui.rs; echo '---'; ls -la /Users/daws/repos/torq/services/monitor/terminal-ui/src/views; echo '---'; sed -n '1,200p' /Users/daws/repos/torq/services/monitor/terminal-ui/src/views/pools.rs; echo '---'; sed -n '1,200p' /Users/daws/repos/torq/services/monitor/terminal-ui/src/views/arbitrage.rs; echo '---'; sed -n '1,200p' /Users/daws/repos/torq/services/monitor/terminal-ui/src/views/services.rs; echo '---'; sed -n '1,200p' /Users/daws/repos/torq/services/monitor/terminal-ui/src/views/market_data.rs; echo '---'; sed -n '1,200p' /Users/daws/repos/torq/services/monitor/terminal-ui/src/views/validation.rs" in /Users/daws/repos/mycelium
+[2025-11-10T22:18:09] bash -lc "sed -n '1,220p' /Users/daws/repos/torq/services/monitor/terminal-ui/src/app.rs; echo '---'; sed -n '1,220p' /Users/daws/repos/torq/services/monitor/terminal-ui/src/lib.rs; echo '---'; sed -n '1,220p' /Users/daws/repos/torq/services/monitor/terminal-ui/src/bin/terminal-ui.rs; echo '---'; ls -la /Users/daws/repos/torq/services/monitor/terminal-ui/src/views; echo '---'; sed -n '1,200p' /Users/daws/repos/torq/services/monitor/terminal-ui/src/views/pools.rs; echo '---'; sed -n '1,200p' /Users/daws/repos/torq/services/monitor/terminal-ui/src/views/arbitrage.rs; echo '---'; sed -n '1,200p' /Users/daws/repos/torq/services/monitor/terminal-ui/src/views/services.rs; echo '---'; sed -n '1,200p' /Users/daws/repos/torq/services/monitor/terminal-ui/src/views/market_data.rs; echo '---'; sed -n '1,200p' /Users/daws/repos/torq/services/monitor/terminal-ui/src/views/validation.rs" succeeded in 58ms:
+//! Application state and coordination
+
+use crate::views::{
+    arbitrage::ArbitrageView, market_data::MarketDataView, pools::PoolsView,
+    services::ServicesView, validation::ValidationView,
+};
+use anyhow::Result;
+use ratatui::{
+    layout::{Constraint, Direction, Layout},
+    style::{Color, Modifier, Style},
+    text::{Line, Span},
+    widgets::{Block, Borders, Tabs},
+    Frame,
+};
+use ui_core::MonitorConfig;
+
+/// Main application state
+pub struct App {
+    config: MonitorConfig,
+    current_tab: usize,
+[2025-11-10T22:18:09] tokens used: 24,064
+[2025-11-10T22:18:13] exec bash -lc "ls -la /Users/daws/repos/Bandit/crates/polygon-terminal && sed -n '1,240p' /Users/daws/repos/Bandit/crates/polygon-terminal/Cargo.toml && sed -n '1,240p' /Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs" in /Users/daws/repos/mycelium
+[2025-11-10T22:18:13] bash -lc "ls -la /Users/daws/repos/Bandit/crates/polygon-terminal && sed -n '1,240p' /Users/daws/repos/Bandit/crates/polygon-terminal/Cargo.toml && sed -n '1,240p' /Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs" succeeded in 37ms:
+total 8
+drwxr-xr-x   4 daws  staff  128 Nov 10 11:30 .
+drwx------  22 daws  staff  704 Nov 10 13:26 ..
+-rw-r--r--   1 daws  staff  507 Nov 10 11:30 Cargo.toml
+drwxr-xr-x   5 daws  staff  160 Nov 10 13:48 src
+[package]
+name = "polygon-terminal"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+anyhow.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+mycelium-transport = { path = "../../../mycelium/crates/mycelium-transport" }
+bandit-schemas = { path = "../bandit-schemas" }
+redis = { version = "0.27", features = ["tokio-comp", "connection-manager"] }
+dashmap = "6"
+serde = { version = "1", features = ["derive"] }
+hex = "0.4"
+[2025-11-10T22:18:13] tokens used: 33,214
+[2025-11-10T22:18:15] exec bash -lc "sed -n '240,800p' /Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs" in /Users/daws/repos/mycelium
+[2025-11-10T22:18:15] bash -lc "sed -n '240,800p' /Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs" succeeded in 26ms:
+                        break Ok(());
+                    }
+                }
+                swap_v3 = self.v3_sub.recv() => {
+                    if let Some(swap) = swap_v3 {
+                        self.swaps_v3_total.fetch_add(1, Ordering::Relaxed);
+                        self.mark_quote_block(&swap.pool_address, swap.block_number);
+                        needs_render = true;
+                    } else {
+                        break Ok(());
+                    }
+                }
+                quote_req = self.quote_req_sub.recv() => {
+                    if let Some(req) = quote_req {
+                        self.quote_requests_total.fetch_add(1, Ordering::Relaxed);
+                        if req.block_number > 0 {
+                            self.mark_quote_block(&req.pool_address, req.block_number);
+                        }
+                        needs_render = true;
+                    } else {
+[2025-11-10T22:18:15] tokens used: 36,728
+[2025-11-10T22:18:18] exec bash -lc "sed -n '1,280p' /Users/daws/repos/Bandit/crates/polygon-terminal/src/app.rs; echo '---'; ls -la /Users/daws/repos/Bandit/crates/polygon-terminal/src/views; echo '---'; sed -n '1,220p' /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/mod.rs; echo '---'; sed -n '1,260p' /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/pools.rs; echo '---'; sed -n '1,260p' /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/overview.rs" in /Users/daws/repos/mycelium
+[2025-11-10T22:18:18] bash -lc "sed -n '1,280p' /Users/daws/repos/Bandit/crates/polygon-terminal/src/app.rs; echo '---'; ls -la /Users/daws/repos/Bandit/crates/polygon-terminal/src/views; echo '---'; sed -n '1,220p' /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/mod.rs; echo '---'; sed -n '1,260p' /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/pools.rs; echo '---'; sed -n '1,260p' /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/overview.rs" exited 1 in 34ms:
+//! Application state and coordination
+
+use crate::views::{
+    events::EventsView, executor::ExecutorView, pools::PoolsView, strategy::StrategyView,
+};
+use anyhow::Result;
+use dashmap::DashMap;
+use ratatui::{
+    layout::{Constraint, Direction, Layout},
+    style::{Color, Modifier, Style},
+    text::{Line, Span},
+    widgets::{Block, Borders, Tabs},
+    Frame,
+};
+use std::path::PathBuf;
+use std::sync::atomic::AtomicU64;
+use std::sync::Arc;
+
+/// Main application state
+pub struct App {
+
+ERROR
+sed: /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/overview.rs: No such file or directory
+[2025-11-10T22:18:18] tokens used: 38,795
+[2025-11-10T22:18:21] exec bash -lc "sed -n '1,280p' /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/events.rs; echo '---'; sed -n '1,260p' /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/strategy.rs; echo '---'; sed -n '1,260p' /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/executor.rs" in /Users/daws/repos/mycelium
+[2025-11-10T22:18:21] bash -lc "sed -n '1,280p' /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/events.rs; echo '---'; sed -n '1,260p' /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/strategy.rs; echo '---'; sed -n '1,260p' /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/executor.rs" succeeded in 25ms:
+//! Events view - live swap events and quote counters
+
+use anyhow::Result;
+use ratatui::{
+    layout::{Constraint, Direction, Layout, Rect},
+    style::{Color, Modifier, Style},
+    text::{Line, Span},
+    widgets::{Block, Borders, Paragraph},
+    Frame,
+};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Arc;
+
+pub struct EventsView {
+    quote_requests_total: Arc<AtomicU64>,
+    quote_responses_total: Arc<AtomicU64>,
+    swaps_v2_total: Arc<AtomicU64>,
+    swaps_v3_total: Arc<AtomicU64>,
+    scroll_offset: usize,
+}
+[2025-11-10T22:18:21] tokens used: 42,756
+
+[2025-11-10T22:18:28] thinking
+
+**Cataloging Torq Terminal UI**
+
+I need to catalog the capabilities of the Torq Terminal UI. In the "Services" tab, I can manage services, check logs, and maintain the service registry. The "Data Flow" tab has four log panes, and the "Pools" tab is quite significant since it renders pool tables and tails TLVs from a UNIX socket to the market data relay path. It's important to check the larger file for stats, but I can first search for "render" functions to simplify my exploration.
+[2025-11-10T22:18:30] exec bash -lc "rg -n \"struct PoolsView|render\\(|update\\(|start_validation|clear_redis_cache|clear\\(\\)\" /Users/daws/repos/torq/services/monitor/terminal-ui/src/views/pools.rs -n --max-columns 200" in /Users/daws/repos/mycelium
+[2025-11-10T22:18:30] bash -lc "rg -n \"struct PoolsView|render\\(|update\\(|start_validation|clear_redis_cache|clear\\(\\)\" /Users/daws/repos/torq/services/monitor/terminal-ui/src/views/pools.rs -n --max-columns 200" succeeded in 45ms:
+166:pub struct PoolsView {
+559:                    message_buffer.clear();
+596:    pub fn render(&mut self, f: &mut Frame, area: Rect) {
+914:    pub async fn update(&mut self) -> Result<()> {
+1025:            message_buffer.clear();
+1392:    pub async fn start_validation(&mut self) -> Result<()> {
+1690:        self.pools.write().await.clear();
+1693:        self.pair_order.clear();
+1694:        self.collapsed_pairs.clear();
+1704:    pub async fn clear_redis_cache(&mut self) -> Result<()> {
+[2025-11-10T22:18:30] tokens used: 46,849
+[2025-11-10T22:18:34] exec bash -lc "sed -n '150,220p' /Users/daws/repos/torq/services/monitor/terminal-ui/src/views/pools.rs; echo '---'; sed -n '596,780p' /Users/daws/repos/torq/services/monitor/terminal-ui/src/views/pools.rs; echo '---'; sed -n '914,1120p' /Users/daws/repos/torq/services/monitor/terminal-ui/src/views/pools.rs; echo '---'; sed -n '1390,1720p' /Users/daws/repos/torq/services/monitor/terminal-ui/src/views/pools.rs" in /Users/daws/repos/mycelium
+[2025-11-10T22:18:34] bash -lc "sed -n '150,220p' /Users/daws/repos/torq/services/monitor/terminal-ui/src/views/pools.rs; echo '---'; sed -n '596,780p' /Users/daws/repos/torq/services/monitor/terminal-ui/src/views/pools.rs; echo '---'; sed -n '914,1120p' /Users/daws/repos/torq/services/monitor/terminal-ui/src/views/pools.rs; echo '---'; sed -n '1390,1720p' /Users/daws/repos/torq/services/monitor/terminal-ui/src/views/pools.rs" succeeded in 32ms:
+    reserve0: u128,
+    #[serde(with = "serde_u128_string")]
+    reserve1: u128,
+    #[serde(with = "serde_u128_string")]
+    sqrt_price_x96: u128,
+    #[serde(with = "serde_u128_string")]
+    liquidity: u128,
+    #[serde(default)]
+    swap_count: u64,
+    block_number: u64,
+
+    /// Timestamp of last update (for flash highlighting)
+    #[serde(skip, default = "default_instant")]
+    last_update: std::time::Instant,
+}
+
+pub struct PoolsView {
+    scroll: u16,
+    selected_pair: usize,
+    pools: Arc<RwLock<HashMap<[u8; 20], PoolDisplay>>>,
+[2025-11-10T22:18:34] tokens used: 47,310
+[2025-11-10T22:18:46] exec bash -lc "rg -n --glob '"'!**/target/**'"' -S \"struct .*Opportunity|Opportunity|Arbitrage|Strategy|QuoteRequest|QuoteResponse|Swap|PoolState\" /Users/daws/repos/Bandit/crates -n --max-columns 200" in /Users/daws/repos/mycelium
+[2025-11-10T22:18:46] bash -lc "rg -n --glob '"'!**/target/**'"' -S \"struct .*Opportunity|Opportunity|Arbitrage|Strategy|QuoteRequest|QuoteResponse|Swap|PoolState\" /Users/daws/repos/Bandit/crates -n --max-columns 200" succeeded in 47ms:
+/Users/daws/repos/Bandit/crates/defi-cost-estimator/src/polygon/mod.rs:49:        // Protocol encoding: 1 = V2 (UniswapV2/SushiSwap), 2 = V3 (UniswapV3/Algebra)
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:12:    fixed_vec::FixedVec, FlashArbitrageExecutionRequest, FlashArbitrageOpportunity,
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:54:    opportunity: &FlashArbitrageOpportunity,
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:143:    /// Gas units per V2 swap (UniswapV2, SushiSwap)
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:208:    111_546 // p75 from 42 V2 swaps (QuickSwap + SushiSwap)
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:310:    opportunity_sub: Subscriber<FlashArbitrageOpportunity>,
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:352:            opportunity_sub: bus.subscriber::<FlashArbitrageOpportunity>(),
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:405:        opportunity: &FlashArbitrageOpportunity,
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:509:                "Opportunity net profit below threshold after gas adjustment"
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:531:        let request = FlashArbitrageExecutionRequest {
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:747:    use bandit_schemas::{fixed_vec::FixedVec, FlashArbitrageOpportunity};
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:758:    fn make_opportunity(net_profit: u128) -> FlashArbitrageOpportunity {
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:769:        FlashArbitrageOpportunity {
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:816:        let mut exec_sub = bus.subscriber::<FlashArbitrageExecutionRequest>();
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:817:        let opp_pub = bus.publisher::<FlashArbitrageOpportunity>();
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:859:        let mut exec_sub = bus.subscriber::<FlashArbitrageExecutionRequest>();
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:860:        let opp_pub = bus.publisher::<FlashArbitrageOpportunity>();
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:888:        let mut exec_sub = bus.subscriber::<FlashArbitrageExecutionRequest>();
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:889:        let opp_pub = bus.publisher::<FlashArbitrageOpportunity>();
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:917:        let mut exec_sub = bus.subscriber::<FlashArbitrageExecutionRequest>();
+[2025-11-10T22:18:46] tokens used: 56,293
+
+[2025-11-10T22:18:52] thinking
+
+**Developing views for arbitrage and validation**
+
+I found messages related to "FlashArbitrageOpportunity" in the polygon-execution-filter and polygon-flash-arbitrage, which could lead to building an "Arbitrage" view. For parity, we might want polygon-terminal to add this view, displaying counters and the latest opportunities, possibly showing paths and net profit with event-driven updates.
+
+Regarding the "Validation" view, we could mirror its style for Bandit. However, we need to rely on existing Bandit services for updates, considering "Diagnostics" instead of "Validation" for showing metrics.
+**Detailing state management and restructuring**
+
+I need to develop the plan for the state management architecture, which could include a central AppState or state stores tied to each view. I’m considering using Arc<DashMap> for pools and adding additional watchers. Subscriptions will hook into the bus for message handling and UI updates with ratatui to minimize reflows, aiming for a 50ms tick without polling.
+
+We should restructure polygon-terminal to align with the Torq layout, possibly renaming "Services" to "Runtime," focusing on network health and bus connectivity. It's essential to create a mapping table connecting Torq's features to polygon-terminal and reference relevant files.
+**Ensuring event-driven updates**
+
+I need to emphasize that "Redis should only be for warm-start, while runtime updates must be event-driven." It seems polygon-terminal already uses warm-start hydration, so it’s clear I need to propose removing the reading of metrics files in the Strategy and Executor views, since they currently poll those files at each render.
+
+Since polling isn't allowed, we need to restructure to subscribe to Bandit metrics events instead of reading from JSONL files. I'll need to check if there are events available for strategy and execution metrics.
+[2025-11-10T22:19:00] codex
+**Detailing state management and restructuring**
+
+I need to develop the plan for the state management architecture, which could include a central AppState or state stores tied to each view. I’m considering using Arc<DashMap> for pools and adding additional watchers. Subscriptions will hook into the bus for message handling and UI updates with ratatui to minimize reflows, aiming for a 50ms tick without polling.
+
+We should restructure polygon-terminal to align with the Torq layout, possibly renaming "Services" to "Runtime," focusing on network health and bus connectivity. It's essential to create a mapping table connecting Torq's features to polygon-terminal and reference relevant files.
+[2025-11-10T22:19:00] codex
+**Ensuring event-driven updates**
+
+I need to emphasize that "Redis should only be for warm-start, while runtime updates must be event-driven." It seems polygon-terminal already uses warm-start hydration, so it’s clear I need to propose removing the reading of metrics files in the Strategy and Executor views, since they currently poll those files at each render.
+
+Since polling isn't allowed, we need to restructure to subscribe to Bandit metrics events instead of reading from JSONL files. I'll need to check if there are events available for strategy and execution metrics.
+[2025-11-10T22:19:01] exec bash -lc "rg -n --glob '"'!**/target/**'"' -S \"StrategyMetrics|metrics snapshot|snapshot metrics|strategy metrics|executor metrics|ExecutionResult|GasMetrics|MetricsSnapshot|metrics_path\" /Users/daws/repos/Bandit -n --max-columns 200" in /Users/daws/repos/mycelium
+[2025-11-10T22:19:01] bash -lc "rg -n --glob '"'!**/target/**'"' -S \"StrategyMetrics|metrics snapshot|snapshot metrics|strategy metrics|executor metrics|ExecutionResult|GasMetrics|MetricsSnapshot|metrics_path\" /Users/daws/repos/Bandit -n --max-columns 200" succeeded in 29ms:
+/Users/daws/repos/Bandit/STARTME.md:13:`polygon-gas-tracker` | Aggregates per-block base fee + tip samples (256 cap) from WebSocket feed. | `GasMetrics`
+/Users/daws/repos/Bandit/STARTME.md:93:- Emits a one-line summary every second with counts for swaps, quotes, pool cleanliness, Redis key totals, plus strategy/executor metrics (if JSON files provided).
+/Users/daws/repos/Bandit/STARTME.md:168:- **No opportunities**: inspect `Strategy metrics snapshot` log lines. If `net_profit` consistently below threshold, lower `StrategyConfig.min_net_profit_wei` or revisit gas estimate envs.
+/Users/daws/repos/Bandit/contracts.yaml:271:  GasMetrics:
+/Users/daws/repos/Bandit/contracts.yaml:693:  ExecutionResult:
+/Users/daws/repos/Bandit/contracts.yaml:738:    description: "Periodic executor metrics snapshot"
+/Users/daws/repos/Bandit/docs/architecture_reference.md:57:├── GasMetrics (tlv_type: 103)          ← GasTrackerService output
+/Users/daws/repos/Bandit/bin/polygon_adapter.rs:829:        let terminal_strategy_metrics_path = env::var("TERMINAL_STRATEGY_METRICS_PATH")
+/Users/daws/repos/Bandit/bin/polygon_adapter.rs:832:        let terminal_executor_metrics_path = env::var("TERMINAL_EXECUTOR_METRICS_PATH")
+/Users/daws/repos/Bandit/bin/polygon_adapter.rs:839:            terminal_strategy_metrics_path,
+/Users/daws/repos/Bandit/bin/polygon_adapter.rs:840:            terminal_executor_metrics_path,
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:13:    FlashLoanFeeUpdate, GasMetrics,
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:120:    /// Percentile (0-100) used when sampling priority fees from GasMetrics.
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:123:    /// Optional path for newline-delimited metrics snapshots.
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:295:struct OrchestratorMetricsSnapshot {
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:311:    gas_sub: Subscriber<GasMetrics>,
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:353:            gas_sub: bus.subscriber::<GasMetrics>(),
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:373:    async fn handle_gas_metrics(&self, metrics: &GasMetrics, _ctx: &ServiceContext) {
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:645:        let snapshot = OrchestratorMetricsSnapshot {
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:675:            "Orchestrator metrics snapshot"
+[2025-11-10T22:19:01] tokens used: 67,246
+[2025-11-10T22:19:06] exec bash -lc "ls -la /Users/daws/repos/Bandit/crates/bandit-schemas && sed -n '1,200p' /Users/daws/repos/Bandit/crates/bandit-schemas/src/lib.rs && rg -n --glob '"'!**/target/**'"' -S \"struct .*GasMetrics|ExecutionResult|FlashArbitrageOpportunity|PoolStateUpdate|PoolStateSnapshotResponse\" /Users/daws/repos/Bandit/crates/bandit-schemas -n --max-columns 200 && sed -n '1,220p' /Users/daws/repos/Bandit/contracts.yaml" in /Users/daws/repos/mycelium
+[2025-11-10T22:19:06] bash -lc "ls -la /Users/daws/repos/Bandit/crates/bandit-schemas && sed -n '1,200p' /Users/daws/repos/Bandit/crates/bandit-schemas/src/lib.rs && rg -n --glob '"'!**/target/**'"' -S \"struct .*GasMetrics|ExecutionResult|FlashArbitrageOpportunity|PoolStateUpdate|PoolStateSnapshotResponse\" /Users/daws/repos/Bandit/crates/bandit-schemas -n --max-columns 200 && sed -n '1,220p' /Users/daws/repos/Bandit/contracts.yaml" exited 1 in 76ms:
+total 16
+drwx------   5 daws  staff  160 Nov  4 15:35 .
+drwx------  22 daws  staff  704 Nov 10 13:26 ..
+-rw-r--r--   1 daws  staff  792 Nov  4 15:39 build.rs
+-rw-r--r--   1 daws  staff  519 Nov  4 15:39 Cargo.toml
+drwx------   3 daws  staff   96 Nov  4 11:25 src
+//! Bandit message types for testing and trading
+//!
+//! Messages are auto-generated from contracts.yaml at build time
+
+pub mod fixed_vec {
+    pub use mycelium_protocol::fixed_vec::*;
+}
+pub use mycelium_protocol::fixed_vec::FixedVecError;
+
+// Include the generated message types
+include!(concat!(env!("OUT_DIR"), "/generated_messages.rs"));
+
+ERROR
+[2025-11-10T22:19:06] tokens used: 71,809
+[2025-11-10T22:19:08] exec bash -lc "sed -n '220,560p' /Users/daws/repos/Bandit/contracts.yaml" in /Users/daws/repos/mycelium
+[2025-11-10T22:19:08] bash -lc "sed -n '220,560p' /Users/daws/repos/Bandit/contracts.yaml" succeeded in 15ms:
+  TokenMetadata:
+    tlv_type: 103
+    domain: "metadata"
+    description: "Token metadata discovered via RPC"
+    fields:
+      token_address:
+        type: "[u8; 20]"
+        description: "Token contract address"
+      decimals:
+        type: u8
+        description: "Token decimals"
+      symbol_len:
+        type: u8
+        description: "Symbol string length"
+      symbol_bytes:
+        type: "[u8; 32]"
+        description: "Symbol as UTF-8 bytes (zero-padded)"
+      chain_id:
+        type: u32
+        description: "Chain ID (137 for Polygon)"
+[2025-11-10T22:19:08] tokens used: 73,225
+[2025-11-10T22:19:11] exec bash -lc "sed -n '560,999p' /Users/daws/repos/Bandit/contracts.yaml" in /Users/daws/repos/mycelium
+[2025-11-10T22:19:11] bash -lc "sed -n '560,999p' /Users/daws/repos/Bandit/contracts.yaml" succeeded in 22ms:
+        type: "Vec<[u8; 20]>"
+        description: "Pool sequence that was simulated"
+        validation:
+          - max_length: 12
+      path_zero_for_one:
+        type: "Vec<u8>"
+        description: "Per-hop direction flags"
+        validation:
+          - max_length: 12
+      amounts_out_per_hop:
+        type: "Vec<[u8; 32]>"
+        description: "Cumulative output amount after each hop"
+        validation:
+          - max_length: 12
+
+  FlashArbitrageOpportunity:
+    tlv_type: 150
+    domain: "strategy"
+    description: "Profitable arbitrage path ready for execution"
+    fields:
+[2025-11-10T22:19:11] tokens used: 76,512
+
+[2025-11-10T22:19:24] thinking
+
+**Evaluating event-driven approach**
+
+To keep things terminal and event-driven, I think adding a "Validation Metrics Service" to Bandit could be useful. This service would handle RawSwapEvent and V2/V3 events, calculating counts, drop rates, and detections. Instead of duplicating work in the terminal, this could output a new telemetry message, "ValidationMetrics," although that may be beyond our current scope. Alternatively, the terminal could subscribe to events and compute metrics in memory, which might be sufficient.
+**Proposing terminal computation**
+
+I’m considering computing directly within the terminal to avoid creating a new service. For navigation, numeric keys can switch tabs and 'q' will quit, with scrolling already implemented in polygon-terminal. For stats, we'll work on matching top area inferences. By eliminating polling and persistence, we can modify Strategy and Executor views to stop reading JSONL and instead subscribe to updated messages. For Strategy metrics, we might add a "StrategyMetrics" TLV to publish periodic metrics, but currently, none exist.
+**Adding telemetry events**
+
+I'm planning to propose adding a new telemetry event called "StrategyMetrics" in contracts.yaml. This would involve updating the Strategy to publish quickly, and the terminal's "Strategy view" would subscribe to these metrics. If I can’t implement it quickly, I might keep reading JSONL temporarily behind a compile flag, but since we need an event-driven approach, I want to push for the event implementation. 
+
+For Executor metrics, "ExecutionMetrics" already exists, but I need to make sure polygon-executor publishes this at intervals. It currently writes to JSON but not to the bus; I’ll suggest also publishing this message to the bus, so the terminal’s executor view can subscribe and update accordingly. For Gas metrics, while not necessary for UI, they can still provide value. Lastly, I plan to use Redis for warm-start hydration to load pool keys, incorporating metadata needed for Torq Pools.
+**Proposing metadata loading**
+
+I noticed that the polygon-terminal's PoolsView does a minimal summary. I think it would be beneficial to load metadata from Redis using the same keys. In Bandit, the metadata enrichment service caches this data in Redis. Now, I need to figure out where those keys are saved. I should search in the polygon-metadata-enrichment crate to look at the code that writes the metadata to Redis. That’ll help in implementing this proposal effectively!
+[2025-11-10T22:19:33] codex
+**Proposing terminal computation**
+
+I’m considering computing directly within the terminal to avoid creating a new service. For navigation, numeric keys can switch tabs and 'q' will quit, with scrolling already implemented in polygon-terminal. For stats, we'll work on matching top area inferences. By eliminating polling and persistence, we can modify Strategy and Executor views to stop reading JSONL and instead subscribe to updated messages. For Strategy metrics, we might add a "StrategyMetrics" TLV to publish periodic metrics, but currently, none exist.
+[2025-11-10T22:19:33] codex
+**Adding telemetry events**
+
+I'm planning to propose adding a new telemetry event called "StrategyMetrics" in contracts.yaml. This would involve updating the Strategy to publish quickly, and the terminal's "Strategy view" would subscribe to these metrics. If I can’t implement it quickly, I might keep reading JSONL temporarily behind a compile flag, but since we need an event-driven approach, I want to push for the event implementation. 
+
+For Executor metrics, "ExecutionMetrics" already exists, but I need to make sure polygon-executor publishes this at intervals. It currently writes to JSON but not to the bus; I’ll suggest also publishing this message to the bus, so the terminal’s executor view can subscribe and update accordingly. For Gas metrics, while not necessary for UI, they can still provide value. Lastly, I plan to use Redis for warm-start hydration to load pool keys, incorporating metadata needed for Torq Pools.
+[2025-11-10T22:19:33] codex
+**Proposing metadata loading**
+
+I noticed that the polygon-terminal's PoolsView does a minimal summary. I think it would be beneficial to load metadata from Redis using the same keys. In Bandit, the metadata enrichment service caches this data in Redis. Now, I need to figure out where those keys are saved. I should search in the polygon-metadata-enrichment crate to look at the code that writes the metadata to Redis. That’ll help in implementing this proposal effectively!
+[2025-11-10T22:19:34] exec bash -lc "sed -n '700,880p' /Users/daws/repos/Bandit/crates/polygon-metadata-enrichment/src/lib.rs" in /Users/daws/repos/mycelium
+[2025-11-10T22:19:34] bash -lc "sed -n '700,880p' /Users/daws/repos/Bandit/crates/polygon-metadata-enrichment/src/lib.rs" succeeded in 39ms:
+    }
+}
+
+// ===== Storage Helper Functions =====
+
+async fn load_pool_from_redis(
+    conn: &redis::aio::ConnectionManager,
+    pool: &[u8; 20],
+) -> Result<Option<CachedPoolMetadata>> {
+    use redis::AsyncCommands;
+    let mut conn = conn.clone();
+    let key = format!("pool:{}", hex::encode(pool));
+    let value: Option<String> = conn.get(&key).await?;
+
+    match value {
+        Some(json) => {
+            let metadata: CachedPoolMetadata = serde_json::from_str(&json)?;
+            Ok(Some(metadata))
+        }
+        None => Ok(None),
+[2025-11-10T22:19:34] tokens used: 79,518
+[2025-11-10T22:19:41] exec bash -lc "rg -n --glob '"'!**/target/**'"' -S \"token:\" /Users/daws/repos/Bandit -n --max-columns 200" in /Users/daws/repos/mycelium
+[2025-11-10T22:19:41] bash -lc "rg -n --glob '"'!**/target/**'"' -S \"token:\" /Users/daws/repos/Bandit -n --max-columns 200" succeeded in 54ms:
+/Users/daws/repos/Bandit/crates/polygon-executor/src/tx_builder.rs:88:        .map(|addr| Token::Address(H160::from(*addr)))
+/Users/daws/repos/Bandit/crates/polygon-executor/src/tx_builder.rs:95:        .map(|dir| Token::Uint(U256::from(*dir as u64)))
+/Users/daws/repos/Bandit/crates/polygon-executor/src/tx_builder.rs:104:    tokens.push(Token::FixedBytes(request.intent_id.to_vec()));
+/Users/daws/repos/Bandit/crates/polygon-executor/src/tx_builder.rs:105:    tokens.push(Token::FixedBytes(request.path_id.to_vec()));
+/Users/daws/repos/Bandit/crates/polygon-executor/src/tx_builder.rs:106:    tokens.push(Token::Array(pools));
+/Users/daws/repos/Bandit/crates/polygon-executor/src/tx_builder.rs:107:    tokens.push(Token::Array(dirs));
+/Users/daws/repos/Bandit/crates/polygon-executor/src/tx_builder.rs:108:    tokens.push(Token::Uint(amount_in));
+/Users/daws/repos/Bandit/crates/polygon-executor/src/tx_builder.rs:109:    tokens.push(Token::Uint(min_amount_out));
+/Users/daws/repos/Bandit/crates/polygon-executor/src/tx_builder.rs:110:    tokens.push(Token::Uint(flash_fee_cost));
+/Users/daws/repos/Bandit/crates/polygon-executor/src/tx_builder.rs:111:    tokens.push(Token::Uint(U256::from(request.flash_fee_bps)));
+/Users/daws/repos/Bandit/crates/polygon-executor/src/tx_builder.rs:112:    tokens.push(Token::Uint(expected_profit));
+/Users/daws/repos/Bandit/crates/polygon-executor/src/tx_builder.rs:113:    tokens.push(Token::Uint(U256::from(request.block_number)));
+/Users/daws/repos/Bandit/crates/polygon-executor/src/tx_builder.rs:114:    tokens.push(Token::Uint(U256::from(request.deadline_ns)));
+/Users/daws/repos/Bandit/crates/polygon-metadata-enrichment/src/multicall.rs:168:            Ok(Token::Address(addr)) => addr,
+/Users/daws/repos/Bandit/crates/polygon-metadata-enrichment/src/multicall.rs:238:                    Ok(Token::Uint(value)) => value,
+/Users/daws/repos/Bandit/crates/polygon-metadata-enrichment/src/multicall.rs:248:                    Ok(Token::String(value)) => Some(value),
+/Users/daws/repos/Bandit/docs/POLYGON_ADAPTER_DESIGN.md:852:token:{token_address} → JSON of token metadata (1 hour TTL)
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:99:    current_token: [u8; 20],
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:674:                current_token: start_out,
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:818:                        current_token: neighbor,
+[2025-11-10T22:19:41] tokens used: 81,504
+[2025-11-10T22:19:43] exec bash -lc "sed -n '800,960p' /Users/daws/repos/Bandit/docs/POLYGON_ADAPTER_DESIGN.md" in /Users/daws/repos/mycelium
+[2025-11-10T22:19:43] bash -lc "sed -n '800,960p' /Users/daws/repos/Bandit/docs/POLYGON_ADAPTER_DESIGN.md" succeeded in 21ms:
+}
+```
+
+### Multi-Node (Production)
+```rust
+// Node 1: Listener only
+let bus = MessageBus::with_tcp("adapter-node-1:9000")?;
+runtime.spawn_service(PolygonListener::new(ws_url)).await?;
+
+// Node 2: Enrichment only (can scale horizontally)
+let bus = MessageBus::with_tcp("enrichment-node-1:9001")?;
+bus.connect_to("adapter-node-1:9000").await?; // Subscribe to RawSwapEvent
+runtime.spawn_service(MetadataEnrichmentService::new(bus)).await?;
+```
+
+---
+
+## Storage Schema
+
+### Postgres: pool_metadata table
+[2025-11-10T22:19:43] tokens used: 82,397
+
+[2025-11-10T22:20:09] thinking
+
+**Planning for JSON deprecation**
+
+I need to document the upcoming deprecation of JSON file reading, but I'll also provide a fallback for the initial release. It’s a bit tricky since the requirement states that no modifications are allowed, so I’ll focus on planning only. I’m thinking about gating this process. For deployment, I’ll adjust the "Bandit" main aggregator to pass the "TERMINAL_* env var." My goal is to create a clear, phased plan that references relevant components and files to help everyone involved.
+**Drafting the project plan**
+
+I'm outlining the sections for our project documentation. First, I'll create a Feature Catalog and Mapping, which will involve listing Torq TUI features with corresponding path references. Then, I’ll summarize the Architecture and Data Flow. 
+
+The phased plan will follow these steps: 
+
+Phase 0: Catalog & Align – which this document fulfills. Phase 1 covers an event-driven state core and adds a subscription aggregator with entities. Each subsequent phase will build on this, leading to rollout.
+
+Lastly, I’ll ensure we meet acceptance criteria by including clear guidelines for referencing files with paths and optional line numbers.
+**Clarifying documentation guidelines**
+
+I need to ensure that we include path references with line numbers when documenting. We should provide hooks, like polygon-terminal/src/lib.rs:66, to update subscriptions, though we won't open to exact lines. The preference is for paths with potential starting lines. According to the guidelines, file references should include paths with optional line numbers—1-based is fine. For our context, referencing paths from Bandit and Torq is outside the realm of mycelium, but absolute paths are acceptable. I'll annotate where we found relevant code from Torq, like app.rs for top-level tabs and bin/terminal-ui.rs for event handling.
+**Referencing project files**
+
+I’ll reference the terminal-ui from services/monitor/terminal-ui/src/bin/terminal-ui.rs at line 15. For views, I’ll mention market_data.rs, which has a Data Flow view with four panes, but no line numbers are necessary. In pools.rs, I need to highlight the render and update functions at lines 596 and 914. The views/services.rs will cover log management, while views/arbitrage.rs will show the aggregator. We can open arbitrage.rs to confirm typical features like opportunities for clarity.
+[2025-11-10T22:20:20] codex
+**Drafting the project plan**
+
+I'm outlining the sections for our project documentation. First, I'll create a Feature Catalog and Mapping, which will involve listing Torq TUI features with corresponding path references. Then, I’ll summarize the Architecture and Data Flow. 
+
+The phased plan will follow these steps: 
+
+Phase 0: Catalog & Align – which this document fulfills. Phase 1 covers an event-driven state core and adds a subscription aggregator with entities. Each subsequent phase will build on this, leading to rollout.
+
+Lastly, I’ll ensure we meet acceptance criteria by including clear guidelines for referencing files with paths and optional line numbers.
+[2025-11-10T22:20:20] codex
+**Clarifying documentation guidelines**
+
+I need to ensure that we include path references with line numbers when documenting. We should provide hooks, like polygon-terminal/src/lib.rs:66, to update subscriptions, though we won't open to exact lines. The preference is for paths with potential starting lines. According to the guidelines, file references should include paths with optional line numbers—1-based is fine. For our context, referencing paths from Bandit and Torq is outside the realm of mycelium, but absolute paths are acceptable. I'll annotate where we found relevant code from Torq, like app.rs for top-level tabs and bin/terminal-ui.rs for event handling.
+[2025-11-10T22:20:20] codex
+**Referencing project files**
+
+I’ll reference the terminal-ui from services/monitor/terminal-ui/src/bin/terminal-ui.rs at line 15. For views, I’ll mention market_data.rs, which has a Data Flow view with four panes, but no line numbers are necessary. In pools.rs, I need to highlight the render and update functions at lines 596 and 914. The views/services.rs will cover log management, while views/arbitrage.rs will show the aggregator. We can open arbitrage.rs to confirm typical features like opportunities for clarity.
+[2025-11-10T22:20:20] exec bash -lc "sed -n '1,200p' /Users/daws/repos/torq/services/monitor/terminal-ui/src/views/arbitrage.rs" in /Users/daws/repos/mycelium
+[2025-11-10T22:20:20] bash -lc "sed -n '1,200p' /Users/daws/repos/torq/services/monitor/terminal-ui/src/views/arbitrage.rs" succeeded in 29ms:
+//! Arbitrage signals view - displays real-time arbitrage opportunities
+//!
+//! Uses event-driven architecture with background task streaming from relay
+
+use anyhow::{Result};
+use codec::{parse_tlv_extensions, TLVExtensionEnum};
+use ratatui::{
+    layout::{Constraint, Rect},
+    style::{Color, Modifier, Style},
+    widgets::{Block, Borders, Row, Table},
+    Frame,
+};
+use std::collections::VecDeque;
+use std::mem::size_of;
+use std::sync::Arc;
+use tokio::io::AsyncReadExt;
+use tokio::net::UnixStream;
+
+use tokio::sync::RwLock;
+use types::protocol::tlv::arbitrage_signal::ArbitrageSignalTLV;
+[2025-11-10T22:20:20] tokens used: 85,460
+
+[2025-11-10T22:20:27] thinking
+
+**Compiling a Phased Plan**
+
+I’ll start by outlining a phased plan. 
+
+- **Phase 0:** Baseline and mapping.  
+- **Phase 1:** State core and event ingestion.  
+- **Phase 2:** UI restructure to match Torq's layout.  
+- **Phase 3:** Pools view parity improvements.  
+- **Phase 4:** Arbitrage and Data Flow views.  
+- **Phase 5:** Transition Strategy/Executor views to be event-driven.  
+- **Phase 6:** Implement a validation view.  
+- **Phase 7:** Conduct testing and migration with replay harness and end-to-end checks.  
+- **Phase 8:** Rollout and ensure observability, while addressing "Risks & Mitigations."  
+
+I’ll aim for clarity and a concise presentation.
+**Outlining Pool State Manager Plan**
+
+I need to highlight the "Pool State Manager (PSM)" in our plan. In Bandit, the "polygon-pool-state" refers to PSM. The Terminal should utilize 'PoolStateUpdate' events from this along with snapshot data from "PoolStateSnapshotResponse." 
+
+Here's how event sources map out:
+
+- **Enriched Listener:** polygon-metadata-enrichment emits V2Swap and V3Swap.  
+- **PSM:** polygon-pool-state emits PoolStateUpdate, snapshots, and quote replies.  
+- **Strategy:** polygon-flash-arbitrage emits FlashArbitrageOpportunity.  
+- **Executor:** polygon-executor emits ExecutionResult and upcoming ExecutionMetrics.  
+- **Gas:** polygon-gas-tracker emits GasMetrics.  
+
+Finally, Terminal employs 'mycelium-transport/MessageBus,' and we need to note which topics to subscribe to. Let's refine this into a final plan!
+[2025-11-10T22:20:36] codex
+**Outlining Pool State Manager Plan**
+
+I need to highlight the "Pool State Manager (PSM)" in our plan. In Bandit, the "polygon-pool-state" refers to PSM. The Terminal should utilize 'PoolStateUpdate' events from this along with snapshot data from "PoolStateSnapshotResponse." 
+
+Here's how event sources map out:
+
+- **Enriched Listener:** polygon-metadata-enrichment emits V2Swap and V3Swap.  
+- **PSM:** polygon-pool-state emits PoolStateUpdate, snapshots, and quote replies.  
+- **Strategy:** polygon-flash-arbitrage emits FlashArbitrageOpportunity.  
+- **Executor:** polygon-executor emits ExecutionResult and upcoming ExecutionMetrics.  
+- **Gas:** polygon-gas-tracker emits GasMetrics.  
+
+Finally, Terminal employs 'mycelium-transport/MessageBus,' and we need to note which topics to subscribe to. Let's refine this into a final plan!
+[2025-11-10T22:20:36] codex
+
+Here’s a concrete, event‑driven implementation plan to bring Bandit’s polygon-terminal (Bandit repo: crates/polygon-terminal) to feature parity with Torq’s terminal UI (torq/services/monitor/terminal-ui), while relying solely on Bandit’s existing services and Mycelium bus events (no log tailing or periodic polling; Redis only for warm-start).
+
+Note: File references are provided for orientation; they’re not exhaustive.
+
+**Current State (Quick Read)**
+- polygon-terminal already:
+  - Subscribes to pool snapshots, V2/V3 swaps, quote req/resp: Bandit messages (`PoolStateSnapshotResponse`, `V2Swap`, `V3Swap`, `PoolStateQuoteRequest/Response`) in crates/polygon-terminal/src/lib.rs.
+  - Hydrates from Redis at startup (pool_state:*), then event-driven updates.
+  - Renders 4 tabs via ratatui: Events, Pools, Strategy, Executor in crates/polygon-terminal/src/app.rs.
+  - Reads Strategy/Executor metrics from JSONL files (polling) in crates/polygon-terminal/src/views/{strategy.rs,executor.rs}. This must become event-driven.
+- Torq terminal-ui:
+  - Tabs: Services, Data Flow, Pools, Arbitrage, Validation with rich navigation and widgets: services/monitor/terminal-ui/src/app.rs.
+  - Uses ratatui and a background API server; tails relay sockets/log files (we will replace with bus subscribers).
+  - Rich Pools view: grouping by pair, collapsible headers, price computations, spread across venues, validation modal, Redis warm-start: services/monitor/terminal-ui/src/views/pools.rs.
+
+Plan constraints upheld:
+- Redis used only for warm-start (pool state + metadata). No runtime polling.
+- Runtime updates are event-driven via Mycelium bus messages (PSM updates, enriched listener events, strategy/executor telemetry).
+- Ignore Torq’s relay sockets, file log tails, and service control; rely only on existing Bandit services/messages.
+
+—
+
+
+**Phase 0 — Catalog & Mapping (Deliverable Doc)**
+- Catalog Torq UI features and map to polygon-terminal equivalents:
+
+  Torq tabs and features:
+  - Services: start/stop, view/copy logs, profiles, infra health (Redis/Postgres), key bindings. File: torq/services/monitor/terminal-ui/src/views/services.rs.
+  - Data Flow: 2×2 pane live logs (Adapter, Market Data Relay, Arbitrage Service, Signal Relay) with scroll/focus. File: torq/services/monitor/terminal-ui/src/views/market_data.rs.
+  - Pools: grouped by pair, collapsible, per-pool data (V2 reserves, V3 sqrt_price/liquidity), last update highlight, spread across venues, validation modal, Redis warm-start, keyboard actions. File: torq/services/monitor/terminal-ui/src/views/pools.rs:596 (render), 914 (update).
+  - Arbitrage: rolling signals table with net profit/spread/age. File: torq/services/monitor/terminal-ui/src/views/arbitrage.rs.
+  - Validation: tools invoking API endpoints, formatting results (drops, protocol stats, cache stats). File: torq/services/monitor/terminal-ui/src/views/validation.rs.
+
+  Mapping to Bandit polygon-terminal:
+  - Services → Infra: No process control. Show runtime health (bus connectivity, Redis reachable), subscription stats, last events by topic. Rely on bus; no logs/files.
+  - Data Flow → Event Streams: 2×2 panes fed from bus topics: Listener/Enrichment (V2/V3), Pool State Manager (PoolStateUpdate/Snapshot), Strategy (FlashArbitrageOpportunity), Execution (ExecutionResult/ExecutionMetrics). No tailing.
+  - Pools → Pools: Use PSM events + enriched swaps; Redis warm-start for state + metadata. Implement pair grouping, collapsible rows, spread calc, price calc (V2 reserves, V3 sqrt_price), last update highlighting, optional quote validation via PSM quote req/resp flow (no Python).
+  - Arbitrage → Arbitrage: Subscribe to FlashArbitrageOpportunity; render rolling table with counters/filters.
+  - Validation → Diagnostics: Compute and render drop/throughput/protocol-mix metrics locally from subscribed streams; optionally add a tiny “diagnostics” aggregator in-terminal (no external API).
+
+Deliverable: a short doc in Bandit repo outlining mapping with links to torq paths and Bandit targets.
+
+—
+
+
+**Phase 1 — Event Core and State Model**
+- Add a central event-driven state core in polygon-terminal:
+  - TerminalState: holds:
+    - Pools: Arc<DashMap<[u8;20], PoolSnapshotState + runtime fields>> and pair index.
+    - Metadata: token/pool cached metadata maps for display (symbol, decimals, dex name/tier).
+    - Streams: bounded ring buffers per “pane” (Listener/Enrichment, PSM, Strategy, Execution).
+    - Counters: atomics for v2/v3 swaps, quotes (req/resp), opportunities, exec results.
+    - Health: Redis connected, bus connected flag, last-seen timestamps per topic.
+- Subscriptions (bus):
+  - Already wired: `PoolStateSnapshotResponse`, `V2Swap`, `V3Swap`, `PoolStateQuoteRequest/Response`.
+  - Add: `PoolStateUpdate` (push pool updates from PSM), `FlashArbitrageOpportunity` (strategy), `ExecutionResult` and `ExecutionMetrics` (executor), `GasMetrics` (optional, for Diagnostics).
+  - File to extend: crates/polygon-terminal/src/lib.rs (service fields + tokio::select! loop).
+- Redis warm-start at startup only:
+  - Hydrate pools from `pool_state:*` (as today) and metadata from `pool:*` and `token:*` keys if present (Bandit writes these; see polygon-metadata-enrichment, e.g., pool:{addr}, token:{addr}).
+  - Files: crates/polygon-terminal/src/lib.rs (hydrate method) and crates/polygon-metadata-enrichment/src/lib.rs for key patterns.
+- On-demand metadata fill:
+  - When a new pool appears via events and display lacks metadata, perform a single Redis GET for `pool:{addr}` and, if needed, `token:{addr}`; cache result in-memory; no periodic polling.
+
+—
+
+
+**Phase 2 — UI Layout and Navigation Parity**
+- Update App tabs to align conceptually with Torq while keeping Bandit semantics:
+  - Tabs: [“Services” (Infra), “Data Flow”, “Pools”, “Arbitrage”, “Validation”].
+  - Numeric keys (1–5), Tab/BackTab, arrows, PageUp/Down, Esc/Enter matching Torq ergonomics.
+  - Add mouse toggle ‘m’ as in Torq to enable/disable mouse capture.
+  - Files:
+    - Torq reference: torq/services/monitor/terminal-ui/src/app.rs, torq/services/monitor/terminal-ui/src/bin/terminal-ui.rs:74.
+    - Bandit: crates/polygon-terminal/src/app.rs and crates/polygon-terminal/src/lib.rs: main event handling.
+
+—
+
+
+**Phase 3 — Data Flow View (Event Streams)**
+- Implement a 2×2 pane “Data Flow” view (no logs):
+  - Panes: Adapter/Enrichment (V2/V3), Pool State Manager (PoolStateUpdate/Snapshot), Strategy (FlashArbitrageOpportunity), Execution (ExecutionResult/ExecutionMetrics).
+  - Each pane: rolling bounded deque, color-coding, per-pane scrolling and focus; mouse wheel scroll and focus by hover when mouse enabled.
+  - Populate panes directly from the bus subscribers (tokio tasks push to per-pane deques).
+  - Files: new view file crates/polygon-terminal/src/views/data_flow.rs; wire into app.rs.
+
+—
+
+
+**Phase 4 — Pools View Parity**
+- Elevate current Pools view to Torq’s richness:
+  - State: keep Arc<DashMap> and pair index; add on-demand metadata map (symbols, decimals, dex, fee tier), last-update instants for flash-highlighting.
+  - Grouping: normalized pair key by token addresses; group all pools; compute spread across venues per pair (min/max price difference).
+  - Price:
+    - V2: price = reserve1/reserve0 (if reserves present from PSM state or can infer from swaps; if not, show “—”).
+    - V3: price from sqrt_price_x96 as in Torq pools.rs (price = (sqrt_price/2^96)^2); display liquidity.
+  - UI:
+    - Collapsible pair headers with indicator “[-]/[+]”, highlight selected pair row; render per-pool rows under expanded pairs with venue, fee, price, last block/time; flash style on updates.
+    - Summary header showing pools count, pairs count, messages received/parsed.
+    - Keyboard: collapse/expand on Tab; ‘c’ clear in-memory view; ‘C’ clear Redis warm cache (one-shot, optional).
+  - Validation flow (no Python):
+    - Replace Torq’s external script with PSM-native quote cycle:
+      - On ‘v’ within a pair: publish a series of `PoolStateQuoteRequest` for that pair’s pools at current block; collect `PoolStateQuoteResponse` and render a modal with per-pool “reported vs quoted” deltas (price, liquidity).
+      - Time out the modal if no responses arrive in N seconds.
+  - Files: crates/polygon-terminal/src/views/pools.rs (extend), crates/polygon-terminal/src/lib.rs (handle events), torq/services/monitor/terminal-ui/src/views/pools.rs (reference).
+
+—
+
+
+**Phase 5 — Arbitrage View**
+- Add Arbitrage view fed by `FlashArbitrageOpportunity`:
+  - Rolling table: time, path length, primary pool, net profit (color-coded), gas estimate, spread; per-block counters and totals.
+  - Filters: quick filter on min net_profit, hop count; ‘c’ clear list.
+  - No log sockets; purely bus-driven.
+  - Files: new crates/polygon-terminal/src/views/arbitrage.rs; Torq reference: torq/services/monitor/terminal-ui/src/views/arbitrage.rs.
+
+—
+
+
+**Phase 6 — Validation (Diagnostics) View**
+- Provide in-terminal diagnostics computed from subscribed data:
+  - Message throughput/drop approximation: counts per topic, processed/failed (terminal can track “received” and “rendered” deltas).
+  - Protocol mix: V2 vs V3 ratios over recent N events.
+  - Missing metadata: list top pools encountered without metadata resolved; show hit/miss counts of Redis metadata lookups.
+  - Redis distribution summary: count of `pool:*` vs `pool_state:*` loaded at warm-start.
+  - All computed event-driven in terminal; no external HTTP API.
+  - Files: new crates/polygon-terminal/src/views/validation.rs; Torq reference: torq/services/monitor/terminal-ui/src/views/validation.rs (UI patterns, not data sources).
+
+—
+
+
+**Phase 7 — Strategy/Executor Views: Remove File Polling**
+- Strategy view:
+  - Today reads last JSONL line. Replace with event-driven telemetry:
+    - Add “StrategyMetrics” TLV to contracts (if not already) and publish periodically from polygon-flash-arbitrage; or, short-term, derive live counters directly in terminal from `FlashArbitrageOpportunity` (opportunity rate, avg quote latency if emitted, fallbacks).
+    - Target message: StrategyMetrics { opportunities_emitted_total, avg_quote_latency_ns, flash_fee_bps, fallbacks, failures, … }.
+  - Update view to subscribe and render latest snapshot; drop file IO.
+  - Files:
+    - polygon-terminal/src/views/strategy.rs (subscribe to bus; remove read_latest_metrics()).
+    - polygon-flash-arbitrage to emit StrategyMetrics (follow pattern in polygon-executor metrics).
+    - contracts.yaml: add StrategyMetrics (telemetry domain).
+- Executor view:
+  - Subscribe to `ExecutionMetrics` (telemetry) and `ExecutionResult` (per-attempt):
+    - If `ExecutionMetrics` not yet emitted, add publish in polygon-executor alongside JSONL write (keep JSONL for ops, but UI consumes bus only).
+  - Render totals (requests/submissions/landed/failed/retries), latency, last profit/cost from `ExecutionResult` if present.
+  - Files:
+    - polygon-terminal/src/views/executor.rs (subscribe; drop file IO).
+    - polygon-executor/src/metrics.rs and/or polygon-executor/src/lib.rs to publish `ExecutionMetrics`.
+
+—
+
+
+**Phase 8 — Services (Infra) View**
+- Implement a lightweight “Services” tab (renamed to “Infra” if preferred) without process control:
+  - Display:
+    - Bus connectivity (connected peers, topic subscription health).
+    - Redis connectivity and configured url (from env).
+    - Per-topic last-seen timestamp and rate in last 60s.
+    - Log directory hints (if any) purely as text; no tailing.
+  - Key bindings: toggle mouse capture, refresh stats; no start/stop/restart.
+  - Files: new crates/polygon-terminal/src/views/services.rs.
+
+—
+
+
+**Phase 9 — Wiring and Rendering Loop**
+- Expand `tokio::select!` in TerminalUiService to drain all new subscribers.
+- Maintain a render tick (already present at 20 FPS) and only draw when state changed.
+- Keyboard and mouse events:
+  - Align with Torq: q/Q, 1–5, Tab/BackTab, arrows, PageUp/Down, ‘m’ toggle mouse capture, Esc to close modals, Enter where relevant.
+- Files: crates/polygon-terminal/src/lib.rs (select! loop, key handling), crates/polygon-terminal/src/app.rs (tab wiring).
+
+—
+
+
+**Data Sources and Differences (Explicit)**
+- Listener + Enrichment: `V2Swap`, `V3Swap` from crates/polygon-metadata-enrichment (bus); NO tailing sockets/files.
+- Pool State Manager (PSM): `PoolStateUpdate` push updates; `PoolStateSnapshotResponse`; `PoolStateQuoteRequest/Response` for validation modal; from crates/polygon-pool-state.
+- Strategy: `FlashArbitrageOpportunity` (bus); optional new `StrategyMetrics` TLV.
+- Executor: `ExecutionResult`, `ExecutionMetrics` (bus).
+- Gas telemetry: `GasMetrics` (optional for Diagnostics).
+- Redis: warm-start only for `pool_state:*`, `pool:*`, `token:*`. No periodic scans, no pub/sub reliance.
+
+—
+
+
+**Testing and Migration**
+- Unit tests (fast):
+  - Price calculations (V2 reserves, V3 sqrt), spread computation, pair normalization, formatting helpers. Place in polygon-terminal tests.
+- Integration (deterministic replay):
+  - Use crates/polygon-replay-harness to publish sequences of V2/V3 swaps, snapshots, opportunities, exec results, and validate in-memory state updates and UI rendering paths.
+- Manual TUI checks:
+  - Verify tab nav, scroll behavior per pane, collapse/expand, validation modal round‑trip via PSM.
+- Performance:
+  - Bounded deques per stream (e.g., 100–1000 entries) to keep redraw cheap.
+  - DashMap for O(1) updates; avoid locks in render by using try_read/clone patterns as Torq does.
+- Migration steps:
+  - Step 1: Land new subscribers + Data Flow and Arbitrage view (visible parity without changing Strategy/Executor yet).
+  - Step 2: Pools view parity (grouping/spreads/metadata/validation modal).
+  - Step 3: Replace Strategy/Executor JSONL readers with event subscribers. Keep JSONL writes in services for ops during transition; deprecate readers once telemetry TLVs are live.
+  - Step 4: Add Diagnostics view and Infra tab.
+- Backward compatibility:
+  - Behind feature flags: temporarily keep file-based readers until metrics TLVs are published; default to bus only in production builds.
+
+—
+
+
+**Rollout Considerations**
+- Contracts schema:
+  - If needed, add “StrategyMetrics” TLV to contracts.yaml and regen bandit-schemas; ensure strategy publishes it.
+  - Ensure executor publishes `ExecutionMetrics` (exists in schema) and keep emitting `ExecutionResult`.
+- Service env/config:
+  - polygon_adapter passes paths for JSONL today; de-emphasize them after bus metrics land.
+  - Terminal receives Redis URL (optional) for warm-start; document env var in README.
+- Observability:
+  - Log only struct logs from services; terminal should not write logs during TUI (to avoid interfering); trace to file only if configured, as Torq does.
+- Docs:
+  - Update Bandit README for polygon-terminal, describing tabs, keybindings, data sources, and how to validate a pair via PSM.
+
+—
+
+
+**Concrete Change Points (Bandit)**
+- polygon-terminal
+  - Service/event core: crates/polygon-terminal/src/lib.rs.
+  - App/tabs/nav: crates/polygon-terminal/src/app.rs.
+  - New/updated views:
+    - Data Flow: crates/polygon-terminal/src/views/data_flow.rs.
+    - Pools (parity uplift): crates/polygon-terminal/src/views/pools.rs.
+    - Arbitrage: crates/polygon-terminal/src/views/arbitrage.rs.
+    - Diagnostics: crates/polygon-terminal/src/views/validation.rs.
+    - Infra: crates/polygon-terminal/src/views/services.rs.
+    - Remove JSONL polling in: crates/polygon-terminal/src/views/{strategy.rs,executor.rs}.
+- Strategy/executor telemetry
+  - Strategy publish StrategyMetrics (new): crates/polygon-flash-arbitrage/src/lib.rs.
+  - Executor publish ExecutionMetrics: crates/polygon-executor/src/metrics.rs and/or crates/polygon-executor/src/lib.rs.
+  - contracts: /Users/daws/repos/Bandit/contracts.yaml (add StrategyMetrics if needed).
+
+—
+
+
+**Acceptance Criteria**
+- UI parity:
+  - Tabs, keybindings, and layout match Torq’s UX.
+  - Pools view: grouped, collapsible, prices/spreads, metadata labels, validation modal using PSM.
+  - Data Flow: 2×2 live panes from bus (no logs).
+  - Arbitrage: live opportunities from bus.
+  - Diagnostics: throughput and health rendered without polling.
+- Event-driven only:
+  - No runtime Redis scans; no file tailers; no JSONL readers.
+- Warm-start:
+  - Redis hydration on startup only for pool state and metadata.
+- Stable under load:
+  - Handles sustained events without render backlog (20 FPS tick; draw-on-change).
+
+Want me to draft the exact subscriber wiring and struct changes for polygon-terminal/src/lib.rs and scaffold the new views next?
+[2025-11-10T22:21:11] tokens used: 92,548

@@ -39,4 +39,4 @@ mod supervisor;
 pub use context::{ActorContext, ActorRef};
 pub use handle::Actor;
 pub use runtime::{ActorRuntime, SpawnError};
-pub use supervisor::{SupervisionStrategy, RestartStrategy};
+pub use supervisor::{RestartStrategy, SupervisionStrategy};

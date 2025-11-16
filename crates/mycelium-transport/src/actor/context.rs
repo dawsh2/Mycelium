@@ -2,10 +2,9 @@
 //!
 //! Provides ActorContext for use within actors and ActorRef for sending messages.
 
-use crate::{MessageBus, Publisher, Result};
+use crate::{MessageBus, Publisher, Result, TransportError};
 use mycelium_protocol::routing::{ActorId, CorrelationId};
 use mycelium_protocol::Message;
-use tokio::sync::oneshot;
 
 /// Context provided to actors during message handling
 ///
@@ -83,41 +82,15 @@ impl<A: super::Actor> ActorContext<A> {
     ///     MyRequest { query: "status" }
     /// ).await?;
     /// ```
-    pub async fn request<Req, Rep>(
-        &self,
-        target: ActorId,
-        request: Req,
-    ) -> Result<Rep>
+    pub async fn request<Req, Rep>(&self, _target: ActorId, _request: Req) -> Result<Rep>
     where
         Req: Message,
         Rep: Message,
     {
-        // Generate correlation ID
-        let _correlation_id = CorrelationId::new();
-
-        // Create a oneshot channel for the reply
-        let (_tx, rx) = oneshot::channel();
-
-        // TODO: Register reply handler with correlation_id -> tx mapping
-        // For now, this is a placeholder implementation
-        // Full implementation would require a registry in the runtime
-
-        // Send request with correlation ID
-        let topic = crate::TopicBuilder::actor_mailbox(target);
-        let publisher = self.bus.publisher_for_topic::<Req>(&topic);
-
-        // TODO: Wrap in envelope with correlation_id
-        publisher.publish(request).await?;
-
-        // Wait for reply (with timeout)
-        let reply = tokio::time::timeout(
-            std::time::Duration::from_secs(5),
-            rx
-        ).await
-            .map_err(|_| crate::TransportError::SendFailed)?
-            .map_err(|_| crate::TransportError::SendFailed)?;
-
-        Ok(reply)
+        Err(TransportError::InvalidConfig(
+            "ActorContext::request is not implemented. Use send()/reply patterns manually."
+                .to_string(),
+        ))
     }
 
     /// Stop this actor
@@ -174,9 +147,18 @@ impl<M: Message> ActorRef<M> {
     }
 
     /// Send a message with a correlation ID (for request/reply)
-    pub async fn send_with_correlation(&self, msg: M, _correlation_id: CorrelationId) -> Result<()> {
-        // TODO: Wrap in envelope with correlation_id
-        self.publisher.publish(msg).await
+    ///
+    /// NOTE: Correlation tracking is not yet implemented. This currently sends
+    /// the message without correlation metadata. Future implementation will wrap
+    /// the message in an envelope with routing information.
+    pub async fn send_with_correlation(
+        &self,
+        _msg: M,
+        _correlation_id: CorrelationId,
+    ) -> Result<()> {
+        Err(TransportError::InvalidConfig(
+            "Correlation-aware actor messaging is not implemented yet".to_string(),
+        ))
     }
 }
 

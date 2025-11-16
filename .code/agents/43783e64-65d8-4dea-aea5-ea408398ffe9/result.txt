@@ -1,0 +1,128 @@
+Here is a step-by-step implementation plan for the Python bridge. This plan is based on the existing architecture and conventions found in the Mycelium repository.
+
+### **Python Bridge Implementation Plan**
+
+#### **1. Introduction**
+
+The goal is to create a Python bridge that allows Python services to seamlessly integrate with the Mycelium `MessageBus`. This will enable Python applications to publish and subscribe to messages, leveraging Mycelium's high-performance, low-latency messaging backbone. The implementation will follow the existing design principles of the project, including schema-driven development, low-overhead transports, and integrated observability.
+
+---
+
+#### **2. Phase 1: Schema Definition & Code Generation**
+
+The foundation of Mycelium's interoperability is its schema-first approach. We will extend this to Python.
+
+*   **Step 2.1: Python Code Generation from `contracts.yaml`**
+    *   **Objective**: Generate Python classes corresponding to the message schemas defined in `contracts.yaml`.
+    *   **Implementation**:
+        1.  Modify the existing `build.rs` script in `mycelium-protocol` to add a Python code generation step.
+        2.  The script will parse `contracts.yaml` and output a Python file (`generated.py`) containing a class for each message.
+        3.  Each generated class will have attributes matching the schema fields and will include methods for serializing to and deserializing from the TLV format.
+        4.  A base class, `Message`, can be created in a support library to handle common logic.
+
+*   **Step 2.2: Schema Evolution and Compatibility**
+    *   **Objective**: Ensure Python code generation respects schema evolution rules.
+    *   **Implementation**: The code generator must handle versioning and optional fields gracefully, ensuring that changes to the schema do not break existing Python services. This aligns with the `schema_compat.rs` logic.
+
+---
+
+#### **3. Phase 2: Bridge Architecture**
+
+A dedicated bridge process will connect the Python world to the Rust `MessageBus`.
+
+*   **Step 3.1: Design the Bridge Service**
+    *   **Objective**: Create a standalone Rust service, `mycelium-python-bridge`, that acts as an intermediary.
+    *   **Implementation**:
+        1.  This service will embed a Mycelium `MessageBus` instance.
+        2.  It will expose a server endpoint (e.g., using TCP or Unix sockets) for Python clients to connect to.
+        3.  The bridge will be responsible for translating messages between the Python clients' transport protocol and the internal `MessageBus`.
+
+*   **Step 3.2: Bridge-to-MessageBus Communication**
+    *   **Objective**: Efficiently route messages between the bridge and the core system.
+    *   **Implementation**: The bridge will use the `local` transport to communicate with the `MessageBus` when running in the same process or a `unix` socket transport for inter-process communication on the same host. This minimizes overhead.
+
+---
+
+#### **4. Phase 3: Python SDK & Runtime**
+
+A user-friendly Python SDK will be the primary interface for Python developers.
+
+*   **Step 4.1: Develop the `mycelium` Python Package**
+    *   **Objective**: Create an installable Python package (`mycelium-py`) for client applications.
+    *   **Implementation**:
+        1.  The package will contain the runtime for connecting to the bridge, the generated message classes, and a simple API.
+        2.  The API will be centered around a `MyceliumClient` class.
+        3.  The client will use `asyncio` for non-blocking network I/O and message handling.
+
+*   **Step 4.2: Implement the Client API**
+    *   **Objective**: Provide an intuitive API for publishing and subscribing.
+    *   **Implementation**:
+        ```python
+        # Example Usage
+        import asyncio
+        from mycelium_py import MyceliumClient
+        from mycelium_py.generated import Ping, Pong
+
+        async def main():
+            client = MyceliumClient()
+            await client.connect("localhost:7777")
+
+            async def on_pong(message: Pong):
+                print(f"Received Pong: {message.value}")
+
+            await client.subscribe(on_pong)
+
+            await client.publish(Ping(value="hello from python"))
+
+        if __name__ == "__main__":
+            asyncio.run(main())
+        ```
+
+---
+
+#### **5. Phase 4: Transport Protocol**
+
+A lightweight, efficient transport protocol is needed between the Python SDK and the bridge.
+
+*   **Step 5.1: Define the Wire Protocol**
+    *   **Objective**: Specify a simple protocol for message exchange.
+    *   **Implementation**:
+        1.  Leverage the existing `stream_transport.rs` implementation as a basis.
+        2.  The protocol will use a simple framing mechanism: `[length][message_type_id][tlv_payload]`.
+        3.  `length`: 4-byte integer indicating the length of the following data.
+        4.  `message_type_id`: A unique identifier for the message type, derived from the schema.
+        5.  `tlv_payload`: The raw TLV-encoded message data.
+        6.  This design avoids the overhead of heavier protocols like HTTP or gRPC and aligns with Mycelium's performance goals.
+
+---
+
+#### **6. Phase 5: Observability**
+
+To ensure the bridge and Python services are production-ready, we need robust observability.
+
+*   **Step 6.1: Metrics and Monitoring**
+    *   **Objective**: Expose metrics from the bridge and Python clients.
+    *   **Implementation**:
+        1.  The `mycelium-python-bridge` will use the `bandit-metrics-export` crate to expose metrics (e.g., messages processed, client connections, errors) in a Prometheus-compatible format.
+        2.  The Python SDK will include an optional metrics component to track client-side buffer lengths, publish rates, and other key indicators.
+
+*   **Step 6.2: Logging and Tracing**
+    *   **Objective**: Implement structured logging and distributed tracing.
+    *   **Implementation**: The bridge and Python SDK will use a structured logging format (e.g., JSON) and integrate with OpenTelemetry for distributed tracing, allowing requests to be traced from a Python service through the bridge and into the core Rust system.
+
+---
+
+#### **7. Phase 6: Deployment & Packaging**
+
+The final step is to make the components easy to build, package, and deploy.
+
+*   **Step 7.1: Package the Python SDK**
+    *   **Objective**: Distribute the Python SDK via PyPI.
+    *   **Implementation**: Create a `setup.py` or `pyproject.toml` for the `mycelium-py` package. The package will bundle the generated `generated.py` file, allowing for a simple `pip install mycelium-py`.
+
+*   **Step 7.2: Package the Bridge**
+    *   **Objective**: Make the bridge service easy to deploy.
+    *   **Implementation**:
+        1.  The `mycelium-python-bridge` will be built as a static binary.
+        2.  Provide a Dockerfile for containerizing the bridge, making it easy to run alongside other Mycelium services, especially in a distributed deployment.
+        3.  For monolithic deployments, the bridge's functionality can be integrated directly into the main application binary.

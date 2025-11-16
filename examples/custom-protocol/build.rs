@@ -1,6 +1,4 @@
-// Include the codegen module from mycelium-protocol
-#[path = "../../crates/mycelium-protocol/codegen.rs"]
-mod codegen;
+use mycelium_protocol::codegen::generate_from_yaml_external;
 
 fn main() {
     // Rebuild if contracts.yaml changes
@@ -10,6 +8,6 @@ fn main() {
     let out_dir = std::env::var("OUT_DIR").unwrap();
     let output_path = format!("{}/generated_messages.rs", out_dir);
 
-    codegen::generate_from_yaml("contracts.yaml", &output_path)
+    generate_from_yaml_external("contracts.yaml", &output_path)
         .expect("Failed to generate protocol messages from contracts.yaml");
 }

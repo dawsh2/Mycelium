@@ -1,0 +1,507 @@
+[2025-11-16T03:13:58] OpenAI Codex v0.0.0 (research preview)
+--------
+workdir: /Users/daws/repos/mycelium
+model: gpt-5.1-codex-mini
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: high
+reasoning summaries: auto
+--------
+[2025-11-16T03:13:58] User instructions:
+Assess feasibility of several performance ideas for Mycelium (shared-memory transport, dual-path routing, specialized bounded queues, batching, pinned executors, schema-aware compression). Repository root: /Users/daws/repos/mycelium. Key files: README.md, crates/mycelium-transport/src (transport logic), docs/SYSTEM_OVERVIEW.md (architecture). Deliver: pros/cons, required changes, blockers, and step-by-step plan or dismissal rationale for each idea.
+
+[Running in read-only mode - no modifications allowed]
+[2025-11-16T03:13:58] OpenAI Codex v0.0.0 (research preview)
+--------
+workdir: /Users/daws/repos/mycelium
+model: gpt-5.1-codex-mini
+provider: openai
+approval: never
+sandbox: danger-full-access
+reasoning effort: high
+reasoning summaries: auto
+--------
+[2025-11-16T03:13:58] User instructions:
+Assess feasibility of several performance ideas for Mycelium (shared-memory transport, dual-path routing, specialized bounded queues, batching, pinned executors, schema-aware compression). Repository root: /Users/daws/repos/mycelium. Key files: README.md, crates/mycelium-transport/src (transport logic), docs/SYSTEM_OVERVIEW.md (architecture). Deliver: pros/cons, required changes, blockers, and step-by-step plan or dismissal rationale for each idea.
+
+[Running in read-only mode - no modifications allowed]
+
+[2025-11-16T03:14:00] thinking
+
+**Planning initial inspection**
+[2025-11-16T03:14:00] exec pwd in /Users/daws/repos/mycelium
+[2025-11-16T03:14:00] pwd succeeded in 3ms:
+/Users/daws/repos/mycelium
+[2025-11-16T03:14:00] tokens used: 881
+[2025-11-16T03:14:01] exec ls in /Users/daws/repos/mycelium
+[2025-11-16T03:14:01] ls succeeded in 4ms:
+benches
+Cargo.lock
+Cargo.toml
+crates
+docs
+examples
+README.md
+scripts
+target
+tests
+[2025-11-16T03:14:01] tokens used: 1,833
+
+[2025-11-16T03:14:03] thinking
+
+**Reading README file**
+[2025-11-16T03:14:03] exec /bin/zsh -lc 'cat README.md' in /Users/daws/repos/mycelium
+[2025-11-16T03:14:03] /bin/zsh -lc 'cat README.md' succeeded in 168ms:
+# Mycelium <img src="docs/assets/cultures.svg" alt="Mycelium" width="48" style="vertical-align: middle; margin-bottom: -8px;">
+
+Typed message bus for Rust services that can run in a single process or across
+multiple processes without changing application code. Mycelium keeps
+message-shape definitions, transport selection, and actor supervision in one
+place so the same service logic works with shared memory (Arc), Unix sockets, or
+TCP.
+
+- Messages are defined once in `contracts.yaml`. Code generation produces Rust
+  structs with serialization, validation, and TLV encoders.
+- Services are plain structs annotated with `#[service]`. The macro wires in a
+  `ServiceContext` that exposes async publishers/subscribers plus tracing and
+  metrics hooks.
+- `MessageBus` encapsulates the transport. Swap the transport at startup; the
+  service code stays untouched.
+- For single-process deployments you can bypass the bus entirely with
+  `routing_config!`, which generates compile-time routers that issue direct
+  function calls (no Arc, no heap, ~2–3 ns per handler).
+
+## Core pieces
+[2025-11-16T03:14:03] tokens used: 1,973
+
+[2025-11-16T03:14:04] thinking
+
+**Identifying need for system overview docs**
+[2025-11-16T03:14:06] exec /bin/zsh -lc 'cat docs/SYSTEM_OVERVIEW.md' in /Users/daws/repos/mycelium
+[2025-11-16T03:14:06] /bin/zsh -lc 'cat docs/SYSTEM_OVERVIEW.md' succeeded in 123ms:
+# Mycelium: A Type-Safe Zero-Copy Messaging Library for Distributed Systems
+
+**Authors**: Mycelium Development Team  
+**Date**: November 2025  
+**Version**: 0.1.0  
+**Status**: Design & Implementation Complete
+
+---
+
+## Abstract
+
+We present Mycelium, a high-performance messaging library designed for low-latency distributed systems. Mycelium combines compile-time type safety with zero-copy serialization to achieve sub-microsecond message passing while maintaining deployment flexibility across local, inter-process, and network boundaries. The library provides three key abstractions: (1) a type-safe publish/subscribe system with automatic routing, (2) an actor-based concurrency model with typed discovery, and (3) a schema evolution system enabling protocol versioning without breaking changes. Performance measurements demonstrate 2-3ns overhead for compile-time routed messages and 65ns for Arc-based message passing, representing a 30x improvement over traditional serialization approaches. The system is particularly well-suited for high-frequency trading systems, real-time analytics, and other latency-sensitive applications requiring both performance and correctness guarantees.
+
+**Keywords**: Message passing, Zero-copy serialization, Type safety, Distributed systems, Actor model, Schema evolution
+
+---
+
+## 1. Introduction
+
+### 1.1 Motivation
+[2025-11-16T03:14:06] tokens used: 3,608
+
+[2025-11-16T03:14:08] thinking
+
+**Assessing transport logic feasibility**
+[2025-11-16T03:14:09] exec /bin/zsh -lc 'ls crates/mycelium-transport/src' in /Users/daws/repos/mycelium
+[2025-11-16T03:14:09] /bin/zsh -lc 'ls crates/mycelium-transport/src' succeeded in 129ms:
+actor
+any.rs
+backpressure.rs
+bounded.rs
+bridge.rs
+buffer_pool.rs
+bus.rs
+codec.rs
+config.rs
+context.rs
+error.rs
+handler.rs
+lib.rs
+local.rs
+metrics.rs
+ordered.rs
+pool.rs
+publisher.rs
+qos.rs
+runtime.rs
+[2025-11-16T03:14:09] tokens used: 12,383
+
+[2025-11-16T03:14:10] thinking
+
+**Examining message bus details**
+[2025-11-16T03:14:11] exec /bin/zsh -lc "sed -n '1,200p' crates/mycelium-transport/src/bus.rs" in /Users/daws/repos/mycelium
+[2025-11-16T03:14:11] /bin/zsh -lc "sed -n '1,200p' crates/mycelium-transport/src/bus.rs" succeeded in 114ms:
+use crate::any::{AnyPublisher, AnySubscriber};
+use crate::bounded::{BoundedPublisher, BoundedSubscriber};
+use crate::config::{EndpointKind, Node, Topology, TransportConfig, TransportType};
+use crate::local::LocalTransport;
+use crate::socket_endpoint::{bind_tcp_endpoint, bind_unix_endpoint, SocketEndpointHandle};
+use crate::tcp::{TcpPublisher, TcpSubscriber, TcpTransport};
+use crate::unix::{UnixPublisher, UnixSubscriber, UnixTransport};
+use crate::{Publisher, Result, Subscriber, TransportError};
+use mycelium_protocol::Message;
+use std::collections::HashMap;
+use std::net::SocketAddr;
+use std::sync::Arc;
+use tokio::sync::RwLock;
+
+/// Message bus coordinator
+///
+/// Provides a unified interface for pub/sub messaging with support for:
+/// - Local transport (Arc<T>) for in-process/same-node communication
+/// - Unix socket transport for inter-node communication (same machine)
+/// - TCP transport for distributed communication (cross-machine)
+[2025-11-16T03:14:11] tokens used: 23,801
+
+[2025-11-16T03:14:13] thinking
+
+**Planning performance improvements**
+
+I want to gather key performance ideas like shared-memory transport, dual-path routing, bounded queues, and more, then analyze their pros, cons, and implementation challenges. To do that, I need to inspect existing transport features in the repo, especially the local transport code, before planning or dismissing any options.
+[2025-11-16T03:14:15] exec /bin/zsh -lc "sed -n '1,200p' crates/mycelium-transport/src/local.rs" in /Users/daws/repos/mycelium
+[2025-11-16T03:14:15] /bin/zsh -lc "sed -n '1,200p' crates/mycelium-transport/src/local.rs" succeeded in 113ms:
+use crate::bridge::BridgeFanout;
+use crate::codec::deserialize_message;
+use crate::error::Result;
+use crate::{config::TransportConfig, ChannelManager, Publisher, Subscriber, TransportError};
+use dashmap::DashMap;
+use mycelium_protocol::{Envelope, Message};
+use std::sync::Arc;
+
+/// Local transport using Arc<T> for zero-copy message passing
+///
+/// This transport is used when all services are in the same process.
+/// Messages are shared via Arc, avoiding serialization overhead.
+///
+/// Performance: ~50-200ns per message (just an Arc clone)
+#[derive(Clone)]
+pub struct LocalTransport {
+    channel_manager: ChannelManager,
+    bridge_fanout: BridgeFanout,
+    type_registry: TypeRegistry,
+}
+[2025-11-16T03:14:15] tokens used: 26,131
+
+[2025-11-16T03:14:17] thinking
+
+**Assessing transport options feasibility**
+
+I’m gathering info on specialized features like shared-memory transport by exploring existing modules and architecture, especially focusing on cross-process communication via shared memory versus current Unix and TCP transports. I want to analyze pros, cons, required changes, and blockers to decide which ideas are feasible or need dismissal.
+[2025-11-16T03:14:18] exec /bin/zsh -lc "sed -n '1,200p' crates/mycelium-transport/src/unix.rs" in /Users/daws/repos/mycelium
+[2025-11-16T03:14:18] /bin/zsh -lc "sed -n '1,200p' crates/mycelium-transport/src/unix.rs" succeeded in 123ms:
+use crate::buffer_pool::BufferPool;
+use crate::error::{Result, TransportError};
+use crate::stream::StreamSubscriber;
+use crate::stream_transport::{spawn_client_reader, StreamPublisher, StreamTransportState};
+use mycelium_protocol::Message;
+use std::path::{Path, PathBuf};
+use std::sync::Arc;
+use tokio::net::unix::OwnedWriteHalf;
+use tokio::net::{UnixListener, UnixStream};
+use tokio::sync::Mutex;
+
+const DEFAULT_CHANNEL_CAPACITY: usize = 1000;
+
+/// Unix socket transport for inter-process communication
+///
+/// Uses Unix domain sockets with TLV framing for message passing
+/// between services in different processes on the same machine.
+///
+/// Performance: ~2-5μs per message (serialization + socket overhead)
+pub struct UnixTransport {
+[2025-11-16T03:14:18] tokens used: 28,243
+
+[2025-11-16T03:14:22] thinking
+
+**Preparing evaluation plan with file references**
+
+I'm organizing a detailed plan to assess each improvement idea by outlining pros, cons, blockers, and necessary changes, while referencing relevant README and code sections with line numbers for clarity. I'll gather code snippets, especially from files like `bounded.rs`, to ground the evaluation in concrete code.
+[2025-11-16T03:14:23] exec /bin/zsh -lc "sed -n '1,200p' crates/mycelium-transport/src/bounded.rs" in /Users/daws/repos/mycelium
+[2025-11-16T03:14:23] /bin/zsh -lc "sed -n '1,200p' crates/mycelium-transport/src/bounded.rs" succeeded in 114ms:
+/// Bounded publisher with backpressure support
+///
+/// Uses `tokio::sync::mpsc` bounded channels to provide natural backpressure.
+/// When the channel is full, publishers block until space is available.
+///
+/// ## Design Philosophy (from ACTORS.md)
+///
+/// - Actor mailboxes provide bounded capacity with backpressure
+/// - Pub/sub can achieve backpressure via bounded channels
+/// - BoundedPublisher trades broadcast capability for flow control
+/// - Use when you need to prevent fast publishers from overwhelming subscribers
+///
+/// ## Tradeoffs vs Regular Publisher
+///
+/// | Feature | Publisher (broadcast) | BoundedPublisher (mpsc) |
+/// |---------|----------------------|-------------------------|
+/// | Multiple subscribers | ✅ Yes (fan-out) | ❌ No (single consumer) |
+/// | Backpressure | ❌ Lagging drops messages | ✅ Blocks when full |
+/// | Use case | Market data broadcast | Actor mailboxes, point-to-point |
+/// | Overhead | Low | Slightly higher |
+[2025-11-16T03:14:23] tokens used: 30,394
+
+[2025-11-16T03:14:25] thinking
+
+**Evaluating bounded subscriber and shared-memory transport**
+[2025-11-16T03:14:25] exec /bin/zsh -lc 'rg -n "shared" -n crates/mycelium-transport/src | head' in /Users/daws/repos/mycelium
+[2025-11-16T03:14:25] /bin/zsh -lc 'rg -n "shared" -n crates/mycelium-transport/src | head' succeeded in 133ms:
+crates/mycelium-transport/src/actor/context.rs:116:/// This is a lightweight handle that can be cloned and shared.
+crates/mycelium-transport/src/shared.rs:3://! This module contains code that's shared across different transport implementations
+crates/mycelium-transport/src/lib.rs:19:pub mod shared;
+crates/mycelium-transport/src/lib.rs:57:pub use shared::{BufferSizes, ChannelManager, ConnectionInfo, TransportType};
+crates/mycelium-transport/src/zerocopy.rs:110:    /// Create a shared view from a slice
+crates/mycelium-transport/src/zerocopy.rs:281:    fn test_shared_view() {
+crates/mycelium-transport/src/zerocopy.rs:289:    fn test_shared_view_to_owned() {
+crates/mycelium-transport/src/local.rs:12:/// Messages are shared via Arc, avoiding serialization overhead.
+crates/mycelium-transport/src/actor/runtime.rs:59:    /// Message bus shared by all actors
+[2025-11-16T03:14:25] tokens used: 32,440
+
+[2025-11-16T03:14:27] thinking
+
+**Checking shared.rs file**
+[2025-11-16T03:14:29] exec /bin/zsh -lc "sed -n '1,200p' crates/mycelium-transport/src/shared.rs" in /Users/daws/repos/mycelium
+[2025-11-16T03:14:29] /bin/zsh -lc "sed -n '1,200p' crates/mycelium-transport/src/shared.rs" succeeded in 163ms:
+//! Shared transport utilities and common functionality
+//!
+//! This module contains code that's shared across different transport implementations
+//! to reduce duplication and ensure consistent behavior.
+
+use crate::config::TransportConfig;
+use crate::{Result, TransportError};
+use dashmap::DashMap;
+use mycelium_protocol::{Envelope, Message};
+use std::sync::Arc;
+use tokio::sync::broadcast;
+
+/// Common broadcast channel management for all transports
+#[derive(Clone)]
+pub struct ChannelManager {
+    /// Topic -> broadcast channel mapping
+    channels: Arc<DashMap<String, broadcast::Sender<Envelope>>>,
+    /// Transport configuration
+    config: TransportConfig,
+}
+[2025-11-16T03:14:29] tokens used: 32,871
+
+[2025-11-16T03:14:34] thinking
+
+**Analyzing specialized queue options**
+
+I'm gathering details on possible specialized bounded queues, focusing on shared-memory transport as a first idea. I'll explore relevant architecture docs and source files like `LocalTransport`, `bus`, and `service_runtime.rs` to assess feasibility, benefits, drawbacks, and necessary integrations. I'll keep in mind the read-only restriction preventing direct code changes, aiming to produce a detailed plan with pros, cons, and implementation steps for each idea.
+[2025-11-16T03:14:35] exec /bin/zsh -lc "sed -n '1,200p' crates/mycelium-transport/src/service_runtime.rs" in /Users/daws/repos/mycelium
+[2025-11-16T03:14:35] /bin/zsh -lc "sed -n '1,200p' crates/mycelium-transport/src/service_runtime.rs" succeeded in 126ms:
+//! ServiceRuntime - Spawns and manages services with supervision
+
+use crate::bus::MessageBus;
+use crate::service_context::ServiceContext;
+use crate::service_metrics::ServiceMetrics;
+use anyhow::anyhow;
+use tokio::sync::{broadcast, oneshot, Mutex};
+
+/// ServiceRuntime manages service lifecycle and supervision
+pub struct ServiceRuntime {
+    bus: std::sync::Arc<MessageBus>,
+    shutdown_tx: broadcast::Sender<()>,
+    handles: Mutex<Vec<tokio::task::JoinHandle<()>>>,
+}
+
+impl ServiceRuntime {
+    /// Create a new ServiceRuntime with a MessageBus
+    pub fn new(bus: MessageBus) -> Self {
+        let (shutdown_tx, _) = broadcast::channel(16);
+
+[2025-11-16T03:14:35] tokens used: 54,865
+
+[2025-11-16T03:14:39] thinking
+
+**Planning detailed analysis and references**
+[2025-11-16T03:14:40] exec /bin/zsh -lc "nl -ba crates/mycelium-transport/src/local.rs | sed -n '1,200p'" in /Users/daws/repos/mycelium
+[2025-11-16T03:14:40] /bin/zsh -lc "nl -ba crates/mycelium-transport/src/local.rs | sed -n '1,200p'" succeeded in 118ms:
+     1	use crate::bridge::BridgeFanout;
+     2	use crate::codec::deserialize_message;
+     3	use crate::error::Result;
+     4	use crate::{config::TransportConfig, ChannelManager, Publisher, Subscriber, TransportError};
+     5	use dashmap::DashMap;
+     6	use mycelium_protocol::{Envelope, Message};
+     7	use std::sync::Arc;
+     8	
+     9	/// Local transport using Arc<T> for zero-copy message passing
+    10	///
+    11	/// This transport is used when all services are in the same process.
+    12	/// Messages are shared via Arc, avoiding serialization overhead.
+    13	///
+    14	/// Performance: ~50-200ns per message (just an Arc clone)
+    15	#[derive(Clone)]
+    16	pub struct LocalTransport {
+    17	    channel_manager: ChannelManager,
+    18	    bridge_fanout: BridgeFanout,
+    19	    type_registry: TypeRegistry,
+    20	}
+[2025-11-16T03:14:40] tokens used: 78,878
+
+[2025-11-16T03:14:42] thinking
+
+**Searching system overview for references**
+[2025-11-16T03:14:43] exec /bin/zsh -lc "nl -ba docs/SYSTEM_OVERVIEW.md | sed -n '1,200p'" in /Users/daws/repos/mycelium
+[2025-11-16T03:14:43] /bin/zsh -lc "nl -ba docs/SYSTEM_OVERVIEW.md | sed -n '1,200p'" succeeded in 126ms:
+     1	# Mycelium: A Type-Safe Zero-Copy Messaging Library for Distributed Systems
+     2	
+     3	**Authors**: Mycelium Development Team  
+     4	**Date**: November 2025  
+     5	**Version**: 0.1.0  
+     6	**Status**: Design & Implementation Complete
+     7	
+     8	---
+     9	
+    10	## Abstract
+    11	
+    12	We present Mycelium, a high-performance messaging library designed for low-latency distributed systems. Mycelium combines compile-time type safety with zero-copy serialization to achieve sub-microsecond message passing while maintaining deployment flexibility across local, inter-process, and network boundaries. The library provides three key abstractions: (1) a type-safe publish/subscribe system with automatic routing, (2) an actor-based concurrency model with typed discovery, and (3) a schema evolution system enabling protocol versioning without breaking changes. Performance measurements demonstrate 2-3ns overhead for compile-time routed messages and 65ns for Arc-based message passing, representing a 30x improvement over traditional serialization approaches. The system is particularly well-suited for high-frequency trading systems, real-time analytics, and other latency-sensitive applications requiring both performance and correctness guarantees.
+    13	
+    14	**Keywords**: Message passing, Zero-copy serialization, Type safety, Distributed systems, Actor model, Schema evolution
+    15	
+    16	---
+    17	
+    18	## 1. Introduction
+    19	
+    20	### 1.1 Motivation
+[2025-11-16T03:14:43] tokens used: 81,600
+
+[2025-11-16T03:14:45] thinking
+
+**Planning detailed references**
+[2025-11-16T03:14:46] exec /bin/zsh -lc "nl -ba crates/mycelium-transport/src/bus.rs | sed -n '1,200p'" in /Users/daws/repos/mycelium
+[2025-11-16T03:14:46] /bin/zsh -lc "nl -ba crates/mycelium-transport/src/bus.rs | sed -n '1,200p'" succeeded in 119ms:
+     1	use crate::any::{AnyPublisher, AnySubscriber};
+     2	use crate::bounded::{BoundedPublisher, BoundedSubscriber};
+     3	use crate::config::{EndpointKind, Node, Topology, TransportConfig, TransportType};
+     4	use crate::local::LocalTransport;
+     5	use crate::socket_endpoint::{bind_tcp_endpoint, bind_unix_endpoint, SocketEndpointHandle};
+     6	use crate::tcp::{TcpPublisher, TcpSubscriber, TcpTransport};
+     7	use crate::unix::{UnixPublisher, UnixSubscriber, UnixTransport};
+     8	use crate::{Publisher, Result, Subscriber, TransportError};
+     9	use mycelium_protocol::Message;
+    10	use std::collections::HashMap;
+    11	use std::net::SocketAddr;
+    12	use std::sync::Arc;
+    13	use tokio::sync::RwLock;
+    14	
+    15	/// Message bus coordinator
+    16	///
+    17	/// Provides a unified interface for pub/sub messaging with support for:
+    18	/// - Local transport (Arc<T>) for in-process/same-node communication
+    19	/// - Unix socket transport for inter-node communication (same machine)
+    20	/// - TCP transport for distributed communication (cross-machine)
+[2025-11-16T03:14:46] tokens used: 91,477
+
+[2025-11-16T03:14:49] thinking
+
+**Preparing to summarize and plan**
+[2025-11-16T03:14:50] exec /bin/zsh -lc "nl -ba crates/mycelium-transport/src/bounded.rs | sed -n '1,200p'" in /Users/daws/repos/mycelium
+[2025-11-16T03:14:50] /bin/zsh -lc "nl -ba crates/mycelium-transport/src/bounded.rs | sed -n '1,200p'" succeeded in 116ms:
+     1	/// Bounded publisher with backpressure support
+     2	///
+     3	/// Uses `tokio::sync::mpsc` bounded channels to provide natural backpressure.
+     4	/// When the channel is full, publishers block until space is available.
+     5	///
+     6	/// ## Design Philosophy (from ACTORS.md)
+     7	///
+     8	/// - Actor mailboxes provide bounded capacity with backpressure
+     9	/// - Pub/sub can achieve backpressure via bounded channels
+    10	/// - BoundedPublisher trades broadcast capability for flow control
+    11	/// - Use when you need to prevent fast publishers from overwhelming subscribers
+    12	///
+    13	/// ## Tradeoffs vs Regular Publisher
+    14	///
+    15	/// | Feature | Publisher (broadcast) | BoundedPublisher (mpsc) |
+    16	/// |---------|----------------------|-------------------------|
+    17	/// | Multiple subscribers | ✅ Yes (fan-out) | ❌ No (single consumer) |
+    18	/// | Backpressure | ❌ Lagging drops messages | ✅ Blocks when full |
+    19	/// | Use case | Market data broadcast | Actor mailboxes, point-to-point |
+    20	/// | Overhead | Low | Slightly higher |
+[2025-11-16T03:14:50] tokens used: 124,073
+
+[2025-11-16T03:14:59] thinking
+
+**Evaluating transport and queue improvement ideas**
+
+I’m outlining evaluations for four advanced ideas: implementing shared-memory cross-process transport with zero-copy and handshake; defining dual-path routing for fast synchronous and slower async message handling; adding specialized bounded queues for high-throughput scenarios; and introducing batching to reduce syscalls. I’m noting pros, cons, required code changes, blockers, and referencing relevant files to guide a clear, stepwise plan for each.
+[2025-11-16T03:15:00] exec /bin/zsh -lc "sed -n '1,200p' crates/mycelium-transport/src/stream_transport.rs" in /Users/daws/repos/mycelium
+[2025-11-16T03:15:00] /bin/zsh -lc "sed -n '1,200p' crates/mycelium-transport/src/stream_transport.rs" succeeded in 135ms:
+use crate::buffer_pool::BufferPool;
+use crate::codec::write_message;
+use crate::error::Result;
+use crate::stream::handle_stream_connection;
+use dashmap::DashMap;
+use mycelium_protocol::{Envelope, Message};
+use std::marker::PhantomData;
+use std::sync::Arc;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::sync::{broadcast, Mutex};
+use zerocopy::AsBytes;
+
+#[derive(Clone)]
+pub(crate) struct StreamTransportState {
+    pub(crate) channels: Arc<DashMap<String, broadcast::Sender<Envelope>>>,
+    pub(crate) type_to_topic: Arc<DashMap<u16, String>>,
+    pub(crate) channel_capacity: usize,
+    pub(crate) buffer_pool: Option<Arc<BufferPool>>,
+}
+
+[2025-11-16T03:15:00] tokens used: 127,977
+
+[2025-11-16T03:15:20] thinking
+
+**Outlining advanced optimization ideas**
+
+I’m organizing detailed plans for six concepts to improve the system, covering batching flushes, pinned executors with dedicated threads, schema-aware compression, shared-memory transport, dual-path routing, and specialized bounded queues. Each idea includes pros, cons, required changes, blockers, and stepwise plans referencing relevant files and docs, aiming to produce a structured, comprehensive overview for the user’s review.
+[2025-11-16T03:15:21] codex
+
+**Shared-Memory Transport**
+- Summary: Today’s transport stack only covers Arc (in-process), Unix sockets, and TCP, so extending to an on-host shared-memory ring buffer would sit alongside those options (docs/SYSTEM_OVERVIEW.md:42-69; crates/mycelium-transport/src/bus.rs:15-200).
+- Pros/Cons: Pro – near-Arc latency without serialization/syscalls; Con – requires careful cross-process synchronization, lifecycle, and security (shared mappings must be ruled by permissions) and will be platform-specific.
+- Required Changes: Add a `SharedMemory` endpoint/transport type (config/topology), implement a `SharedMemoryTransport` that publishes TLV payloads into a ring buffer plus notification, and teach `MessageBus` to route to it alongside Arc/Unix/TCP.
+- Blockers: Designing a safe, lock-free cross-process queue is tricky, the metadata handshake (who owns the buffer, schema registration) needs a control channel (probably Unix socket or filesystem), and recovery from crashes (dangling mmap) must be handled.
+- Plan: 1) Document the feature and extend `Topology/TransportConfig` to describe shared mappings; 2) implement a helper module (e.g., using `memfd`/`mmap` + `crossbeam-ringbuf`) to publish/subscribe payloads with notification semaphores and schema registration; 3) integrate it into `MessageBus`/runtime selection logic and add multi-process integration tests.
+
+**Dual-Path Routing**
+- Summary: Local transport already exposes `BridgeFanout` and multicast channels (crates/mycelium-transport/src/local.rs:9-111), so adding a “fast lane” for critical services while keeping the existing broadcast lane is feasible.
+- Pros/Cons: Pro – latency-critical subscribers can receive messages synchronously before any wider fan-out or async work; Con – increases subscription bookkeeping and might double-deliver unless carefully split, plus it complicates actor/service APIs if the fast path bypasses contextual instrumentation.
+- Required Changes: Extend the router/bus to let callers register “fast” callbacks (or direct handles) that run inline before enqueuing to the broadcast `Publisher`; reuse `BridgeFanout` to fan-out into a dedicated queue for async subscribers.
+- Blockers: Maintaining ordering between fast/slow paths, ensuring the fast path still has access to `ServiceContext` traces/metrics, and preventing starvation of the slower path are non‑trivial.
+- Plan: 1) Define a fast-path registry keyed by message type (maybe reusing `TypeRegistry`); 2) have each publish call first invoke all fast handlers (synchronous) and then continue with the existing broadcast; 3) expose APIs so a service can opt into the fast path (maybe via new attribute or explicit subscriber); 4) add tests confirming correctness under mix of sync/async subscribers.
+
+**Specialized Bounded Queues**
+- Summary: The existing `BoundedPublisher` is just a tokio `mpsc` pair (crates/mycelium-transport/src/bounded.rs:34-164), so swapping in a custom ring buffer could reduce overhead for actor mailboxes.
+- Pros/Cons: Pro – a cache-friendly circular buffer tailored to `Envelope` avoids the `mpsc` heap nodes and atomic wakers; Con – it sacrifices the rich tokio backpressure APIs, is harder to suspend/resume, and requires unsafe code to stay performant.
+- Required Changes: Implement a new bounded queue (e.g., SPSC ring with `cache_padded` atomics) that stores `Envelope` pointers, wrap it with the same `publish`/`recv` interface, and ensure the queue hooks into the existing transport (maybe via new `BoundedQueueBuilder`).
+- Blockers: Achieving fairness/notify semantics manually is subtle, and introducing a custom queue may require additional synchronization primitives to support cancellation/shutdown.
+- Plan: 1) Benchmark the current `tokio::mpsc` implementation to confirm hotspots; 2) prototype a ring-buffer queue (maybe with `crossbeam-queue` or `heapless`), matching `Envelope` ownership semantics; 3) expose a builder so services can choose the optimized queue while keeping the API identical; 4) add stress tests for cancellation and backpressure.
+
+**Batching**
+- Summary: `StreamPublisher::publish` holds the write half, writes one TLV frame, and flushes immediately (crates/mycelium-transport/src/stream_transport.rs:36-71), so every send results in at least one syscall/flush.
+- Pros/Cons: Pro – batching several messages before a single flush would amortize syscalls and improve throughput over Unix/TCP; Con – it adds latency/jitter and requires timer-based flushes to avoid delays when traffic is low.
+- Required Changes: Introduce a `Batcher` that accumulates TLV frames into a per-connection buffer (maybe reusing `BufferPool`), flush on high-water mark/timeouts, and make `StreamPublisher` use it instead of flushing per message.
+- Blockers: Need to manage partial frames when a message is enqueued mid-flush, and the current `write_message` API assumes direct socket writes, so it will need a variant that writes into a `Vec<u8>`.
+- Plan: 1) Extend `write_message` to write into any `BufMut` so batches can be composed without flushing; 2) add a batching layer that flushes either when the buffer reaches a size threshold or a timeout fires (use `tokio::time::Interval`); 3) hook the batcher into Unix/TCP publishers and expose tuning knobs via `TransportConfig`; 4) add benchmarks to ensure latency stays acceptable.
+
+**Pinned Executors**
+- Summary: Services are spawned via `tokio::spawn` on the default runtime without affinity (crates/mycelium-transport/src/service_runtime.rs:1-136), so each service currently shares runtime threads.
+- Pros/Cons: Pro – pinning each service (or service class) to a dedicated thread reduces scheduler jitter and cache thrashing for the most latency-sensitive flows; Con – extra OS threads consume more resources and may limit scalability (especially for large numbers of services).
+- Required Changes: Build or borrow a `tokio::runtime::Handle` per service (maybe via `Builder::new_current_thread`) and spawn the service onto that runtime, or use `tokio::task::Builder::spawn_named` with a dedicated runtime handle pinned to a specific thread.
+- Blockers: TokIo runtime APIs don’t expose “pin to thread X” easily; it may require creating one-thread runtimes per service, reworking shutdown to join those runtimes, and ensuring `ServiceContext` remains `Send`.
+- Plan: 1) Prototype a helper that launches a single-threaded `Runtime` per service and runs the service future inside it; 2) adapt `ServiceRuntime::shutdown` to stop and join those runtimes; 3) evaluate memory/threads overhead and gate the feature (e.g., only for tagged services or in a “pinned execution” mode).
+
+**Schema-Aware Compression**
+- Summary: Messages are deterministic zero-copy structs per `contracts.yaml` with TLV framing (docs/SYSTEM_OVERVIEW.md:89-177), which currently assumes payloads are sent verbatim.
+- Pros/Cons: Pro – schema-aware compression (e.g., delta-encoding predictable fields or using a shared dictionary) could shrink larger payloads; Con – it breaks zero-copy deserialization, adds decompression CPU, and complicates schema evolution (compressed wire format must keep versioning).
+- Required Changes: Add compression metadata to `Envelope` (flag + dictionary ID), enable publishers to compress based on schema hints, decompress before invoking `deserialize_message`, and ensure receivers can still skip unknown message types.
+- Blockers: Compression requires extra buffer allocations and decoding steps that may negate latency benefits for small messages; dictionary management and schema compatibility (per-version) also become operational burdens.
+- Plan: 1) Prototype an optional compressor that operates on the TLV payload (e.g., LZ4 with schema-driven field selection); 2) add metadata plumbing (flags, optional dictionary) to `Envelope` and update the codec to decompress when needed; 3) benchmark to confirm the CPU tradeoff wins only when messages exceed some size threshold, and gate the feature behind config so it can be toggled per topic.
+
+Next steps:
+1. Choose the idea with the clearest payoff (shared-memory or batching) and start a prototype/benchmarks so we can quantify the win before investing in the harder pieces.
+2. If I should evaluate further ideas (e.g., tooling or telemetry), let me know and I can outline follow-up plans.
+[2025-11-16T03:15:31] tokens used: 133,744

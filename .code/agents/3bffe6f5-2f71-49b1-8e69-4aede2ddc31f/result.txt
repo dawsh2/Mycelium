@@ -1,0 +1,778 @@
+Perfect! Now I have a comprehensive understanding of the Mycelium architecture. Let me create a detailed implementation plan for the Python bridge.
+
+# Python Bridge Implementation Plan for Mycelium
+
+Based on analysis of the Mycelium transport layer, protocol system, and existing roadmap documents, here's a comprehensive step-by-step implementation plan for enabling Python services to publish/subscribe TLV messages via the Rust MessageBus.
+
+## Architecture Overview
+
+The Python bridge will enable Python services to communicate with the Mycelium MessageBus through three main approaches:
+
+1. **Direct Socket Connection** - Python connects to Unix/TCP endpoints exposed by Rust services
+2. **Rust Bridge Service** - A Rust shim service that manages Python subprocess lifecycle
+3. **Hybrid Mode** - Python runs as independent process but benefits from Rust-side observability
+
+---
+
+## Phase 1: Wire Protocol & Schema Foundation
+
+### 1.1 Document TLV Frame Contract
+
+**Goal**: Create authoritative specification for the wire protocol that Python clients must implement.
+
+**Tasks**:
+- Document the existing TLV frame format used by `crates/mycelium-transport/src/codec.rs:26-33`:
+  ```
+  ┌──────────┬──────────┬──────────────┐
+  │ Type ID  │ Length   │ Value        │
+  │ 2 bytes  │ 4 bytes  │ N bytes      │
+  │ (u16 LE) │ (u32 LE) │ (zerocopy)   │
+  └──────────┴──────────┴──────────────┘
+  ```
+- Specify Unix socket frame delivery semantics (stream-oriented, no message boundaries)
+- Specify TCP socket frame delivery semantics (same as Unix, TCP-specific considerations)
+- Document MAX_PAYLOAD_SIZE limit (from `mycelium_protocol::codec::MAX_PAYLOAD_SIZE`)
+- Create wire format examples for 3-5 representative message types
+
+**Deliverables**:
+- `docs/python-bridge/wire-protocol.md` - Complete TLV specification
+- Example frame dumps with hex + annotations
+
+---
+
+### 1.2 Extend Protocol Codegen for Python
+
+**Goal**: Generate Python pack/unpack code from `contracts.yaml` that matches Rust zerocopy layout.
+
+**Architecture Decision**: Keep codegen in `mycelium-protocol` crate vs separate tool
+- **Recommendation**: Add `codegen::python` module to `crates/mycelium-protocol/src/codegen.rs`
+- Reuse existing YAML parsing infrastructure from `crates/mycelium-protocol/src/codegen.rs:85-266`
+
+**Tasks**:
+1. Add Python code generator to `crates/mycelium-protocol/src/codegen.rs`:
+   ```rust
+   pub fn generate_python_from_yaml<P: AsRef<Path>>(
+       yaml_path: P,
+       output_path: P,
+   ) -> Result<(), CodegenError>
+   ```
+
+2. Implement field type mappings (Rust → Python):
+   - `u8/u16/u32/u64` → `struct.pack('<B/H/I/Q', ...)`
+   - `i32/i64` → `struct.pack('<i/q', ...)`
+   - `f64` → `struct.pack('<d', ...)`
+   - `[u8; N]` → `bytes` (fixed length, no packing)
+   - `U256` / `[u8; 32]` → `bytes` (32 bytes)
+   - `FixedStr<N>` → Custom Python class with length prefix + padding
+   - `FixedVec<T, N>` → Custom Python class with count field + padding + elements
+
+3. Generate Python classes with methods:
+   ```python
+   class PlayerLogin:
+       TYPE_ID = 1000
+       TOPIC = "game"
+       
+       def __init__(self, player_id: int, session_token: int, timestamp: int):
+           # Validation from contracts.yaml
+       
+       def pack(self) -> bytes:
+           # Zerocopy-compatible struct packing
+       
+       @classmethod
+       def unpack(cls, data: bytes) -> 'PlayerLogin':
+           # Zerocopy-compatible struct unpacking
+       
+       def validate(self) -> None:
+           # Validation rules from contracts.yaml
+   ```
+
+4. Handle alignment and padding to match Rust `#[repr(C)]` layout:
+   - Python `struct` module uses native alignment by default
+   - Must use `<` prefix for little-endian, standard sizes
+   - Add explicit padding bytes where Rust would insert them
+
+5. Generate validation logic from `contracts.yaml` validation rules:
+   - `not_empty`, `min_length`, `max_length` (from `codegen.rs:345-410`)
+
+**Test Strategy**:
+- Round-trip tests: Rust pack → Python unpack → Python pack → Rust unpack
+- Alignment tests: Verify sizeof(PythonMessage) == sizeof(RustMessage)
+- Validation tests: Ensure Python validation matches Rust validation
+
+**Deliverables**:
+- `crates/mycelium-protocol/src/codegen/python.rs` - Python code generator
+- `python-sdk/mycelium_protocol/__init__.py` - Runtime support (packing/unpacking utilities)
+- Generated `python-sdk/mycelium_protocol/messages.py` from example `contracts.yaml`
+- Test suite verifying Rust/Python binary compatibility
+
+---
+
+## Phase 2: Python SDK & Runtime
+
+### 2.1 Core Python Transport Client
+
+**Goal**: Python library for connecting to Mycelium Unix/TCP endpoints and pub/sub.
+
+**Package Structure**:
+```
+python-sdk/
+├── pyproject.toml                    # Modern Python packaging
+├── mycelium/
+│   ├── __init__.py
+│   ├── transport.py                  # UnixTransport, TcpTransport
+│   ├── codec.py                      # TLV encoding/decoding
+│   ├── publisher.py                  # Publisher<M>
+│   ├── subscriber.py                 # Subscriber<M>
+│   └── protocol/
+│       ├── __init__.py
+│       └── messages.py               # Generated from contracts.yaml
+└── tests/
+    ├── test_codec.py
+    ├── test_transport.py
+    └── test_integration.py           # Rust/Python integration tests
+```
+
+**Core Classes**:
+
+1. **TLVCodec** (`mycelium/codec.py`):
+   ```python
+   class TLVCodec:
+       @staticmethod
+       def encode(type_id: int, payload: bytes) -> bytes:
+           """Pack TLV frame: [type_id:u16][length:u32][payload:bytes]"""
+           
+       @staticmethod
+       def decode(stream: BinaryIO) -> tuple[int, bytes]:
+           """Read TLV frame from stream, return (type_id, payload)"""
+   ```
+
+2. **UnixTransport** (`mycelium/transport.py`):
+   ```python
+   class UnixTransport:
+       def __init__(self, socket_path: str):
+           self._socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+           self._reader_thread = threading.Thread(target=self._read_loop)
+           self._subscribers: dict[str, list[Subscriber]] = {}
+           
+       def connect(self) -> None:
+           """Connect to Unix socket endpoint"""
+           
+       def publisher(self, message_type: type[Message]) -> Publisher:
+           """Create publisher for message type"""
+           
+       def subscriber(self, message_type: type[Message]) -> Subscriber:
+           """Create subscriber for message type"""
+           
+       def _read_loop(self) -> None:
+           """Background thread: read frames and route to subscribers"""
+   ```
+
+3. **TcpTransport** (`mycelium/transport.py`):
+   ```python
+   class TcpTransport:
+       # Same interface as UnixTransport but uses TCP socket
+   ```
+
+4. **Publisher** (`mycelium/publisher.py`):
+   ```python
+   class Publisher[M]:
+       def publish(self, msg: M) -> None:
+           """Serialize and send message over transport"""
+   ```
+
+5. **Subscriber** (`mycelium/subscriber.py`):
+   ```python
+   class Subscriber[M]:
+       def recv(self) -> M:
+           """Blocking receive (blocks until message available)"""
+           
+       async def recv_async(self) -> M:
+           """Async receive (for asyncio compatibility)"""
+   ```
+
+**Threading Model**:
+- Single background reader thread per transport
+- Queue-based message routing (stdlib `queue.Queue`)
+- Thread-safe publish/subscribe operations
+- Optional asyncio integration via `asyncio.Queue`
+
+**Error Handling**:
+- Connection errors → reconnect with exponential backoff
+- Decode errors → log and skip frame (don't crash reader thread)
+- Type mismatches → raise `MessageTypeError`
+
+**Deliverables**:
+- `python-sdk/mycelium/` package implementation
+- Unit tests with mock sockets
+- Documentation with usage examples
+
+---
+
+### 2.2 Python Runtime Integration
+
+**Goal**: Enable Python services to integrate with Mycelium observability and lifecycle.
+
+**Options**:
+
+**Option A: Standalone Python Process** (simpler, less integrated)
+```python
+from mycelium import UnixTransport
+
+# Python service runs independently
+transport = UnixTransport("/tmp/mycelium/polygon-adapter.sock")
+transport.connect()
+
+pub = transport.publisher(GasMetrics)
+sub = transport.subscriber(BlockEvents)
+
+while True:
+    event = sub.recv()
+    # ... process event ...
+    pub.publish(GasMetrics(...))
+```
+
+**Option B: Rust Bridge Service** (recommended, full integration)
+- Rust service spawns/supervises Python subprocess
+- Forwards messages over stdin/stdout or dedicated socket pair
+- Provides unified metrics, tracing, and shutdown
+
+---
+
+## Phase 3: Rust Bridge Service (Optional but Recommended)
+
+### 3.1 Python Bridge Service
+
+**Goal**: Rust service that spawns Python workers and integrates them with Mycelium supervision.
+
+**Architecture**:
+```
+┌─────────────────────────────────────┐
+│  MessageBus (Rust)                  │
+│  ┌────────────┐  ┌────────────┐    │
+│  │ Service A  │  │ Service B  │    │
+│  └────────────┘  └────────────┘    │
+│         │              │            │
+│         └──────┬───────┘            │
+│                │                    │
+│      ┌─────────▼─────────┐          │
+│      │ PythonBridge      │          │
+│      │  Service          │          │
+│      └─────────┬─────────┘          │
+│                │ (Unix socket)      │
+└────────────────┼────────────────────┘
+                 │
+       ┌─────────▼─────────┐
+       │ Python Worker     │
+       │ (subprocess)      │
+       │                   │
+       │  - data adapter   │
+       │  - risk calc      │
+       │  - ML model       │
+       └───────────────────┘
+```
+
+**Implementation**:
+
+**File**: `crates/mycelium-python-bridge/src/lib.rs`
+
+```rust
+use mycelium_transport::{ServiceContext, service};
+use tokio::process::Command;
+use tokio::io::{BufReader, AsyncBufReadExt};
+
+pub struct PythonBridgeConfig {
+    pub python_path: PathBuf,
+    pub script_path: PathBuf,
+    pub socket_path: PathBuf,
+    pub env: HashMap<String, String>,
+}
+
+pub struct PythonBridge {
+    config: PythonBridgeConfig,
+    child: Option<Child>,
+}
+
+#[service]
+impl PythonBridge {
+    pub fn new(config: PythonBridgeConfig) -> Self {
+        Self { config, child: None }
+    }
+    
+    async fn run(&mut self, ctx: &ServiceContext) -> Result<()> {
+        // 1. Spawn Python subprocess
+        let mut child = Command::new(&self.config.python_path)
+            .arg(&self.config.script_path)
+            .env("MYCELIUM_SOCKET", &self.config.socket_path)
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()?;
+        
+        // 2. Monitor stdout/stderr for logging
+        let stdout = child.stdout.take().unwrap();
+        let stderr = child.stderr.take().unwrap();
+        
+        tokio::spawn(async move {
+            let mut reader = BufReader::new(stdout).lines();
+            while let Ok(Some(line)) = reader.next_line().await {
+                tracing::info!(target: "python", "{}", line);
+            }
+        });
+        
+        tokio::spawn(async move {
+            let mut reader = BufReader::new(stderr).lines();
+            while let Ok(Some(line)) = reader.next_line().await {
+                tracing::error!(target: "python", "{}", line);
+            }
+        });
+        
+        self.child = Some(child);
+        
+        // 3. Wait for shutdown signal or child exit
+        tokio::select! {
+            _ = ctx.shutdown_signal() => {
+                tracing::info!("Shutting down Python worker");
+                if let Some(mut child) = self.child.take() {
+                    child.kill().await?;
+                }
+            }
+            status = child.wait() => {
+                tracing::warn!("Python worker exited: {:?}", status);
+                return Err(anyhow::anyhow!("Python worker crashed"));
+            }
+        }
+        
+        Ok(())
+    }
+}
+```
+
+**Benefits**:
+- Python worker appears in Rust service topology
+- Unified logging (Python stdout/stderr → Rust tracing)
+- Graceful shutdown (Rust signals Python via socket/SIGTERM)
+- Restart policies (ServiceRuntime handles exponential backoff)
+- Centralized configuration (Rust reads config, passes to Python)
+
+**Deliverables**:
+- `crates/mycelium-python-bridge/` crate
+- Example Python worker scripts
+- Integration tests
+
+---
+
+## Phase 4: Testing & Integration
+
+### 4.1 Round-Trip Integration Tests
+
+**Goal**: Prove Python ↔ Rust message passing works correctly.
+
+**Test Scenarios**:
+
+1. **Echo Test** (`tests/integration/python_echo_test.rs`):
+   ```rust
+   #[tokio::test]
+   async fn test_python_echo_service() {
+       // 1. Start Rust MessageBus with Unix endpoint
+       let bus = MessageBus::new();
+       let socket_path = "/tmp/mycelium-test.sock";
+       let _handle = bus.bind_unix_endpoint(socket_path).await?;
+       
+       // 2. Start Python echo script
+       let mut python = Command::new("python3")
+           .arg("tests/fixtures/echo_service.py")
+           .env("SOCKET_PATH", socket_path)
+           .spawn()?;
+       
+       // 3. Publish message from Rust
+       let pub_ = bus.publisher::<TestMessage>();
+       pub_.publish(TestMessage { value: 42 }).await?;
+       
+       // 4. Subscribe and verify echo
+       let mut sub = bus.subscriber::<TestMessage>();
+       let echoed = sub.recv().await?;
+       assert_eq!(echoed.value, 42);
+       
+       python.kill().await?;
+   }
+   ```
+
+2. **Type Safety Test**:
+   - Python sends invalid type_id → Rust logs error and skips
+   - Python sends malformed payload → Rust validation fails
+   - Python sends oversized message → Connection closed
+
+3. **Performance Test**:
+   - Measure Rust → Python → Rust round-trip latency
+   - Target: <1ms for small messages on Unix sockets
+   - Measure throughput: messages/second
+
+4. **Concurrency Test**:
+   - Multiple Python publishers → Rust subscriber
+   - Rust publisher → Multiple Python subscribers
+   - Verify no message loss or corruption
+
+**Deliverables**:
+- Integration test suite in `tests/integration/`
+- Python test fixtures in `tests/fixtures/`
+- CI configuration for running Python tests
+
+---
+
+### 4.2 Schema Drift Detection
+
+**Goal**: Prevent Rust/Python schema desync by detecting changes.
+
+**Mechanism**:
+1. Generate Python code during Rust build (`build.rs` runs Python codegen)
+2. Commit generated Python code to repo
+3. CI checks for uncommitted changes after build
+4. Lock `contracts.yaml` version, bump on schema changes
+
+**Alternative**: Runtime Schema Validation
+- Embed schema hash in generated code
+- Python client checks hash on connect
+- Mismatch → reject connection with clear error
+
+**Deliverables**:
+- CI pipeline that detects schema drift
+- Documentation on schema versioning policy
+
+---
+
+## Phase 5: Observability & Operations
+
+### 5.1 Metrics Integration
+
+**Goal**: Surface Python service metrics to Rust observability stack.
+
+**Approach**:
+
+**Option A: Log-Based Metrics** (simple)
+```python
+# Python logs structured metrics to stdout
+print(f"METRIC publish_count {topic} {count}")
+```
+- Rust bridge parses logs and records to `ServiceMetrics`
+
+**Option B: Side-Channel Metrics** (better)
+```python
+# Python writes metrics to shared memory or Unix socket
+metrics_client.record("publish_count", topic, count)
+```
+- Rust bridge reads metrics channel and publishes to Prometheus/StatsD
+
+**Recommended**: Option B with StatsD protocol over Unix datagram socket
+
+**Implementation**:
+```python
+# mycelium/metrics.py
+class MetricsClient:
+    def __init__(self, socket_path: str):
+        self._sock = socket.socket(socket.AF_UNIX, socket.SOCK_DGRAM)
+        self._sock.connect(socket_path)
+    
+    def increment(self, metric: str, tags: dict[str, str]) -> None:
+        msg = f"{metric}:1|c|#{self._format_tags(tags)}"
+        self._sock.send(msg.encode())
+```
+
+**Metrics to Track**:
+- `python.messages.published{topic, type_id}`
+- `python.messages.received{topic, type_id}`
+- `python.errors{error_type}`
+- `python.processing_time{topic}` (histogram)
+
+**Deliverables**:
+- `mycelium/metrics.py` - Python metrics client
+- Rust bridge metrics collector
+- Example Grafana dashboard
+
+---
+
+### 5.2 Distributed Tracing
+
+**Goal**: Connect Python spans to Rust tracing context.
+
+**Approach**:
+1. Rust bridge generates `trace_id` for Python worker
+2. Pass `trace_id` via environment variable: `MYCELIUM_TRACE_ID=abc123`
+3. Python emits structured logs with `trace_id`
+4. Rust bridge forwards to OpenTelemetry/Jaeger
+
+**Python Integration**:
+```python
+import os
+import logging
+
+trace_id = os.getenv("MYCELIUM_TRACE_ID")
+logger = logging.getLogger("mycelium")
+logger.info("Processing message", extra={"trace_id": trace_id, "topic": topic})
+```
+
+**Deliverables**:
+- Tracing context propagation
+- Example trace spans showing Rust → Python flow
+
+---
+
+## Phase 6: Documentation & Examples
+
+### 6.1 Getting Started Guide
+
+**File**: `docs/python-bridge/getting-started.md`
+
+**Contents**:
+1. Installation
+   ```bash
+   pip install mycelium-python-sdk
+   ```
+
+2. Define messages in `contracts.yaml`
+3. Generate Python code
+   ```bash
+   cargo build  # Runs codegen
+   ```
+
+4. Connect to Mycelium
+   ```python
+   from mycelium import UnixTransport
+   from mycelium.protocol.messages import GasMetrics
+   
+   transport = UnixTransport("/tmp/mycelium/adapter.sock")
+   transport.connect()
+   
+   pub = transport.publisher(GasMetrics)
+   pub.publish(GasMetrics(block_number=12345, base_fee_per_gas=...))
+   ```
+
+5. Deploy with Rust bridge service
+
+**Deliverables**:
+- Getting started guide
+- API reference documentation
+- Migration guide for existing Python services
+
+---
+
+### 6.2 Example Applications
+
+**Example 1: Python Data Adapter** (`examples/python-adapter/`)
+```python
+# Fetches data from external API, publishes to Mycelium
+import requests
+from mycelium import UnixTransport
+from mycelium.protocol.messages import MarketData
+
+transport = UnixTransport("/tmp/mycelium/adapter.sock")
+pub = transport.publisher(MarketData)
+
+while True:
+    data = requests.get("https://api.example.com/data").json()
+    pub.publish(MarketData(
+        symbol=data["symbol"],
+        price=data["price"],
+        ...
+    ))
+```
+
+**Example 2: Python Risk Calculator** (`examples/python-risk/`)
+```python
+# Subscribes to trades, computes risk metrics, publishes results
+from mycelium import UnixTransport
+from mycelium.protocol.messages import Trade, RiskMetrics
+
+transport = UnixTransport("/tmp/mycelium/trading.sock")
+trade_sub = transport.subscriber(Trade)
+risk_pub = transport.publisher(RiskMetrics)
+
+for trade in trade_sub:
+    risk = calculate_risk(trade)
+    risk_pub.publish(RiskMetrics(
+        portfolio_var=risk.var,
+        sharpe_ratio=risk.sharpe,
+        ...
+    ))
+```
+
+**Deliverables**:
+- 3-5 example applications
+- Performance benchmarks
+- Deployment configurations
+
+---
+
+## Phase 7: Deployment & Operations
+
+### 7.1 Deployment Patterns
+
+**Pattern 1: Sidecar** (Python + Rust bridge in same pod/container)
+```yaml
+# docker-compose.yml
+services:
+  rust-bridge:
+    image: mycelium-bridge:latest
+    volumes:
+      - ./sockets:/tmp/mycelium
+  
+  python-worker:
+    image: python-adapter:latest
+    volumes:
+      - ./sockets:/tmp/mycelium
+    environment:
+      - MYCELIUM_SOCKET=/tmp/mycelium/adapter.sock
+```
+
+**Pattern 2: Managed Subprocess** (Rust spawns Python)
+```toml
+# topology.toml
+[[nodes]]
+name = "python-adapter"
+services = ["python-adapter"]
+
+[nodes.python]
+script = "/app/adapter.py"
+env = { API_KEY = "secret" }
+```
+
+**Pattern 3: Independent Process** (Python connects to existing bus)
+```bash
+# Python runs as systemd service
+[Unit]
+Description=Mycelium Python Adapter
+
+[Service]
+Environment=MYCELIUM_SOCKET=/run/mycelium/bus.sock
+ExecStart=/usr/bin/python3 /app/adapter.py
+```
+
+**Deliverables**:
+- Deployment guides for each pattern
+- Docker/Kubernetes examples
+- Systemd unit files
+
+---
+
+### 7.2 Packaging & Distribution
+
+**Python Package** (`python-sdk/`):
+```toml
+# pyproject.toml
+[project]
+name = "mycelium-python"
+version = "0.1.0"
+dependencies = []
+
+[tool.hatch.build]
+include = ["mycelium/**/*.py"]
+```
+
+**Publish to PyPI**:
+```bash
+python -m build
+twine upload dist/*
+```
+
+**Rust Crate** (`crates/mycelium-python-bridge/`):
+```toml
+[package]
+name = "mycelium-python-bridge"
+version = "0.1.0"
+
+[dependencies]
+mycelium-transport = { path = "../mycelium-transport" }
+tokio = { workspace = true }
+```
+
+**Deliverables**:
+- PyPI package: `mycelium-python`
+- Crates.io package: `mycelium-python-bridge`
+- Release automation
+
+---
+
+## Summary & Milestones
+
+### Milestone 1: Core Protocol (2-3 weeks)
+- [ ] Wire protocol documentation
+- [ ] Python code generator in `mycelium-protocol`
+- [ ] Generated Python message classes
+- [ ] Binary compatibility tests
+
+### Milestone 2: Python SDK (2-3 weeks)
+- [ ] `TLVCodec` implementation
+- [ ] `UnixTransport` + `TcpTransport`
+- [ ] Publisher/Subscriber classes
+- [ ] Unit tests
+
+### Milestone 3: Integration (1-2 weeks)
+- [ ] Round-trip integration tests
+- [ ] Schema drift detection
+- [ ] Performance benchmarks
+
+### Milestone 4: Bridge Service (2 weeks)
+- [ ] `mycelium-python-bridge` crate
+- [ ] Subprocess management
+- [ ] Metrics/tracing integration
+
+### Milestone 5: Operations (1-2 weeks)
+- [ ] Documentation
+- [ ] Example applications
+- [ ] Deployment guides
+- [ ] PyPI/Crates.io publishing
+
+**Total Estimated Time**: 8-12 weeks
+
+---
+
+## Open Questions & Decisions
+
+### Q1: Schema Codegen Location
+**Options**:
+- A) Extend `mycelium-protocol/src/codegen.rs` (recommended)
+- B) Separate `mycelium-python-codegen` crate
+- C) Python-side codegen tool
+
+**Recommendation**: **Option A** - Keep all codegen centralized for consistency
+
+### Q2: Message Format Flexibility
+**Question**: Should we support JSON/MessagePack as alternative to TLV for Python ergonomics?
+
+**Tradeoff**:
+- TLV: Zero-copy, fast, matches Rust
+- JSON: Easier debugging, human-readable, slower
+
+**Recommendation**: Start with TLV only, add JSON as opt-in debugging mode later
+
+### Q3: Async vs Sync Python API
+**Options**:
+- A) Blocking API with threads (simpler)
+- B) AsyncIO API (more Pythonic for async code)
+- C) Both (more maintenance)
+
+**Recommendation**: **Option C** - Provide both, internally share transport implementation
+
+### Q4: Binary Distribution
+**Question**: Should we distribute precompiled Rust bridge binaries or require building from source?
+
+**Recommendation**: Provide wheels for common platforms (Linux x86_64, macOS ARM64), fallback to source build
+
+---
+
+## Risk Mitigation
+
+### Risk 1: Binary Compatibility
+**Mitigation**: Extensive round-trip tests, schema versioning, runtime validation
+
+### Risk 2: Performance Overhead
+**Mitigation**: Benchmark early, profile Python TLV encoding, consider optional Cython/Rust extension
+
+### Risk 3: Python Subprocess Crashes
+**Mitigation**: Rust bridge implements exponential backoff, health checks, graceful degradation
+
+### Risk 4: Schema Evolution
+**Mitigation**: Version contracts.yaml, maintain compatibility matrix, deprecation policy
+
+---
+
+This plan provides a production-ready Python bridge that leverages Mycelium's existing TLV transport, code generation, and service runtime infrastructure while maintaining the performance characteristics needed for high-frequency trading and real-time data processing.

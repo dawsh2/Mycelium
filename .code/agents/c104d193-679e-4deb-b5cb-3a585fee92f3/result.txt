@@ -1,0 +1,136 @@
+Here is a proposed implementation plan to consolidate duplicated logic in the Mycelium codebase.
+
+### 1. Unify `ServiceRuntime` Implementations
+
+**Analysis:**
+Based on inspection of `crates/mycelium-transport/src/runtime.rs` and `crates/mycelium-transport/src/service_runtime.rs`, the former appears to be a legacy, more generic actor runtime, while the latter is a more specialized runtime for services. The `service_runtime.rs` is more aligned with the project's direction. The goal is to deprecate `runtime.rs` and consolidate all necessary functionality into `service_runtime.rs`.
+
+**Proposed Plan:**
+
+1.  **Identify Unique Functionality:** Analyze `runtime.rs` to identify any features or public-facing APIs not present in `service_runtime.rs`. The key difference seems to be the generic `spawn()` method in `runtime.rs` versus the more structured service-oriented approach in `service_runtime.rs`.
+2.  **Migrate Users:** Identify all internal usages of `runtime.rs`. Based on a quick search, its usage is likely limited or non-existent in favor of `service_runtime.rs`. Any users should be migrated to `ServiceRuntime`.
+3.  **Consolidate and Deprecate:**
+    *   If any essential features from `runtime.rs` are identified, move them into `service_runtime.rs` or a more appropriate location (e.g., `crates/mycelium-transport/src/actor/runtime.rs`).
+    *   Mark the contents of `runtime.rs` with `#[deprecated]` attributes, pointing users to `ServiceRuntime`.
+4.  **Remove Legacy Module:** After a deprecation period (or immediately, if no external users are expected), delete the `crates/mycelium-transport/src/runtime.rs` file and update `lib.rs` to remove the module.
+
+**Affected Files:**
+
+*   `crates/mycelium-transport/src/runtime.rs`: To be deprecated and eventually deleted.
+*   `crates/mycelium-transport/src/service_runtime.rs`: May receive minor additions.
+*   `crates/mycelium-transport/src/lib.rs`: To remove the `pub mod runtime;` declaration.
+*   Any files that currently import from `mycelium_transport::runtime`.
+
+**Testing Strategy:**
+
+*   The existing test suite should continue to pass after the migration.
+*   Run `cargo check --all-features` to detect any breakage caused by the removal.
+*   Pay close attention to integration tests in the `tests/` directory, as they are most likely to exercise the runtime components.
+
+**Potential Risks:**
+
+*   There might be subtle dependencies on `runtime.rs` that are not immediately obvious, leading to compilation failures or runtime errors after removal. A thorough search for usages is critical.
+
+### 2. Extract Shared TCP/Unix Transport Logic
+
+**Analysis:**
+`crates/mycelium-transport/src/tcp.rs` and `crates/mycelium-transport/src/unix.rs` contain significant duplication. Both implement logic for:
+*   Binding a server to an address.
+*   Accepting incoming connections in a loop.
+*   Spawning a task to handle each new connection (`handle_client_stream`).
+*   The `handle_client_stream` function itself, which sets up codecs, buffers, and bi-directional communication channels.
+
+A generic stream transport abstraction can eliminate this redundancy.
+
+**Proposed Plan:**
+
+1.  **Create a Generic Stream Module:**
+    *   Create a new private module: `crates/mycelium-transport/src/stream_transport.rs`.
+    *   This module will contain a generic `run_server` function and a `handle_connection` function.
+2.  **Define Generic Traits:**
+    *   The `run_server` function will be generic over a type that can produce a stream of connections (e.g., `TcpListener`, `UnixListener`). We can define a simple trait for this.
+    *   The `handle_connection` function will be generic over an `AsyncRead + AsyncWrite` stream.
+3.  **Refactor TCP and Unix Transports:**
+    *   Modify `tcp.rs` and `unix.rs` to delegate all the server-side and connection-handling logic to the new `stream_transport.rs` module.
+    *   The transport-specific files will now only be responsible for creating the initial listener (`TcpListener` or `UnixListener`) and passing it to the generic `run_server` function.
+
+**Affected Files:**
+
+*   `crates/mycelium-transport/src/stream_transport.rs`: **New file** containing the shared logic.
+*   `crates/mycelium-transport/src/tcp.rs`: To be refactored to use the new module.
+*   `crates/mycelium-transport/src/unix.rs`: To be refactored to use the new module.
+*   `crates/mycelium-transport/src/lib.rs`: To add the new module.
+
+**Testing Strategy:**
+
+*   The existing transport tests in `tests/transport_tests/` should pass without modification, as the public API of the TCP and Unix transports will not change.
+*   Add new unit tests specifically for the logic within `stream_transport.rs`, using mock stream and listener objects.
+
+**Potential Risks:**
+
+*   Incorrectly defining the generic bounds could lead to complex compiler errors. The key is to ensure the traits correctly capture the necessary capabilities of `AsyncRead`, `AsyncWrite`, and the listener types.
+
+### 3. Consolidate `MessageBus` Routing Helpers
+
+**Analysis:**
+In `crates/mycelium-transport/src/bus.rs`, the `publisher_to()` and `subscriber_from()` methods both perform similar logic to resolve a topic string into a concrete transport-level address. This involves looking up the topic in the `Topology` map.
+
+**Proposed Plan:**
+
+1.  **Create a Private Resolution Helper:**
+    *   Implement a new private method on `MessageBus`, for example `resolve_topic(&self, topic: &str) -> Option<Vec<Address>>`.
+    *   This function will contain the logic for querying the `topology` field and returning the associated addresses.
+2.  **Refactor Public Methods:**
+    *   Modify `publisher_to()` and `subscriber_from()` to call the new `resolve_topic()` helper function.
+    *   The public methods will then focus only on their specific roles: creating a `Publisher` or a `Subscriber` with the resolved addresses.
+
+**Affected Files:**
+
+*   `crates/mycelium-transport/src/bus.rs`: Will be modified to include the new private helper and refactor the public methods.
+
+**Testing Strategy:**
+
+*   The existing tests for `MessageBus` should continue to pass.
+*   Add a new unit test specifically for the `resolve_topic()` helper to ensure it correctly handles found and not-found cases.
+
+**Potential Risks:**
+
+*   This is a low-risk refactoring, as it is confined to a single module and does not change public APIs. The main risk is introducing a minor logic error during the refactoring, which should be caught by tests.
+
+### 4. Centralize Example Boilerplate (Stretch Goal)
+
+**Analysis:**
+The examples in `examples/generic/` (e.g., `game_server.rs`, `sensor_network.rs`) share setup code for:
+*   Parsing command-line arguments (e.g., for listen addresses).
+*   Setting up the `tokio` runtime.
+*   Initializing the `MessageBus` and transports.
+*   Graceful shutdown handling.
+
+**Proposed Plan:**
+
+1.  **Create an `example_utils` Crate or Module:**
+    *   A new local crate (e.g., `crates/example-utils`) or a module within an existing crate could house the shared logic. A new crate is cleaner for dependency management.
+2.  **Extract Common Setup Functions:**
+    *   Create a function like `pub fn setup_global_bus() -> MessageBus` that initializes the `MessageBus`, registers transports, and returns a configured instance.
+    *   Create helper functions for common tasks, like `fn get_tcp_listen_addr() -> String` which parses command-line arguments or provides a default.
+3.  **Refactor Examples:**
+    *   Update the examples in `examples/generic/` and other relevant locations to use the new helper functions from `example-utils`. This will significantly reduce the line count of each example and focus the code on the specific logic being demonstrated.
+
+**Affected Files:**
+
+*   `crates/example-utils/src/lib.rs`: **New file/crate**.
+*   `Cargo.toml`: The root `Cargo.toml` would need to be updated to include the new crate in the workspace.
+*   `examples/generic/game_server.rs`: To be refactored.
+*   `examples/generic/managed_service.rs`: To be refactored.
+*   `examples/generic/sensor_network.rs`: To be refactored.
+*   Each example's `Cargo.toml` would need to add a dependency on `example-utils`.
+
+**Testing Strategy:**
+
+*   The `example-utils` crate should have its own set of unit tests.
+*   After refactoring, all examples should still compile and run as expected (`cargo run --example <name>`).
+
+**Potential Risks:**
+
+*   Over-engineering the solution. The goal is to reduce boilerplate, not create a complex framework for examples. The helpers should be simple and focused.
+*   Making the examples harder to understand. The shared code should be straightforward, so that someone reading an example can easily understand what the setup helpers are doing. Good documentation on the helper functions will be important.

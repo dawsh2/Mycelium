@@ -1,15 +1,15 @@
 use crate::buffer_pool::BufferPool;
-use crate::codec::write_message;
 use crate::error::Result;
-use crate::stream::{handle_stream_connection, StreamSubscriber};
-use dashmap::DashMap;
-use mycelium_protocol::{Envelope, Message};
-use std::marker::PhantomData;
+use crate::stream::StreamSubscriber;
+use crate::stream_transport::{spawn_client_reader, StreamPublisher, StreamTransportState};
+use mycelium_protocol::Message;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use tokio::io::AsyncWriteExt;
+use tokio::net::tcp::OwnedWriteHalf;
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::{broadcast, Mutex};
+use tokio::sync::Mutex;
+
+const DEFAULT_CHANNEL_CAPACITY: usize = 1000;
 
 /// TCP socket transport for distributed inter-process communication
 ///
@@ -21,14 +21,8 @@ pub struct TcpTransport {
     bind_addr: SocketAddr,
     listener: Option<Arc<TcpListener>>,
     /// Client-side persistent connection (for publishers)
-    connection: Option<Arc<Mutex<TcpStream>>>,
-    /// Topic → broadcast channel mapping
-    channels: Arc<DashMap<String, broadcast::Sender<Envelope>>>,
-    /// Type ID → Topic mapping (for efficient routing)
-    type_to_topic: Arc<DashMap<u16, String>>,
-    channel_capacity: usize,
-    /// Optional buffer pool for zero-allocation reading
-    buffer_pool: Option<Arc<BufferPool>>,
+    write_half: Option<Arc<Mutex<OwnedWriteHalf>>>,
+    state: StreamTransportState,
 }
 
 impl TcpTransport {
@@ -49,20 +43,16 @@ impl TcpTransport {
     ) -> Result<Self> {
         let listener = TcpListener::bind(addr).await?;
         let bind_addr = listener.local_addr()?;
+        let state = StreamTransportState::new(DEFAULT_CHANNEL_CAPACITY, buffer_pool);
 
         let transport = Self {
             bind_addr,
             listener: Some(Arc::new(listener)),
-            connection: None,
-            channels: Arc::new(DashMap::new()),
-            type_to_topic: Arc::new(DashMap::new()),
-            channel_capacity: 1000,
-            buffer_pool: buffer_pool.map(Arc::new),
+            write_half: None,
+            state: state.clone(),
         };
 
-        // Spawn accept loop
         transport.spawn_accept_loop();
-
         Ok(transport)
     }
 
@@ -71,42 +61,31 @@ impl TcpTransport {
     /// Establishes a persistent connection that will be reused for all publishes.
     pub async fn connect(addr: SocketAddr) -> Result<Self> {
         let stream = TcpStream::connect(addr).await?;
+        let (reader, writer) = stream.into_split();
+        let state = StreamTransportState::new(DEFAULT_CHANNEL_CAPACITY, None);
+
+        spawn_client_reader(reader, state.clone(), "TCP");
 
         Ok(Self {
             bind_addr: addr,
             listener: None,
-            connection: Some(Arc::new(Mutex::new(stream))),
-            channels: Arc::new(DashMap::new()),
-            type_to_topic: Arc::new(DashMap::new()),
-            channel_capacity: 1000,
-            buffer_pool: None,
+            write_half: Some(Arc::new(Mutex::new(writer))),
+            state,
         })
     }
 
-    /// Spawn the accept loop for incoming connections
     fn spawn_accept_loop(&self) {
         let Some(listener) = self.listener.clone() else {
             return;
         };
-
-        let channels = Arc::clone(&self.channels);
-        let type_to_topic = Arc::clone(&self.type_to_topic);
-        let buffer_pool = self.buffer_pool.clone();
+        let state = self.state.clone();
 
         tokio::spawn(async move {
             loop {
                 match listener.accept().await {
                     Ok((stream, addr)) => {
                         tracing::debug!("Accepted TCP connection from {}", addr);
-                        let channels = Arc::clone(&channels);
-                        let type_to_topic = Arc::clone(&type_to_topic);
-                        let buffer_pool = buffer_pool.clone();
-                        tokio::spawn(async move {
-                            let pool_ref = buffer_pool.as_ref().map(|p| p.as_ref());
-                            if let Err(e) = handle_stream_connection(stream, channels, type_to_topic, pool_ref).await {
-                                tracing::error!("Connection error from {}: {}", addr, e);
-                            }
-                        });
+                        spawn_client_reader(stream, state.clone(), "TCP");
                     }
                     Err(e) => {
                         tracing::error!("Accept error: {}", e);
@@ -116,33 +95,21 @@ impl TcpTransport {
         });
     }
 
-    /// Get or create a broadcast channel for a topic
-    fn get_or_create_channel(&self, topic: &str) -> broadcast::Sender<Envelope> {
-        self.channels
-            .entry(topic.to_string())
-            .or_insert_with(|| broadcast::channel(self.channel_capacity).0)
-            .clone()
-    }
-
     /// Create a publisher for a message type
     ///
     /// Returns None if this is a server-side transport (no client connection).
     pub fn publisher<M: Message>(&self) -> Option<TcpPublisher<M>> {
-        let connection = self.connection.as_ref()?.clone();
-        Some(TcpPublisher {
-            connection,
-            _phantom: PhantomData,
-        })
+        let write_half = self.write_half.as_ref()?.clone();
+        Some(StreamPublisher::new(write_half))
     }
 
     /// Create a subscriber for a message type
     ///
     /// Registers the type_id → topic mapping for efficient routing.
     pub fn subscriber<M: Message>(&self) -> TcpSubscriber<M> {
-        // Register type_id → topic mapping
-        self.type_to_topic.insert(M::TYPE_ID, M::TOPIC.to_string());
+        self.state.register_type::<M>();
 
-        let tx = self.get_or_create_channel(M::TOPIC);
+        let tx = self.state.get_or_create_channel(M::TOPIC);
         let rx = tx.subscribe();
         TcpSubscriber::new(rx)
     }
@@ -154,32 +121,7 @@ impl TcpTransport {
 }
 
 /// Publisher for TCP socket transport with persistent connection
-pub struct TcpPublisher<M> {
-    connection: Arc<Mutex<TcpStream>>,
-    _phantom: PhantomData<M>,
-}
-
-impl<M: Message> TcpPublisher<M>
-where
-    M: zerocopy::AsBytes,
-{
-    /// Publish a message over TCP socket using the persistent connection
-    ///
-    /// The connection is shared across all publishers from the same transport,
-    /// protected by a mutex. This eliminates the overhead of creating a new
-    /// connection for each message.
-    pub async fn publish(&self, msg: M) -> Result<()> {
-        let mut stream = self.connection.lock().await;
-
-        // Write message to persistent connection
-        write_message(&mut *stream, &msg).await?;
-
-        // Flush to ensure message is sent
-        stream.flush().await?;
-
-        Ok(())
-    }
-}
+pub type TcpPublisher<M> = StreamPublisher<M, OwnedWriteHalf>;
 
 /// Subscriber for TCP socket transport (re-exported from stream module)
 pub type TcpSubscriber<M> = StreamSubscriber<M>;
@@ -187,7 +129,10 @@ pub type TcpSubscriber<M> = StreamSubscriber<M>;
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::codec::write_message;
     use mycelium_protocol::impl_message;
+    use tokio::net::TcpListener;
+    use tokio::sync::oneshot;
     use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
     #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
@@ -203,7 +148,6 @@ mod tests {
         let addr = "127.0.0.1:0".parse().unwrap();
         let transport = TcpTransport::bind(addr).await.unwrap();
 
-        // Should have bound to a random port
         assert_ne!(transport.local_addr().port(), 0);
     }
 
@@ -215,17 +159,14 @@ mod tests {
 
         let mut sub = server.subscriber::<TestMsg>();
 
-        // Give server time to start
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-        // Client publishes
         let client = TcpTransport::connect(server_addr).await.unwrap();
         let pub_ = client.publisher::<TestMsg>().unwrap();
 
         let msg = TestMsg { value: 42 };
         pub_.publish(msg.clone()).await.unwrap();
 
-        // Wait for message with timeout
         let received = tokio::time::timeout(tokio::time::Duration::from_secs(1), sub.recv())
             .await
             .expect("Timeout waiting for message");
@@ -243,7 +184,6 @@ mod tests {
 
         tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 
-        // Client publishes multiple messages
         let client = TcpTransport::connect(server_addr).await.unwrap();
         let pub_ = client.publisher::<TestMsg>().unwrap();
 
@@ -251,7 +191,6 @@ mod tests {
             pub_.publish(TestMsg { value: i }).await.unwrap();
         }
 
-        // Receive messages
         for i in 0..3 {
             let received = tokio::time::timeout(tokio::time::Duration::from_secs(1), sub.recv())
                 .await
@@ -259,5 +198,33 @@ mod tests {
 
             assert_eq!(received.unwrap().value, i);
         }
+    }
+
+    #[tokio::test]
+    async fn test_tcp_connect_subscriber_receives() {
+        let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let addr = listener.local_addr().unwrap();
+
+        let (ready_tx, ready_rx) = oneshot::channel();
+        let server_handle = tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            ready_rx.await.unwrap();
+            let msg = TestMsg { value: 123 };
+            write_message(&mut stream, &msg).await.unwrap();
+        });
+
+        let transport = TcpTransport::connect(addr).await.unwrap();
+        let mut sub = transport.subscriber::<TestMsg>();
+
+        ready_tx.send(()).unwrap();
+
+        let received = tokio::time::timeout(tokio::time::Duration::from_secs(1), sub.recv())
+            .await
+            .expect("Timeout waiting for TCP message")
+            .expect("TCP stream closed unexpectedly");
+
+        assert_eq!(received.value, 123);
+
+        server_handle.await.unwrap();
     }
 }

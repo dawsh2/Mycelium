@@ -1,0 +1,514 @@
+Cargo.lock:276: "serde_json",
+Cargo.lock:1119:name = "serde_json"
+Cargo.lock:1282: "serde_json",
+README.md:12:  `ServiceContext` that exposes async publishers/subscribers plus tracing and
+README.md:13:  metrics hooks.
+README.md:25:| `ServiceContext` | `crates/mycelium-transport/src/service.rs` | Runtime handle passed to every service method. Provides `emit`, `subscribe`, shutdown signals, metrics, and tracing spans. |
+README.md:49:       domain: telemetry
+README.md:62:   use mycelium_transport::{service, ServiceContext};
+README.md:68:       async fn run(&mut self, ctx: &ServiceContext) -> Result<()> {
+README.md:86:   async fn main() -> Result<(), anyhow::Error> {
+README.md:90:       runtime.spawn_service(GasLogger).await?;
+README.md:100:- `ServiceContext::emit` attaches tracing spans and counters. The overhead is ~120
+examples/domain_specific/defi/contracts.yaml:14:  # Minimum compatible version (decoders can skip unknown fields within this range)
+scripts/detect_duplication/src/main.rs:26:fn main() {
+examples/domain_specific/defi_arbitrage_demo.rs:27:    is_healthy: bool,
+examples/domain_specific/defi_arbitrage_demo.rs:39:        self.is_healthy = true;
+examples/domain_specific/defi_arbitrage_demo.rs:51:        self.is_healthy = false;
+examples/domain_specific/defi_arbitrage_demo.rs:56:    async fn health(&self) -> HealthStatus {
+examples/domain_specific/defi_arbitrage_demo.rs:57:        if self.is_healthy {
+examples/domain_specific/defi_arbitrage_demo.rs:60:            HealthStatus::Unhealthy {
+examples/domain_specific/defi_arbitrage_demo.rs:61:                reason: mycelium_transport::UnhealthyReason::NotReady,
+examples/domain_specific/defi_arbitrage_demo.rs:78:            is_healthy: false,
+examples/domain_specific/defi_arbitrage_demo.rs:119:async fn main() -> Result<(), Box<dyn std::error::Error>> {
+examples/domain_specific/defi_arbitrage_demo.rs:147:    // Check health
+examples/domain_specific/defi_arbitrage_demo.rs:148:    let health = handler.health().await;
+examples/domain_specific/defi_arbitrage_demo.rs:149:    println!("   Health status: {}\n", health);
+examples/domain_specific/defi_arbitrage_demo.rs:223:    let final_health = handler.health().await;
+examples/domain_specific/defi_arbitrage_demo.rs:224:    println!("   Final health status: {}", final_health);
+docs/ARCHITECTURE_DIAGRAMS.md:46:│  │                       TLV Codec & Schema Evolution                   │   │
+docs/ARCHITECTURE_DIAGRAMS.md:48:│  │  │ encode_message │  │ decode_message │  │ check_compat   │       │   │
+docs/ARCHITECTURE_DIAGRAMS.md:437:│    let msg = decode_message(&buf[..])?;     // Zero-copy decode            │
+docs/todo/2025-11-05-python-integration-roadmap.md:4:Context
+docs/todo/2025-11-05-python-integration-roadmap.md:29:     supervision, metrics, and shutdown semantics.
+docs/todo/2025-11-05-python-integration-roadmap.md:48:- Reuse Mycelium restart/backoff strategies and structured telemetry.
+examples/actor_demo.rs:7:use mycelium_transport::{Actor, ActorContext, ActorRuntime, MessageBus};
+examples/actor_demo.rs:37:    async fn handle(&mut self, msg: Self::Message, _ctx: &mut ActorContext<Self>) {
+examples/actor_demo.rs:42:    async fn started(&mut self, ctx: &mut ActorContext<Self>) {
+examples/actor_demo.rs:46:    async fn stopped(&mut self, _ctx: &mut ActorContext<Self>) {
+examples/actor_demo.rs:52:async fn main() {
+examples/pure_emit_test.rs:5:use mycelium_transport::{service, ServiceContext, ServiceRuntime};
+examples/pure_emit_test.rs:33:    async fn run(&mut self, ctx: &ServiceContext) -> Result<()> {
+examples/pure_emit_test.rs:44:async fn main() -> Result<()> {
+examples/pure_emit_test.rs:46:    tracing_subscriber::fmt()
+examples/pure_emit_test.rs:50:    let service = EmitOnlyService::new(10_000);
+examples/pure_emit_test.rs:56:    let handle = runtime.spawn_service(service).await?;
+scripts/detect_duplication/Cargo.lock:35: "serde_json",
+scripts/detect_duplication/Cargo.lock:189:name = "serde_json"
+examples/generic/game_server.rs:31:    health: u64,       // u64 to avoid padding
+examples/generic/game_server.rs:49:async fn main() {
+examples/generic/game_server.rs:94:                health: 100,
+examples/generic/game_server.rs:108:                state.player_id, state.position_x, state.position_y, state.health
+examples/generic/game_server.rs:118:                state.player_id, state.position_x, state.position_y, state.health
+docs/SYSTEM_OVERVIEW.md:65:│  • TLV Codec                                             │
+docs/SYSTEM_OVERVIEW.md:145:pub fn decode_message<M: Message + FromBytes>(bytes: &[u8]) 
+docs/SYSTEM_OVERVIEW.md:146:    -> Result<M, CodecError> 
+docs/SYSTEM_OVERVIEW.md:151:        return Err(CodecError::TypeMismatch);
+docs/SYSTEM_OVERVIEW.md:156:    M::read_from(payload).ok_or(CodecError::InvalidPayload)
+docs/SYSTEM_OVERVIEW.md:185:When a decoder encounters an unknown TYPE_ID, it can:
+docs/SYSTEM_OVERVIEW.md:332:    codec: FrameCodec,
+docs/SYSTEM_OVERVIEW.md:359:    codec: FrameCodec,
+docs/SYSTEM_OVERVIEW.md:436:    async fn handle(&mut self, msg: Self::Message, ctx: &mut ActorContext<Self>);
+docs/SYSTEM_OVERVIEW.md:439:    async fn started(&mut self, ctx: &mut ActorContext<Self>) {}
+docs/SYSTEM_OVERVIEW.md:440:    async fn stopped(&mut self, ctx: &mut ActorContext<Self>) {}
+docs/SYSTEM_OVERVIEW.md:441:    async fn on_error(&mut self, error: Box<dyn Error>, ctx: &mut ActorContext<Self>) -> bool {
+docs/SYSTEM_OVERVIEW.md:459:    async fn handle(&mut self, msg: RiskCheckRequest, ctx: &mut ActorContext<Self>) {
+docs/SYSTEM_OVERVIEW.md:548:    enable_metrics: bool,             // Track dropped messages
+docs/SYSTEM_OVERVIEW.md:920:    fn test_encode_decode_roundtrip(value: u64) {
+docs/SYSTEM_OVERVIEW.md:923:        let decoded: TestMsg = decode_message(&bytes)?;
+docs/SYSTEM_OVERVIEW.md:924:        assert_eq!(msg, decoded);
+crates/mycelium-transport/src/context.rs:3://! Use `mycelium_transport::ServiceContext` (defined in `service_context.rs`).
+crates/mycelium-transport/src/context.rs:7:    note = "Import ServiceContext from mycelium_transport::service_context instead"
+crates/mycelium-transport/src/context.rs:9:pub use crate::service_context::ServiceContext;
+examples/simple_service.rs:6://! - Automatic metrics collection (emits, latency, errors, restarts)
+examples/simple_service.rs:11:use mycelium_transport::{service, ServiceContext, ServiceRuntime};
+examples/simple_service.rs:45:    async fn run(&mut self, ctx: &ServiceContext) -> Result<()> {
+examples/simple_service.rs:63:            // Emit a message (this will be tracked in metrics)
+examples/simple_service.rs:102:async fn main() -> Result<()> {
+examples/simple_service.rs:104:    tracing_subscriber::fmt()
+examples/simple_service.rs:112:    log::info!("  - Auto-collected metrics (emits, latency, errors)");
+examples/simple_service.rs:116:    let service = CounterService::new(Duration::from_millis(500), 10);
+examples/simple_service.rs:136:    let handle = runtime.spawn_service(service).await?;
+docs/todo/2025-11-05-python-bridge-plan.md:28:   - Emit structured metrics for bridge throughput and failure counters.
+scripts/detect_duplication/Cargo.toml:18:serde_json = "1.0"
+tests/transport_tests/local_transport.rs:100:    let metrics = PerformanceMetrics::new(message_count as usize, start_time.elapsed());
+tests/transport_tests/local_transport.rs:103:    metrics.assert_throughput_at_least(100000.0, "local transport");
+tests/transport_tests/local_transport.rs:104:    metrics.assert_latency_at_most(1, "local transport");
+tests/transport_tests/local_transport.rs:108:        metrics.message_count,
+tests/transport_tests/local_transport.rs:109:        metrics.duration,
+tests/transport_tests/local_transport.rs:110:        metrics.throughput,
+tests/transport_tests/local_transport.rs:111:        metrics.duration.as_nanos() as u64 / metrics.message_count as u64
+examples/generic/sensor_network.rs:36:async fn main() {
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:31:    async fn run(&mut self, ctx: ServiceContext) -> Result<()> {
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:58:    async fn run(&mut self, ctx: ServiceContext) -> Result<()> {
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:82:    async fn run(&mut self, ctx: ServiceContext) -> Result<()> {
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:106:async fn main() -> Result<()> {
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:113:    runtime.spawn_service(BlockchainListener::new()).await?;
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:118:    runtime.run().await?;
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:130:async fn main() -> Result<()> {
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:137:    runtime.spawn_service(ArbitrageService::new()).await?;
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:138:    runtime.spawn_service(RiskManager::new()).await?;
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:143:    runtime.run().await?;
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:155:async fn main() -> Result<()> {
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:161:    runtime.spawn_service(ExecutionService::new()).await?;
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:165:    runtime.run().await?;
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:186:async fn main() -> Result<()> {
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:191:    runtime.spawn_service(BlockchainListener::new()).await?;
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:193:    runtime.run().await?;
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:205:async fn main() -> Result<()> {
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:211:    runtime.spawn_service(ArbitrageService::new()).await?;
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:212:    runtime.spawn_service(RiskManager::new()).await?;
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:213:    runtime.spawn_service(ExecutionService::new()).await?;
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:215:    runtime.run().await?;
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:238:async fn main() -> Result<()> {
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:245:    runtime.spawn_service(BlockchainListener::new()).await?;
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:246:    runtime.spawn_service(ArbitrageService::new()).await?;
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:247:    runtime.spawn_service(RiskManager::new()).await?;
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:248:    runtime.spawn_service(ExecutionService::new()).await?;
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:253:    runtime.run().await?;
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:320:fn main() -> Result<()> {
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:323:        ArbitrageService::new(),
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:325:        ExecutionService::new(),
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:409:runtime.spawn_service(ArbitrageService::new()).await?;
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:410:runtime.spawn_service(RiskManager::new()).await?;
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:414:runtime.spawn_service(ExecutionService::new()).await?;
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:431:runtime.spawn_service(ArbitrageService::new()).await?;
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:432:runtime.spawn_service(RiskManager::new()).await?;
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:433:runtime.spawn_service(ExecutionService::new()).await?;
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:435:runtime.run().await?;
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:462:fn main() -> Result<()> {
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:464:        ArbitrageService::new(),
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:466:        ExecutionService::new(),
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:500:fn main() -> Result<()> {
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:503:        ArbitrageService::new(),
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:505:        ExecutionService::new(),
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:509:    let infra_bus = MessageBus::with_tcp("metrics-collector:9000").await?;
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:513:        infra_runtime.spawn_service(MetricsCollector::new()).await?;
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:514:        infra_runtime.spawn_service(DatabaseLogger::new()).await?;
+docs/implementation/DEPLOYMENT_MODES_EXAMPLE.md:515:        infra_runtime.run().await
+examples/simple_pubsub.rs:27:async fn main() {
+examples/generic/managed_service.rs:42:    is_healthy: bool,
+examples/generic/managed_service.rs:50:        self.is_healthy = true;
+examples/generic/managed_service.rs:58:        self.is_healthy = false;
+examples/generic/managed_service.rs:63:    async fn health(&self) -> HealthStatus {
+examples/generic/managed_service.rs:64:        if self.is_healthy {
+examples/generic/managed_service.rs:67:            HealthStatus::Unhealthy {
+examples/generic/managed_service.rs:68:                reason: mycelium_transport::UnhealthyReason::NotReady,
+examples/generic/managed_service.rs:84:            is_healthy: false,
+examples/generic/managed_service.rs:115:async fn main() -> Result<(), Box<dyn std::error::Error>> {
+examples/generic/managed_service.rs:140:    let health = processor.health().await;
+examples/generic/managed_service.rs:141:    println!("   Health status: {}\n", health);
+examples/generic/managed_service.rs:213:    let final_health = processor.health().await;
+examples/generic/managed_service.rs:214:    println!("   Final health: {}\n", final_health);
+examples/generic/managed_service.rs:218:    println!("  • ManagedService provides lifecycle hooks (init/shutdown/health)");
+examples/overhead_breakdown.rs:1://! Detailed breakdown of overhead in ServiceContext::emit()
+examples/overhead_breakdown.rs:57:async fn main() {
+examples/overhead_breakdown.rs:63:    let metrics = ServiceMetrics::new();
+examples/overhead_breakdown.rs:88:    measure("5. metrics.record_emit()", iterations, || {
+examples/overhead_breakdown.rs:89:        metrics.record_emit(100);
+examples/overhead_breakdown.rs:122:    // Measure with timing + metrics
+examples/overhead_breakdown.rs:123:    let with_metrics = measure_async("10. Publish + timing + metrics", iterations, || async {
+examples/overhead_breakdown.rs:127:        metrics.record_emit(latency_us);
+examples/overhead_breakdown.rs:144:        metrics.record_emit(latency_us);
+examples/overhead_breakdown.rs:155:        metrics.record_emit(latency_us);
+examples/overhead_breakdown.rs:169:        with_metrics.saturating_sub(with_timing)
+examples/overhead_breakdown.rs:186:        "\nTotal overhead from ServiceContext:   {} ns",
+examples/compile_time_routing.rs:93:fn main() {
+examples/measure_latency.rs:17:async fn main() {
+examples/ping_pong_service.rs:4://! Services can now both send and receive messages through ServiceContext.
+examples/ping_pong_service.rs:8:use mycelium_transport::{service, MessageBus, ServiceContext, ServiceRuntime};
+examples/ping_pong_service.rs:35:    async fn run(&mut self, ctx: &ServiceContext) -> Result<()> {
+examples/ping_pong_service.rs:66:    async fn run(&mut self, ctx: &ServiceContext) -> Result<()> {
+examples/ping_pong_service.rs:93:async fn main() -> Result<()> {
+examples/ping_pong_service.rs:95:    tracing_subscriber::fmt()
+examples/ping_pong_service.rs:106:    let pong_handle = runtime.spawn_service(PongService).await?;
+examples/ping_pong_service.rs:107:    let ping_handle = runtime.spawn_service(PingService).await?;
+examples/custom-protocol/src/main.rs:8:async fn main() -> Result<(), Box<dyn std::error::Error>> {
+crates/mycelium-transport/src/qos.rs:54:    /// Enable metrics collection
+crates/mycelium-transport/src/qos.rs:55:    pub enable_metrics: bool,
+crates/mycelium-transport/src/qos.rs:64:            enable_metrics: true,
+crates/mycelium-transport/src/qos.rs:98:    /// Enable or disable metrics
+crates/mycelium-transport/src/qos.rs:99:    pub fn with_metrics(mut self, enable: bool) -> Self {
+crates/mycelium-transport/src/qos.rs:100:        self.enable_metrics = enable;
+crates/mycelium-transport/src/qos.rs:105:/// Mailbox metrics for monitoring and observability
+crates/mycelium-transport/src/qos.rs:125:    /// Create new metrics
+crates/mycelium-transport/src/qos.rs:217:        assert!(opts.enable_metrics);
+crates/mycelium-transport/src/qos.rs:231:            .with_metrics(false);
+crates/mycelium-transport/src/qos.rs:236:        assert!(!opts.enable_metrics);
+crates/mycelium-transport/src/qos.rs:240:    fn test_mailbox_metrics() {
+crates/mycelium-transport/src/qos.rs:241:        let metrics = MailboxMetrics::new();
+crates/mycelium-transport/src/qos.rs:243:        metrics.record_drop();
+crates/mycelium-transport/src/qos.rs:244:        metrics.record_drop();
+crates/mycelium-transport/src/qos.rs:245:        assert_eq!(metrics.dropped(), 2);
+crates/mycelium-transport/src/qos.rs:247:        metrics.record_reject();
+crates/mycelium-transport/src/qos.rs:248:        assert_eq!(metrics.rejected(), 1);
+crates/mycelium-transport/src/qos.rs:250:        metrics.record_processed();
+crates/mycelium-transport/src/qos.rs:251:        metrics.record_processed();
+crates/mycelium-transport/src/qos.rs:252:        metrics.record_processed();
+crates/mycelium-transport/src/qos.rs:253:        assert_eq!(metrics.processed(), 3);
+crates/mycelium-transport/src/qos.rs:255:        metrics.set_queue_depth(42);
+crates/mycelium-transport/src/qos.rs:256:        assert_eq!(metrics.depth(), 42);
+crates/mycelium-transport/src/qos.rs:258:        metrics.update_max_latency(100);
+crates/mycelium-transport/src/qos.rs:259:        assert_eq!(metrics.max_latency(), 100);
+crates/mycelium-transport/src/qos.rs:261:        metrics.update_max_latency(50); // Should not update (lower)
+crates/mycelium-transport/src/qos.rs:262:        assert_eq!(metrics.max_latency(), 100);
+crates/mycelium-transport/src/qos.rs:264:        metrics.update_max_latency(200); // Should update (higher)
+crates/mycelium-transport/src/qos.rs:265:        assert_eq!(metrics.max_latency(), 200);
+crates/mycelium-transport/src/qos.rs:270:        let metrics = MailboxMetrics::new();
+crates/mycelium-transport/src/qos.rs:273:        assert_eq!(metrics.drop_rate(), 0.0);
+crates/mycelium-transport/src/qos.rs:277:            metrics.record_processed();
+crates/mycelium-transport/src/qos.rs:279:        metrics.record_drop();
+crates/mycelium-transport/src/qos.rs:280:        metrics.record_drop();
+crates/mycelium-transport/src/qos.rs:282:        assert_eq!(metrics.drop_rate(), 0.2); // 2/10 = 20%
+crates/mycelium-transport/src/stream.rs:180:        tlv_bytes.extend_from_slice(&123u16.to_le_bytes());
+crates/mycelium-transport/src/stream.rs:181:        tlv_bytes.extend_from_slice(&(payload.len() as u32).to_le_bytes());
+crates/mycelium-transport/src/stream.rs:182:        tlv_bytes.extend_from_slice(payload);
+crates/mycelium-transport/src/stream.rs:210:        wrong_tlv.extend_from_slice(&999u16.to_le_bytes());
+crates/mycelium-transport/src/stream.rs:211:        wrong_tlv.extend_from_slice(&10u32.to_le_bytes());
+crates/mycelium-transport/src/stream.rs:212:        wrong_tlv.extend_from_slice(&wrong_payload);
+crates/mycelium-transport/src/stream.rs:230:        correct_tlv.extend_from_slice(&123u16.to_le_bytes());
+crates/mycelium-transport/src/stream.rs:231:        correct_tlv.extend_from_slice(&(payload.len() as u32).to_le_bytes());
+crates/mycelium-transport/src/stream.rs:232:        correct_tlv.extend_from_slice(payload);
+crates/mycelium-transport/src/lib.rs:16:pub mod service_metrics;
+crates/mycelium-transport/src/lib.rs:34:    Actor, ActorContext, ActorRef, ActorRuntime, RestartStrategy, SpawnError, SupervisionStrategy,
+crates/mycelium-transport/src/lib.rs:40:pub use codec::{deserialize_message, read_frame, write_message, CodecError};
+crates/mycelium-transport/src/lib.rs:48:pub use service::{DegradedReason, HealthStatus, ManagedService, ServiceRunner, UnhealthyReason};
+crates/mycelium-transport/src/lib.rs:49:pub use service_context::ServiceContext;
+crates/mycelium-transport/src/lib.rs:50:pub use service_metrics::ServiceMetrics;
+crates/mycelium-transport/src/service_context.rs:1://! ServiceContext - The infrastructure API provided to services
+crates/mycelium-transport/src/service_context.rs:4:use crate::service_metrics::ServiceMetrics;
+crates/mycelium-transport/src/service_context.rs:11:/// ServiceContext provides infrastructure APIs to services
+crates/mycelium-transport/src/service_context.rs:14:/// Services receive this in their `run(&mut self, ctx: ServiceContext)` method.
+crates/mycelium-transport/src/service_context.rs:15:pub struct ServiceContext {
+crates/mycelium-transport/src/service_context.rs:32:    metrics: ServiceMetrics,
+crates/mycelium-transport/src/service_context.rs:35:impl ServiceContext {
+crates/mycelium-transport/src/service_context.rs:36:    /// Create a new ServiceContext
+crates/mycelium-transport/src/service_context.rs:42:        metrics: ServiceMetrics,
+crates/mycelium-transport/src/service_context.rs:50:            metrics,
+crates/mycelium-transport/src/service_context.rs:74:        // Record metrics
+crates/mycelium-transport/src/service_context.rs:75:        self.metrics.record_emit(latency_us);
+crates/mycelium-transport/src/service_context.rs:144:        self.metrics.record_error();
+crates/mycelium-transport/src/service_context.rs:147:    /// Get access to metrics (for custom metrics recording)
+crates/mycelium-transport/src/service_context.rs:148:    pub fn metrics(&self) -> &ServiceMetrics {
+crates/mycelium-transport/src/service_context.rs:149:        &self.metrics
+crates/mycelium-transport/src/service_context.rs:159:    /// send and receive messages through the ServiceContext API.
+crates/mycelium-transport/src/service_context.rs:164:    /// # use mycelium_transport::{ServiceContext, service};
+crates/mycelium-transport/src/service_context.rs:183:    ///     async fn run(&mut self, ctx: &ServiceContext) -> Result<()> {
+crates/mycelium-transport/src/actor/context.rs:3://! Provides ActorContext for use within actors and ActorRef for sending messages.
+crates/mycelium-transport/src/actor/context.rs:9:/// Context provided to actors during message handling
+crates/mycelium-transport/src/actor/context.rs:16:pub struct ActorContext<A: super::Actor> {
+crates/mycelium-transport/src/actor/context.rs:27:impl<A: super::Actor> ActorContext<A> {
+crates/mycelium-transport/src/actor/context.rs:91:            "ActorContext::request is not implemented. Use send()/reply patterns manually."
+crates/mycelium-transport/src/error.rs:35:    #[error("Codec error: {0}")]
+crates/mycelium-transport/src/error.rs:36:    Codec(#[from] crate::codec::CodecError),
+examples/custom-protocol/README.md:42:fn main() {
+crates/mycelium-transport/src/actor/mod.rs:12://! use crate::{Actor, ActorContext, ActorRuntime, MessageBus};
+crates/mycelium-transport/src/actor/mod.rs:22://!     async fn handle(&mut self, msg: Self::Message, ctx: &mut ActorContext<Self>) {
+crates/mycelium-transport/src/actor/mod.rs:39:pub use context::{ActorContext, ActorRef};
+crates/mycelium-protocol/src/messages.rs:329:            FixedVec::from_slice(path).map_err(|_| ValidationError::PathTooLong(path.len()))?;
+crates/mycelium-transport/src/pool.rs:29:    /// Whether the connection is healthy
+crates/mycelium-transport/src/pool.rs:30:    pub healthy: Arc<RwLock<bool>>,
+crates/mycelium-transport/src/pool.rs:41:            healthy: Arc::new(RwLock::new(true)),
+crates/mycelium-transport/src/pool.rs:53:    pub async fn is_healthy(&self) -> bool {
+crates/mycelium-transport/src/pool.rs:54:        *self.healthy.read().await
+crates/mycelium-transport/src/pool.rs:57:    pub async fn mark_unhealthy(&self) {
+crates/mycelium-transport/src/pool.rs:58:        let mut healthy = self.healthy.write().await;
+crates/mycelium-transport/src/pool.rs:59:        *healthy = false;
+crates/mycelium-transport/src/pool.rs:132:        // Try to find a healthy connection
+crates/mycelium-transport/src/pool.rs:134:            if conn.is_healthy().await {
+crates/mycelium-transport/src/pool.rs:138:            // Drop unhealthy connection
+crates/mycelium-transport/src/pool.rs:141:        // No healthy connections available - create new one
+crates/mycelium-transport/src/pool.rs:152:        // Check if connection is still healthy
+crates/mycelium-transport/src/pool.rs:153:        if !connection.is_healthy().await {
+crates/mycelium-transport/src/pool.rs:180:        let (total, healthy, total_messages) = if let Some(pool) = pool {
+crates/mycelium-transport/src/pool.rs:181:            let mut healthy_count = 0;
+crates/mycelium-transport/src/pool.rs:185:                if conn.is_healthy().await {
+crates/mycelium-transport/src/pool.rs:186:                    healthy_count += 1;
+crates/mycelium-transport/src/pool.rs:191:            (pool.len(), healthy_count, total_messages)
+crates/mycelium-transport/src/pool.rs:199:            healthy_connections: healthy,
+crates/mycelium-transport/src/pool.rs:216:                let is_healthy = futures::executor::block_on(conn.is_healthy());
+crates/mycelium-transport/src/pool.rs:217:                idle_time < idle_timeout && is_healthy
+crates/mycelium-transport/src/pool.rs:227:    pub healthy_connections: usize,
+crates/mycelium-transport/src/pool.rs:237:            "Pool {}: {}/{} connections ({} healthy), {} messages sent, pooling: {}",
+crates/mycelium-transport/src/pool.rs:241:            self.healthy_connections,
+crates/mycelium-transport/src/zerocopy.rs:100:/// let view = SharedView::from_slice(&data);
+crates/mycelium-transport/src/zerocopy.rs:111:    pub fn from_slice(data: &'a [u8]) -> Self {
+crates/mycelium-transport/src/zerocopy.rs:149:        Self::from_slice(data)
+crates/mycelium-transport/src/zerocopy.rs:155:        Self::from_slice(data)
+crates/mycelium-transport/src/zerocopy.rs:161:        Self::from_slice(buf.as_slice())
+crates/mycelium-transport/src/zerocopy.rs:175:/// let cow = Cow::Borrowed(SharedView::from_slice(&data));
+crates/mycelium-transport/src/zerocopy.rs:191:        Self::Borrowed(SharedView::from_slice(data))
+crates/mycelium-transport/src/zerocopy.rs:283:        let view = SharedView::from_slice(&data);
+crates/mycelium-transport/src/zerocopy.rs:291:        let view = SharedView::from_slice(&data);
+examples/custom-protocol/build.rs:3:fn main() {
+crates/mycelium-transport/src/actor/supervisor.rs:106:    fn test_immediate_restart() {
+crates/mycelium-transport/src/service.rs:29:///     async fn health(&self) -> HealthStatus {
+crates/mycelium-transport/src/service.rs:56:    /// Check service health
+crates/mycelium-transport/src/service.rs:58:    /// Called periodically to monitor service health.
+crates/mycelium-transport/src/service.rs:59:    /// Should be fast (<10ms) as it may block health check endpoints.
+crates/mycelium-transport/src/service.rs:60:    async fn health(&self) -> HealthStatus;
+crates/mycelium-transport/src/service.rs:74:    /// Service is healthy and processing normally
+crates/mycelium-transport/src/service.rs:85:    /// Service is unhealthy and may need intervention
+crates/mycelium-transport/src/service.rs:91:    Unhealthy { reason: UnhealthyReason },
+crates/mycelium-transport/src/service.rs:94:/// Reasons for degraded service health
+crates/mycelium-transport/src/service.rs:110:/// Reasons for unhealthy service status
+crates/mycelium-transport/src/service.rs:112:pub enum UnhealthyReason {
+crates/mycelium-transport/src/service.rs:125:    /// Other unhealthy reason
+crates/mycelium-transport/src/service.rs:130:    /// Returns true if the service is healthy
+crates/mycelium-transport/src/service.rs:131:    pub fn is_healthy(&self) -> bool {
+crates/mycelium-transport/src/service.rs:140:    /// Returns true if the service is unhealthy
+crates/mycelium-transport/src/service.rs:141:    pub fn is_unhealthy(&self) -> bool {
+crates/mycelium-transport/src/service.rs:142:        matches!(self, HealthStatus::Unhealthy { .. })
+crates/mycelium-transport/src/service.rs:154:            HealthStatus::Healthy => write!(f, "healthy"),
+crates/mycelium-transport/src/service.rs:156:            HealthStatus::Unhealthy { reason } => write!(f, "unhealthy: {:?}", reason),
+crates/mycelium-transport/src/service.rs:178:/// #     async fn health(&self) -> mycelium_transport::HealthStatus {
+crates/mycelium-transport/src/service.rs:186:///     .with_health_check_port(8080)
+crates/mycelium-transport/src/service.rs:187:///     .run(|service| async move {
+crates/mycelium-transport/src/service.rs:197:    health_check_port: Option<u16>,
+crates/mycelium-transport/src/service.rs:205:            health_check_port: None,
+crates/mycelium-transport/src/service.rs:209:    /// Enable health check endpoint on the specified port
+crates/mycelium-transport/src/service.rs:210:    pub fn with_health_check_port(mut self, port: u16) -> Self {
+crates/mycelium-transport/src/service.rs:211:        self.health_check_port = Some(port);
+crates/mycelium-transport/src/service.rs:220:    /// 2. Start optional health check server
+crates/mycelium-transport/src/service.rs:240:        // Start health check server if configured
+crates/mycelium-transport/src/service.rs:241:        let _health_server = if let Some(port) = self.health_check_port {
+crates/mycelium-transport/src/service.rs:242:            tracing::info!("Starting health check server on port {}", port);
+crates/mycelium-transport/src/service.rs:243:            // TODO: Implement simple HTTP health check server
+crates/mycelium-transport/src/service.rs:296:        async fn health(&self) -> HealthStatus {
+crates/mycelium-transport/src/service.rs:300:                HealthStatus::Unhealthy {
+crates/mycelium-transport/src/service.rs:301:                    reason: UnhealthyReason::NotReady,
+crates/mycelium-transport/src/service.rs:315:            service.health().await,
+crates/mycelium-transport/src/service.rs:316:            HealthStatus::Unhealthy {
+crates/mycelium-transport/src/service.rs:317:                reason: UnhealthyReason::NotReady
+crates/mycelium-transport/src/service.rs:323:        assert_eq!(service.health().await, HealthStatus::Healthy);
+crates/mycelium-transport/src/service.rs:328:            service.health().await,
+crates/mycelium-transport/src/service.rs:329:            HealthStatus::Unhealthy {
+crates/mycelium-transport/src/service.rs:330:                reason: UnhealthyReason::NotReady
+crates/mycelium-transport/src/service.rs:336:    fn test_health_status_checks() {
+crates/mycelium-transport/src/service.rs:337:        assert!(HealthStatus::Healthy.is_healthy());
+crates/mycelium-transport/src/service.rs:346:        let unhealthy = HealthStatus::Unhealthy {
+crates/mycelium-transport/src/service.rs:347:            reason: UnhealthyReason::FatalError,
+crates/mycelium-transport/src/service.rs:349:        assert!(unhealthy.is_unhealthy());
+crates/mycelium-transport/src/service.rs:350:        assert!(!unhealthy.is_operational());
+crates/mycelium-transport/src/actor/handle.rs:5:use super::context::ActorContext;
+crates/mycelium-transport/src/actor/handle.rs:17:/// use crate::{Actor, ActorContext};
+crates/mycelium-transport/src/actor/handle.rs:27:///     async fn handle(&mut self, msg: Self::Message, ctx: &mut ActorContext<Self>) {
+crates/mycelium-transport/src/actor/handle.rs:36:///     async fn started(&mut self, ctx: &mut ActorContext<Self>) {
+crates/mycelium-transport/src/actor/handle.rs:40:///     async fn stopped(&mut self, ctx: &mut ActorContext<Self>) {
+crates/mycelium-transport/src/actor/handle.rs:54:    async fn handle(&mut self, msg: Self::Message, ctx: &mut ActorContext<Self>);
+crates/mycelium-transport/src/actor/handle.rs:59:    async fn started(&mut self, _ctx: &mut ActorContext<Self>) {
+crates/mycelium-transport/src/actor/handle.rs:66:    async fn stopped(&mut self, _ctx: &mut ActorContext<Self>) {
+crates/mycelium-transport/src/actor/handle.rs:79:        _ctx: &mut ActorContext<Self>,
+crates/mycelium-transport/src/service_runtime.rs:4:use crate::service_context::ServiceContext;
+crates/mycelium-transport/src/service_runtime.rs:5:use crate::service_metrics::ServiceMetrics;
+crates/mycelium-transport/src/service_runtime.rs:29:    pub async fn spawn_service<S>(&self, service: S) -> anyhow::Result<ServiceHandle>
+crates/mycelium-transport/src/service_runtime.rs:40:        let metrics = ServiceMetrics::new();
+crates/mycelium-transport/src/service_runtime.rs:42:        let ctx = ServiceContext::new(
+crates/mycelium-transport/src/service_runtime.rs:47:            metrics.clone(),
+crates/mycelium-transport/src/service_runtime.rs:54:            let result = run_supervised(service, ctx, metrics, service_name).await;
+crates/mycelium-transport/src/service_runtime.rs:97:    /// Service name (for logging/metrics)
+crates/mycelium-transport/src/service_runtime.rs:101:    fn run(
+crates/mycelium-transport/src/service_runtime.rs:103:        ctx: &ServiceContext,
+crates/mycelium-transport/src/service_runtime.rs:106:    /// Optional: Called once before run()
+crates/mycelium-transport/src/service_runtime.rs:120:    ctx: ServiceContext,
+crates/mycelium-transport/src/service_runtime.rs:121:    metrics: ServiceMetrics,
+crates/mycelium-transport/src/service_runtime.rs:132:        metrics.record_error();
+crates/mycelium-transport/src/service_runtime.rs:137:        match service.run(&ctx).await {
+crates/mycelium-transport/src/service_runtime.rs:150:                metrics.record_error();
+crates/mycelium-transport/src/service_runtime.rs:158:                metrics.record_restart();
+crates/mycelium-transport/src/service_runtime.rs:174:        metrics.record_error();
+crates/mycelium-transport/src/service_runtime.rs:180:    metrics.print_summary(&service_name);
+crates/mycelium-transport/src/service_metrics.rs:1://! Simple metrics tracking for services
+crates/mycelium-transport/src/service_metrics.rs:3://! This provides basic metrics collection without external dependencies.
+crates/mycelium-transport/src/service_metrics.rs:30:    /// Create a new metrics collector
+crates/mycelium-transport/src/service_metrics.rs:56:    pub fn record_restart(&self) {
+crates/mycelium-transport/src/service_metrics.rs:85:    /// Print metrics summary
+crates/mycelium-transport/src/service_metrics.rs:93:            "Service metrics summary"
+crates/mycelium-transport/src/publisher.rs:68:    /// message loss is acceptable (e.g., metrics, debug telemetry).
+crates/mycelium-transport/src/metrics.rs:1://! Deprecated compatibility shim for legacy `metrics` module.
+crates/mycelium-transport/src/metrics.rs:3://! Use `mycelium_transport::ServiceMetrics` (from `service_metrics.rs`).
+crates/mycelium-transport/src/metrics.rs:7:    note = "Import ServiceMetrics from mycelium_transport::service_metrics instead"
+crates/mycelium-transport/src/metrics.rs:9:pub use crate::service_metrics::ServiceMetrics;
+crates/mycelium-transport/src/actor/runtime.rs:3:use super::context::{ActorContext, ActorRef};
+crates/mycelium-transport/src/actor/runtime.rs:152:        let mut ctx = ActorContext::new(actor_id, self.bus.clone());
+crates/mycelium-transport/src/actor/runtime.rs:252:        let mut ctx = ActorContext::new(actor_id, self.bus.clone());
+crates/mycelium-transport/src/actor/runtime.rs:419:        async fn handle(&mut self, msg: Self::Message, _ctx: &mut ActorContext<Self>) {
+crates/mycelium-transport/src/actor/runtime.rs:481:            async fn handle(&mut self, msg: Self::Message, _ctx: &mut ActorContext<Self>) {
+crates/mycelium-transport/src/actor/runtime.rs:511:            async fn handle(&mut self, _msg: Self::Message, _ctx: &mut ActorContext<Self>) {}
+crates/mycelium-transport/src/actor/runtime.rs:537:            async fn handle(&mut self, msg: Self::Message, _ctx: &mut ActorContext<Self>) {
+crates/mycelium-transport/src/actor/runtime.rs:547:                _ctx: &mut ActorContext<Self>,
+crates/mycelium-transport/src/actor/runtime.rs:602:            async fn handle(&mut self, msg: Self::Message, _ctx: &mut ActorContext<Self>) {
+crates/mycelium-transport/src/actor/runtime.rs:613:                _ctx: &mut ActorContext<Self>,
+crates/mycelium-transport/src/codec.rs:10:pub enum CodecError {
+crates/mycelium-transport/src/codec.rs:15:    ProtocolCodec(#[from] mycelium_protocol::CodecError),
+crates/mycelium-transport/src/codec.rs:24:pub type Result<T> = std::result::Result<T, CodecError>;
+crates/mycelium-transport/src/codec.rs:48:        return Err(CodecError::MessageTooLarge(len));
+crates/mycelium-transport/src/codec.rs:78:        return Err(CodecError::MessageTooLarge(payload_len));
+crates/mycelium-transport/src/codec.rs:83:    tlv_bytes.extend_from_slice(&header_buf);
+crates/mycelium-transport/src/codec.rs:87:    tlv_bytes.extend_from_slice(&payload_buf);
+crates/mycelium-transport/src/codec.rs:124:        return Err(CodecError::MessageTooLarge(payload_len));
+crates/mycelium-transport/src/codec.rs:133:    buffer[..HEADER_SIZE].copy_from_slice(&header_buf);
+crates/mycelium-transport/src/codec.rs:153:        return Err(CodecError::DeserializationFailed);
+crates/mycelium-transport/src/codec.rs:156:    M::read_from(bytes).ok_or(CodecError::DeserializationFailed)
+crates/mycelium-transport/src/codec.rs:249:        assert!(matches!(result, Err(CodecError::MessageTooLarge(_))));
+crates/mycelium-transport/src/codec.rs:264:        let decoded: TestMsg = deserialize_message(bytes).unwrap();
+crates/mycelium-transport/src/codec.rs:266:        assert_eq!(decoded.value, 123);
+crates/mycelium-transport/src/codec.rs:267:        assert_eq!(decoded.data, 456);
+crates/mycelium-protocol/build.rs:5:fn main() {
+crates/mycelium-protocol/src/fixed_vec.rs:135:    /// Use `try_push()` or `from_slice()` instead for safe operations.
+crates/mycelium-protocol/src/fixed_vec.rs:205:    pub fn from_slice(slice: &[T]) -> Result<Self, FixedVecError> {
+crates/mycelium-protocol/src/fixed_vec.rs:246:        Self::from_slice(slice)
+crates/mycelium-protocol/src/fixed_vec.rs:257:        Self::from_slice(&vec)
+crates/mycelium-protocol/src/fixed_vec.rs:303:        result.data[..bytes.len()].copy_from_slice(bytes);
+crates/mycelium-protocol/src/fixed_vec.rs:392:    fn test_fixed_vec_from_slice() {
+crates/mycelium-protocol/src/fixed_vec.rs:394:        let vec: FixedVec<u32, 5> = FixedVec::from_slice(slice).unwrap();
+crates/mycelium-protocol/src/fixed_vec.rs:404:        let fixed_vec: FixedVec<u32, 8> = FixedVec::from_slice(&original).unwrap();
+crates/mycelium-protocol/src/codec.rs:1://! TLV Codec - Registry-Free Encoder/Decoder
+crates/mycelium-protocol/src/codec.rs:53:/// Codec errors
+crates/mycelium-protocol/src/codec.rs:55:pub enum CodecError {
+crates/mycelium-protocol/src/codec.rs:75:pub type CodecResult<T> = Result<T, CodecError>;
+crates/mycelium-protocol/src/codec.rs:88:pub fn encode_message<M: Message + AsBytes>(message: &M) -> CodecResult<Vec<u8>> {
+crates/mycelium-protocol/src/codec.rs:94:        return Err(CodecError::PayloadTooLarge {
+crates/mycelium-protocol/src/codec.rs:104:    tlv.extend_from_slice(&M::TYPE_ID.to_le_bytes());
+crates/mycelium-protocol/src/codec.rs:107:    tlv.extend_from_slice(&(payload.len() as u32).to_le_bytes());
+crates/mycelium-protocol/src/codec.rs:110:    tlv.extend_from_slice(payload);
+crates/mycelium-protocol/src/codec.rs:125:pub fn parse_header(bytes: &[u8]) -> CodecResult<(TlvHeader, usize)> {
+crates/mycelium-protocol/src/codec.rs:127:        return Err(CodecError::MessageTooSmall {
+crates/mycelium-protocol/src/codec.rs:139:        return Err(CodecError::MessageTooSmall {
+crates/mycelium-protocol/src/codec.rs:147:        return Err(CodecError::PayloadTooLarge {
+crates/mycelium-protocol/src/codec.rs:160:/// use mycelium_protocol::{CounterUpdate, decode_message};
+crates/mycelium-protocol/src/codec.rs:163:/// let msg: CounterUpdate = decode_message(bytes).unwrap();
+crates/mycelium-protocol/src/codec.rs:165:pub fn decode_message<M: Message + FromBytes>(bytes: &[u8]) -> CodecResult<M> {
+crates/mycelium-protocol/src/codec.rs:170:        return Err(CodecError::UnknownType(header.type_id));
+crates/mycelium-protocol/src/codec.rs:177:        CodecError::DeserializationFailed(format!(
+crates/mycelium-protocol/src/codec.rs:190:/// use mycelium_protocol::{decode_any_message, AnyMessage};
+crates/mycelium-protocol/src/codec.rs:193:/// match decode_any_message(bytes).unwrap() {
+crates/mycelium-protocol/src/codec.rs:200:pub fn decode_any_message(bytes: &[u8]) -> CodecResult<AnyMessage> {
+crates/mycelium-protocol/src/codec.rs:201:    decode_any_message_with_policy(bytes, UnknownTypePolicy::default())
+crates/mycelium-protocol/src/codec.rs:208:/// use mycelium_protocol::{decode_any_message_with_policy, UnknownTypePolicy};
+crates/mycelium-protocol/src/codec.rs:211:/// let result = decode_any_message_with_policy(bytes, UnknownTypePolicy::Skip);
+crates/mycelium-protocol/src/codec.rs:217:/// use mycelium_protocol::{decode_any_message_with_policy, UnknownTypePolicy, AnyMessage};
+crates/mycelium-protocol/src/codec.rs:220:/// match decode_any_message_with_policy(bytes, UnknownTypePolicy::Store).unwrap() {
+crates/mycelium-protocol/src/codec.rs:227:pub fn decode_any_message_with_policy(
+crates/mycelium-protocol/src/codec.rs:230:) -> CodecResult<AnyMessage> {
+crates/mycelium-protocol/src/codec.rs:238:                CodecError::DeserializationFailed(format!(
+crates/mycelium-protocol/src/codec.rs:248:                CodecError::DeserializationFailed(format!(
+crates/mycelium-protocol/src/codec.rs:258:                CodecError::DeserializationFailed(format!(
+crates/mycelium-protocol/src/codec.rs:269:                UnknownTypePolicy::Fail => Err(CodecError::UnknownType(unknown)),
+crates/mycelium-protocol/src/codec.rs:298:/// Used by `decode_any_message()` for type-safe dynamic dispatch.
+crates/mycelium-protocol/src/codec.rs:312:    fn test_encode_decode_text_message() {
+crates/mycelium-protocol/src/codec.rs:330:        let decoded: TextMessage = decode_message(&bytes).unwrap();
+crates/mycelium-protocol/src/codec.rs:332:        assert_eq!(decoded.sender.as_str().unwrap(), "alice");
+crates/mycelium-protocol/src/codec.rs:333:        assert_eq!(decoded.content.as_str().unwrap(), "Hello, World!");
+crates/mycelium-protocol/src/codec.rs:334:        assert_eq!(decoded.timestamp, 1234567890);
+crates/mycelium-protocol/src/codec.rs:338:    fn test_encode_decode_counter_update() {
+crates/mycelium-protocol/src/codec.rs:346:        let decoded: CounterUpdate = decode_message(&bytes).unwrap();
+crates/mycelium-protocol/src/codec.rs:348:        assert_eq!(decoded.counter_id, 42);
+crates/mycelium-protocol/src/codec.rs:349:        assert_eq!(decoded.value, 100);
+crates/mycelium-protocol/src/codec.rs:350:        assert_eq!(decoded.delta, 5);
+crates/mycelium-protocol/src/codec.rs:354:    fn test_encode_decode_batch_operation() {
+crates/mycelium-protocol/src/codec.rs:360:            items: FixedVec::from_slice(&items).unwrap(),
+crates/mycelium-protocol/src/codec.rs:365:        let decoded: BatchOperation = decode_message(&bytes).unwrap();
+crates/mycelium-protocol/src/codec.rs:367:        assert_eq!(decoded.operation_id, 999);
+crates/mycelium-protocol/src/codec.rs:368:        assert_eq!(decoded.items.len(), 3);
+crates/mycelium-protocol/src/codec.rs:369:        assert_eq!(decoded.total_count, 3);
+crates/mycelium-protocol/src/codec.rs:373:    fn test_decode_any_message() {
+crates/mycelium-protocol/src/codec.rs:384:        match decode_any_message(&bytes).unwrap() {
+crates/mycelium-protocol/src/codec.rs:385:            AnyMessage::TextMessage(decoded) => {
+crates/mycelium-protocol/src/codec.rs:386:                assert_eq!(decoded.sender.as_str().unwrap(), "bob");
+crates/mycelium-protocol/src/codec.rs:399:        match decode_any_message(&bytes).unwrap() {
+crates/mycelium-protocol/src/codec.rs:415:        let decoded: CounterUpdate = decode_message(&bytes1).unwrap();
+crates/mycelium-protocol/src/codec.rs:416:        let bytes2 = encode_message(&decoded).unwrap();
+crates/mycelium-protocol/src/codec.rs:444:        assert!(matches!(result, Err(CodecError::MessageTooSmall { .. })));
+crates/mycelium-protocol/src/codec.rs:451:        bytes[0..2].copy_from_slice(&9999u16.to_le_bytes()); // Unknown type
+crates/mycelium-protocol/src/codec.rs:452:        bytes[2..6].copy_from_slice(&10u32.to_le_bytes()); // Length
+crates/mycelium-protocol/src/codec.rs:454:        let result = decode_any_message(&bytes);
+crates/mycelium-protocol/src/codec.rs:455:        assert!(matches!(result, Err(CodecError::UnknownType(9999))));
+crates/mycelium-protocol/src/codec.rs:469:        let decoded: TextMessage = decode_message(&bytes).unwrap();
+crates/mycelium-protocol/src/codec.rs:472:            decoded.sender.as_str().unwrap()
+crates/mycelium-protocol/src/codec.rs:482:        let decoded: CounterUpdate = decode_message(&bytes).unwrap();
+crates/mycelium-protocol/src/codec.rs:483:        assert_eq!(counter.counter_id, decoded.counter_id);
+crates/mycelium-protocol/src/codec.rs:489:            items: FixedVec::from_slice(&items).unwrap(),
+crates/mycelium-protocol/src/codec.rs:493:        let decoded: BatchOperation = decode_message(&bytes).unwrap();
+crates/mycelium-protocol/src/codec.rs:494:        assert_eq!(batch.operation_id, decoded.operation_id);
+crates/mycelium-protocol/src/codec.rs:505:        bytes.extend_from_slice(&unknown_type_id.to_le_bytes());
+crates/mycelium-protocol/src/codec.rs:506:        bytes.extend_from_slice(&(payload.len() as u32).to_le_bytes());
+crates/mycelium-protocol/src/codec.rs:507:        bytes.extend_from_slice(&payload);
+crates/mycelium-protocol/src/codec.rs:510:        let result = decode_any_message(&bytes);
+crates/mycelium-protocol/src/codec.rs:511:        assert!(matches!(result, Err(CodecError::UnknownType(9999))));
+crates/mycelium-protocol/src/codec.rs:522:        bytes.extend_from_slice(&unknown_type_id.to_le_bytes());
+crates/mycelium-protocol/src/codec.rs:523:        bytes.extend_from_slice(&(payload.len() as u32).to_le_bytes());
+crates/mycelium-protocol/src/codec.rs:524:        bytes.extend_from_slice(&payload);
+crates/mycelium-protocol/src/codec.rs:527:        let result = decode_any_message_with_policy(&bytes, UnknownTypePolicy::Skip);
+crates/mycelium-protocol/src/codec.rs:547:        bytes.extend_from_slice(&unknown_type_id.to_le_bytes());
+crates/mycelium-protocol/src/codec.rs:548:        bytes.extend_from_slice(&(payload.len() as u32).to_le_bytes());
+crates/mycelium-protocol/src/codec.rs:549:        bytes.extend_from_slice(&payload);
+crates/mycelium-protocol/src/codec.rs:552:        let result = decode_any_message_with_policy(&bytes, UnknownTypePolicy::Store);
+crates/mycelium-protocol/src/codec.rs:568:        // Known type should decode normally regardless of policy
+crates/mycelium-protocol/src/codec.rs:582:            let result = decode_any_message_with_policy(&bytes, policy);
+crates/mycelium-protocol/src/codec.rs:586:                AnyMessage::TextMessage(decoded) => {
+crates/mycelium-protocol/src/codec.rs:587:                    assert_eq!(decoded.sender.as_str().unwrap(), "test");
+crates/mycelium-protocol/src/schema_compat.rs:43:    /// Forward compatible - new decoder can read old messages
+crates/mycelium-protocol/src/schema_compat.rs:45:    /// Backward compatible - old decoder can read new messages
+crates/mycelium-protocol/src/schema_compat.rs:251:                    "Required field '{}' added to message '{}' (may break old decoders)",
+crates/mycelium-protocol/tests/schema_evolution.rs:7:    check_compatibility, decode_any_message_with_policy, CompatibilityLevel, FieldSchema,
+crates/mycelium-protocol/tests/schema_evolution.rs:81:    let result = decode_any_message_with_policy(&unknown_bytes, UnknownTypePolicy::Skip);
+crates/mycelium-protocol/tests/schema_evolution.rs:85:    let result = decode_any_message_with_policy(&unknown_bytes, UnknownTypePolicy::Fail);
+crates/mycelium-protocol/tests/schema_evolution.rs:318:    let result = decode_any_message_with_policy(&unknown_bytes, UnknownTypePolicy::Store);
+crates/mycelium-protocol/codegen.rs:579:    code.push_str("        let path_fixed = FixedVec::from_slice(path)\n");
+crates/mycelium-protocol/src/lib.rs:14:    decode_any_message, decode_any_message_with_policy, decode_message, encode_message,
+crates/mycelium-protocol/src/lib.rs:15:    parse_header, AnyMessage, CodecError, CodecResult, TlvHeader, UnknownMessage,
+Cargo.toml:94:serde_json = "1.0"
+crates/mycelium-macro/src/lib.rs:47:        panic!("#[service] requires a run() method");
+crates/mycelium-macro/src/lib.rs:83:            fn run(&mut self, ctx: &::mycelium_transport::ServiceContext)
+crates/mycelium-macro/src/lib.rs:86:                self.__service_run(ctx)

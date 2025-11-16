@@ -1,0 +1,1148 @@
+Diff in /Users/daws/repos/Bandit/bin/polygon_adapter.rs:15:
+ ///     REDIS_URL - Override Redis connection
+ ///     TERMINAL_UI - Set to "1" or "true" to redirect logs to file (/tmp/bandit/logs/polygon-adapter.log)
+ use anyhow::{Context, Result};
+[31m-use hex::decode;
+(B[m use ethers::types::H160;
+[32m+use hex::decode;
+(B[m use mycelium_transport::{MessageBus, ServiceRuntime};
+[32m+use polygon_execution_filter::{OrchestratorConfig, PolygonOrchestratorService};
+(B[m use polygon_executor::{
+     ExecutorConfig as PolygonExecutorConfig, PolygonExecutorService, RelayerType, SignerType,
+ };
+Diff in /Users/daws/repos/Bandit/bin/polygon_adapter.rs:24:
+ use polygon_executor_stub::{ExecutorStubConfig, ExecutorStubService};
+ use polygon_flash_arbitrage::{PolygonFlashArbitrageService, StrategyConfig};
+ use polygon_gas_tracker::GasTrackerService;
+[31m-use polygon_execution_filter::{OrchestratorConfig, PolygonOrchestratorService};
+(B[m use polygon_pool_state::PolygonPoolStateService;
+ use polygon_replay_harness::{ReplayCaptureConfig, ReplayCaptureService};
+ use polygon_terminal::TerminalUiService;
+Diff in /Users/daws/repos/Bandit/bin/polygon_adapter.rs:503:
+             .init();
+     }
+ 
+[31m-    tracing::info!("Starting Polygon Adapter (single-node deployment) [terminal_ui={}]", terminal_ui_enabled);
+(B[m[32m+    tracing::info!(
+(B[m[32m+        "Starting Polygon Adapter (single-node deployment) [terminal_ui={}]",
+(B[m[32m+        terminal_ui_enabled
+(B[m[32m+    );
+(B[m 
+     // Load configuration
+     let config = Config::load().context("Failed to load configuration")?;
+Diff in /Users/daws/repos/Bandit/bin/polygon_adapter.rs:566:
+         // Manual TCP endpoint binding for backward compatibility
+         let tcp_addr: std::net::SocketAddr = "127.0.0.1:9091".parse()?;
+         let (tcp_handle, bound_addr) = bus.bind_tcp_endpoint(tcp_addr).await?;
+[31m-        tracing::info!("✓ TCP endpoint listening on {} for external clients", bound_addr);
+(B[m[32m+        tracing::info!(
+(B[m[32m+            "✓ TCP endpoint listening on {} for external clients",
+(B[m[32m+            bound_addr
+(B[m[32m+        );
+(B[m 
+         (bus, Some(tcp_handle))
+     };
+Diff in /Users/daws/repos/Bandit/crates/bandit-provider-runner/src/lib.rs:61:
+             }
+ 
+             if ctx.is_shutting_down() {
+[31m-                anyhow::bail!("Shutdown requested while connecting {name}", name = self.name);
+(B[m[32m+                anyhow::bail!(
+(B[m[32m+                    "Shutdown requested while connecting {name}",
+(B[m[32m+                    name = self.name
+(B[m[32m+                );
+(B[m             }
+         }
+     }
+Diff in /Users/daws/repos/Bandit/crates/bandit-schemas/../../../mycelium/crates/mycelium-protocol/src/codegen.rs:558:
+             "[u8; 20]" => 20,
+             "[u8; 32]" => 32,
+             "[u8; 6]" => 6,
+[31m-            "U256" => 32,                        // Stored as [u8; 32]
+(B[m[32m+            "U256" => 32,           // Stored as [u8; 32]
+(B[m             "String" => 2 + 6 + 32, // FixedStr<32>: [count: u16][_padding: [u8; 6]][chars: [u8; 32]]
+             "Vec<[u8; 20]>" => {
+                 let max_len = max_length(4);
+Diff in /Users/daws/repos/Bandit/crates/bandit-schemas/../../../mycelium/crates/mycelium-protocol/src/codegen.rs:572:
+                 let max_len = max_length(16);
+                 2 + 6 + (1 * max_len)
+             }
+[31m-            "[[u8; 32]; 256]" => 32 * 256,       // Fixed array: 256 elements of 32 bytes each
+(B[m[32m+            "[[u8; 32]; 256]" => 32 * 256, // Fixed array: 256 elements of 32 bytes each
+(B[m             "[[u8; 32]; 6]" => 32 * 6,
+             "[[u8; 20]; 6]" => 20 * 6,
+             _ => panic!("Unknown field type for size calculation: {}", field_type),
+Diff in /Users/daws/repos/Bandit/crates/defi-cost-estimator/src/polygon/mod.rs:43:
+         path_protocols: &[u8],
+     ) -> U256 {
+         // Calculate total gas units
+[31m-        let mut total_units = self.config.gas_flash_loan_overhead + self.config.gas_callback_overhead;
+(B[m[32m+        let mut total_units =
+(B[m[32m+            self.config.gas_flash_loan_overhead + self.config.gas_callback_overhead;
+(B[m 
+         // Sum gas for each hop based on protocol type
+         // Protocol encoding: 1 = V2 (UniswapV2/SushiSwap), 2 = V3 (UniswapV3/Algebra)
+Diff in /Users/daws/repos/Bandit/crates/defi-cost-estimator/src/polygon/mod.rs:52:
+                 break;
+             }
+             let gas_per_swap = match path_protocols[i] {
+[31m-                1 => self.config.gas_v2_swap,  // V2: simpler constant product math
+(B[m[31m-                2 => self.config.gas_v3_swap,  // V3: concentrated liquidity, tick math
+(B[m[31m-                _ => self.config.gas_units_per_hop,  // Fallback to legacy per-hop
+(B[m[32m+                1 => self.config.gas_v2_swap,       // V2: simpler constant product math
+(B[m[32m+                2 => self.config.gas_v3_swap,       // V3: concentrated liquidity, tick math
+(B[m[32m+                _ => self.config.gas_units_per_hop, // Fallback to legacy per-hop
+(B[m             };
+             total_units = total_units.saturating_add(gas_per_swap);
+         }
+Diff in /Users/daws/repos/Bandit/crates/defi-cost-estimator/src/polygon/mod.rs:81:
+ 
+     fn update_flash_fee_bps(&self, bps: u32, timestamp_ns: u64) {
+         self.flash_fee_bps.store(bps, Ordering::Relaxed);
+[31m-        self.last_flash_fee_update_ns.store(timestamp_ns, Ordering::Relaxed);
+(B[m[32m+        self.last_flash_fee_update_ns
+(B[m[32m+            .store(timestamp_ns, Ordering::Relaxed);
+(B[m     }
+ 
+     fn flash_fee_staleness_seconds(&self, now_ns: u64) -> u64 {
+Diff in /Users/daws/repos/Bandit/crates/defi-cost-estimator/src/polygon/mod.rs:164:
+ 
+         // Check staleness at 25 hours later (24h = 86400s + 3600s)
+         let twenty_five_hours_ns = 1_000_000_000 + (25 * 60 * 60 * 1_000_000_000);
+[31m-        assert_eq!(estimator.flash_fee_staleness_seconds(twenty_five_hours_ns), 25 * 60 * 60);
+(B[m[32m+        assert_eq!(
+(B[m[32m+            estimator.flash_fee_staleness_seconds(twenty_five_hours_ns),
+(B[m[32m+            25 * 60 * 60
+(B[m[32m+        );
+(B[m     }
+ }
+ 
+Diff in /Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:5:
+ use bandit_schemas::{
+     fixed_vec::FixedVec, FlashArbitrageOpportunity, FlashLoanFeeUpdate, GasMetrics,
+     PoolStateQuoteRequest, PoolStateQuoteResponse, PoolStateSnapshotRequest,
+[31m-    PoolStateSnapshotResponse, V2PoolStateUpdate, V3PoolStateUpdate, V2Swap, V3Swap,
+(B[m[32m+    PoolStateSnapshotResponse, V2PoolStateUpdate, V2Swap, V3PoolStateUpdate, V3Swap,
+(B[m };
+ use dashmap::DashMap;
+ use futures::future::OptionFuture;
+Diff in /Users/daws/repos/Bandit/crates/polygon-listener/src/lib.rs:441:
+ 
+         // Track event statistics
+         if event_sig == UNISWAP_V2_SWAP_SIG {
+[31m-            self.v2_swap_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+(B[m[32m+            self.v2_swap_count
+(B[m[32m+                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+(B[m             self.handle_swap(provider, log, event_sig, ctx).await
+         } else if event_sig == UNISWAP_V3_SWAP_SIG {
+[31m-            self.v3_swap_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+(B[m[32m+            self.v3_swap_count
+(B[m[32m+                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+(B[m             self.handle_swap(provider, log, event_sig, ctx).await
+         } else if event_sig == UNISWAP_V2_SYNC_SIG {
+[31m-            self.v2_sync_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+(B[m[32m+            self.v2_sync_count
+(B[m[32m+                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+(B[m             self.handle_v2_sync(provider, log, ctx).await
+         } else if event_sig == UNISWAP_V3_MINT_SIG {
+[31m-            self.v3_mint_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+(B[m[32m+            self.v3_mint_count
+(B[m[32m+                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+(B[m             self.handle_concentrated_liquidity(provider, log, 1, ctx)
+                 .await
+         } else if event_sig == UNISWAP_V3_BURN_SIG {
+Diff in /Users/daws/repos/Bandit/crates/polygon-listener/src/lib.rs:457:
+[31m-            self.v3_burn_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+(B[m[32m+            self.v3_burn_count
+(B[m[32m+                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+(B[m             self.handle_concentrated_liquidity(provider, log, 2, ctx)
+                 .await
+         } else if event_sig == ALGEBRA_FEE_SIG {
+Diff in /Users/daws/repos/Bandit/crates/polygon-listener/src/lib.rs:462:
+         } else if event_sig == FLASH_LOAN_FEE_SIG {
+             self.handle_flash_loan_fee(provider, log, ctx).await
+         } else {
+[31m-            self.unknown_event_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+(B[m[32m+            self.unknown_event_count
+(B[m[32m+                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+(B[m             tracing::debug!("Ignoring unknown event signature: {:?}", event_sig);
+             Ok(())
+         }
+Diff in /Users/daws/repos/Bandit/crates/polygon-metadata-enrichment/src/lib.rs:24:
+     pub pool_address: [u8; 20],
+     pub token0_address: [u8; 20],
+     pub token1_address: [u8; 20],
+[31m-    pub token0_symbol: String,   // Fallback to "TOKEN_{hex}" if unavailable
+(B[m[31m-    pub token1_symbol: String,   // Fallback to "TOKEN_{hex}" if unavailable
+(B[m[32m+    pub token0_symbol: String, // Fallback to "TOKEN_{hex}" if unavailable
+(B[m[32m+    pub token1_symbol: String, // Fallback to "TOKEN_{hex}" if unavailable
+(B[m     pub token0_decimals: u8,
+     pub token1_decimals: u8,
+     pub protocol: u8, // 1=V2, 2=V3
+Diff in /Users/daws/repos/Bandit/crates/polygon-metadata-enrichment/src/multicall.rs:163:
+     let results = multicall.call_raw().await?;
+ 
+     let mut decoded = Vec::with_capacity(calls.len());
+[31m-    for ((call, result), name) in calls.into_iter().zip(results.into_iter()).zip(call_names.iter()) {
+(B[m[32m+    for ((call, result), name) in calls
+(B[m[32m+        .into_iter()
+(B[m[32m+        .zip(results.into_iter())
+(B[m[32m+        .zip(call_names.iter())
+(B[m[32m+    {
+(B[m         let address = match result {
+             Ok(Token::Address(addr)) => addr,
+             Ok(unexpected) => {
+Diff in /Users/daws/repos/Bandit/crates/polygon-metadata-enrichment/src/multicall.rs:171:
+                     "Unexpected token type for {} call: {:?}. Retrying individually.",
+                     name, unexpected
+                 );
+[31m-                call.call().await.with_context(|| format!("Failed to resolve pool {} via fallback call", name))?
+(B[m[32m+                call.call()
+(B[m[32m+                    .await
+(B[m[32m+                    .with_context(|| format!("Failed to resolve pool {} via fallback call", name))?
+(B[m             }
+             Err(err) => {
+                 warn!(
+Diff in /Users/daws/repos/Bandit/crates/polygon-metadata-enrichment/src/multicall.rs:178:
+                     "Multicall entry failed for {}: {}. Retrying individually.",
+                     name, err
+                 );
+[31m-                call.call().await.with_context(|| format!("Failed to resolve pool {} via fallback call", name))?
+(B[m[32m+                call.call()
+(B[m[32m+                    .await
+(B[m[32m+                    .with_context(|| format!("Failed to resolve pool {} via fallback call", name))?
+(B[m             }
+         };
+         decoded.push(address);
+Diff in /Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:4:
+ use bandit_schemas::{
+     fixed_vec::FixedVec, AlgebraFeeUpdate, ConcentratedLiquidityEvent, GasMetrics,
+     PoolStateQuoteRequest, PoolStateQuoteResponse, PoolStateSnapshotRequest,
+[31m-    PoolStateSnapshotResponse, V2PoolStateUpdate, V3PoolStateUpdate, V2Swap, V2Sync, V3Swap,
+(B[m[32m+    PoolStateSnapshotResponse, V2PoolStateUpdate, V2Swap, V2Sync, V3PoolStateUpdate, V3Swap,
+(B[m };
+ use dashmap::DashMap;
+ use mycelium_transport::{service, MessageBus, ServiceContext, Subscriber};
+Diff in /Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:568:
+             match state.protocol {
+                 Some(1) => {
+                     // V2 pool
+[31m-                    let reserve0 = state.v2_reserve0
+(B[m[32m+                    let reserve0 = state
+(B[m[32m+                        .v2_reserve0
+(B[m                         .map(|r| {
+                             let mut bytes = [0u8; 32];
+                             r.to_big_endian(&mut bytes);
+Diff in /Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:576:
+                         })
+                         .unwrap_or([0u8; 32]);
+ 
+[31m-                    let reserve1 = state.v2_reserve1
+(B[m[32m+                    let reserve1 = state
+(B[m[32m+                        .v2_reserve1
+(B[m                         .map(|r| {
+                             let mut bytes = [0u8; 32];
+                             r.to_big_endian(&mut bytes);
+Diff in /Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:24:
+ use uuid::Uuid;
+ 
+ #[cfg(feature = "with-strategy")]
+[32m+use polygon_execution_filter::{OrchestratorConfig, PolygonOrchestratorService};
+(B[m[32m+#[cfg(feature = "with-strategy")]
+(B[m use polygon_executor_stub::{ExecutorStubConfig, ExecutorStubService};
+ #[cfg(feature = "with-strategy")]
+ use polygon_flash_arbitrage::{PolygonFlashArbitrageService, StrategyConfig};
+Diff in /Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:30:
+[31m-#[cfg(feature = "with-strategy")]
+(B[m[31m-use polygon_execution_filter::{OrchestratorConfig, PolygonOrchestratorService};
+(B[m 
+ #[derive(Debug, Clone, Deserialize, Serialize)]
+ #[serde(tag = "type")]
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/app.rs:107:
+         }
+     }
+ 
+[31m-
+(B[m     pub fn switch_tab(&mut self, index: usize) {
+         if index < self.tabs.len() {
+             self.current_tab = index;
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs:155:
+                                 .as_str()
+                                 .unwrap_or("UNKNOWN")
+                                 .to_string();
+[31m-                            let token0_decimals = metadata["token0_decimals"].as_u64().unwrap_or(18) as u8;
+(B[m[31m-                            let token1_decimals = metadata["token1_decimals"].as_u64().unwrap_or(18) as u8;
+(B[m[32m+                            let token0_decimals =
+(B[m[32m+                                metadata["token0_decimals"].as_u64().unwrap_or(18) as u8;
+(B[m[32m+                            let token1_decimals =
+(B[m[32m+                                metadata["token1_decimals"].as_u64().unwrap_or(18) as u8;
+(B[m                             let protocol = metadata["protocol"].as_u64().unwrap_or(1) as u8;
+                             let dex_id = metadata["dex_id"].as_u64().unwrap_or(999) as u16;
+                             let fee_bps = metadata["fee_bps"].as_u64().unwrap_or(3000) as u32;
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs:163:
+[31m-                            let tick_spacing = metadata["tick_spacing"].as_i64().unwrap_or(0) as i32;
+(B[m[32m+                            let tick_spacing =
+(B[m[32m+                                metadata["tick_spacing"].as_i64().unwrap_or(0) as i32;
+(B[m 
+                             // Create PoolDisplay with metadata
+                             let display = views::pools::PoolDisplay::from_metadata(
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs:180:
+                             self.pool_displays.insert(pool_addr, display);
+ 
+                             // Also insert into pools map for backward compatibility
+[31m-                            self.pools.entry(pool_addr).or_insert_with(|| views::pools::PoolSnapshotState {
+(B[m[31m-                                last_status: 1,
+(B[m[31m-                                last_snapshot_block: 0,
+(B[m[31m-                                last_quote_block: None,
+(B[m[32m+                            self.pools.entry(pool_addr).or_insert_with(|| {
+(B[m[32m+                                views::pools::PoolSnapshotState {
+(B[m[32m+                                    last_status: 1,
+(B[m[32m+                                    last_snapshot_block: 0,
+(B[m[32m+                                    last_quote_block: None,
+(B[m[32m+                                }
+(B[m                             });
+ 
+                             metadata_count += 1;
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs:193:
+             }
+         }
+ 
+[31m-        ctx.info(&format!("Hydrated {} pools with metadata from Redis", metadata_count));
+(B[m[32m+        ctx.info(&format!(
+(B[m[32m+            "Hydrated {} pools with metadata from Redis",
+(B[m[32m+            metadata_count
+(B[m[32m+        ));
+(B[m         Ok(())
+     }
+ 
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/events.rs:44:
+         let chunks = Layout::default()
+             .direction(Direction::Vertical)
+             .constraints([
+[31m-                Constraint::Length(7),  // Event counters
+(B[m[31m-                Constraint::Min(0),     // Recent events (future)
+(B[m[32m+                Constraint::Length(7), // Event counters
+(B[m[32m+                Constraint::Min(0),    // Recent events (future)
+(B[m             ])
+             .split(area);
+ 
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/events.rs:58:
+         let counters_text = vec![
+             Line::from(vec![
+                 Span::styled("Quote Requests:  ", Style::default().fg(Color::Gray)),
+[31m-                Span::styled(format!("{:>12}", requests), Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+(B[m[32m+                Span::styled(
+(B[m[32m+                    format!("{:>12}", requests),
+(B[m[32m+                    Style::default()
+(B[m[32m+                        .fg(Color::Green)
+(B[m[32m+                        .add_modifier(Modifier::BOLD),
+(B[m[32m+                ),
+(B[m             ]),
+             Line::from(vec![
+                 Span::styled("Quote Responses: ", Style::default().fg(Color::Gray)),
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/events.rs:65:
+[31m-                Span::styled(format!("{:>12}", responses), Style::default().fg(Color::Green).add_modifier(Modifier::BOLD)),
+(B[m[32m+                Span::styled(
+(B[m[32m+                    format!("{:>12}", responses),
+(B[m[32m+                    Style::default()
+(B[m[32m+                        .fg(Color::Green)
+(B[m[32m+                        .add_modifier(Modifier::BOLD),
+(B[m[32m+                ),
+(B[m             ]),
+             Line::from(""),
+             Line::from(vec![
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/events.rs:69:
+                 Span::styled("V2 Swaps:        ", Style::default().fg(Color::Gray)),
+[31m-                Span::styled(format!("{:>12}", v2), Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+(B[m[32m+                Span::styled(
+(B[m[32m+                    format!("{:>12}", v2),
+(B[m[32m+                    Style::default()
+(B[m[32m+                        .fg(Color::Yellow)
+(B[m[32m+                        .add_modifier(Modifier::BOLD),
+(B[m[32m+                ),
+(B[m             ]),
+             Line::from(vec![
+                 Span::styled("V3 Swaps:        ", Style::default().fg(Color::Gray)),
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/events.rs:74:
+[31m-                Span::styled(format!("{:>12}", v3), Style::default().fg(Color::Magenta).add_modifier(Modifier::BOLD)),
+(B[m[32m+                Span::styled(
+(B[m[32m+                    format!("{:>12}", v3),
+(B[m[32m+                    Style::default()
+(B[m[32m+                        .fg(Color::Magenta)
+(B[m[32m+                        .add_modifier(Modifier::BOLD),
+(B[m[32m+                ),
+(B[m             ]),
+         ];
+ 
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/events.rs:78:
+[31m-        let counters = Paragraph::new(counters_text)
+(B[m[31m-            .block(Block::default().borders(Borders::ALL).title("Event Counters"));
+(B[m[32m+        let counters = Paragraph::new(counters_text).block(
+(B[m[32m+            Block::default()
+(B[m[32m+                .borders(Borders::ALL)
+(B[m[32m+                .title("Event Counters"),
+(B[m[32m+        );
+(B[m         f.render_widget(counters, chunks[0]);
+ 
+         // Placeholder for recent events list
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/events.rs:87:
+                 Style::default().fg(Color::DarkGray),
+             )),
+         ])
+[31m-        .block(Block::default().borders(Borders::ALL).title("Recent Events"));
+(B[m[32m+        .block(
+(B[m[32m+            Block::default()
+(B[m[32m+                .borders(Borders::ALL)
+(B[m[32m+                .title("Recent Events"),
+(B[m[32m+        );
+(B[m         f.render_widget(placeholder, chunks[1]);
+     }
+ 
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/executor.rs:66:
+                     Span::styled("Total Opportunities: ", Style::default().fg(Color::Gray)),
+                     Span::styled(
+                         format!("{}", m.opportunities_total.unwrap_or(0)),
+[31m-                        Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+(B[m[32m+                        Style::default()
+(B[m[32m+                            .fg(Color::Cyan)
+(B[m[32m+                            .add_modifier(Modifier::BOLD),
+(B[m                     ),
+                 ])),
+                 ListItem::new(Line::from(vec![
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/executor.rs:73:
+                     Span::styled("Actionable:          ", Style::default().fg(Color::Gray)),
+                     Span::styled(
+                         format!("{}", m.actionable_total.unwrap_or(0)),
+[31m-                        Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
+(B[m[32m+                        Style::default()
+(B[m[32m+                            .fg(Color::Green)
+(B[m[32m+                            .add_modifier(Modifier::BOLD),
+(B[m                     ),
+                 ])),
+                 ListItem::new(""),
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/executor.rs:81:
+                     Span::styled("Last Net Profit:     ", Style::default().fg(Color::Gray)),
+                     Span::styled(
+                         format!("{} wei", net_profit),
+[31m-                        Style::default().fg(profit_color).add_modifier(Modifier::BOLD),
+(B[m[32m+                        Style::default()
+(B[m[32m+                            .fg(profit_color)
+(B[m[32m+                            .add_modifier(Modifier::BOLD),
+(B[m                     ),
+                 ])),
+                 ListItem::new(Line::from(vec![
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/executor.rs:107:
+             ]
+         };
+ 
+[31m-        let list = List::new(items)
+(B[m[31m-            .block(Block::default().borders(Borders::ALL).title("Transaction Executor"));
+(B[m[32m+        let list = List::new(items).block(
+(B[m[32m+            Block::default()
+(B[m[32m+                .borders(Borders::ALL)
+(B[m[32m+                .title("Transaction Executor"),
+(B[m[32m+        );
+(B[m         f.render_widget(list, area);
+     }
+ 
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/mod.rs:1:
+ //! Terminal UI views
+ 
+ pub mod events;
+[32m+pub mod executor;
+(B[m pub mod pools;
+ pub mod strategy;
+[31m-pub mod executor;
+(B[m 
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/pools.rs:27:
+     pub token1_symbol: String,
+     pub token0_decimals: u8,
+     pub token1_decimals: u8,
+[31m-    pub protocol: u8,        // 1=V2, 2=V3
+(B[m[32m+    pub protocol: u8, // 1=V2, 2=V3
+(B[m     pub dex_id: u16,
+     pub fee_bps: u32,
+[31m-    pub tick_spacing: i32,   // V3 only
+(B[m[32m+    pub tick_spacing: i32, // V3 only
+(B[m 
+     // State (from swap events)
+[31m-    pub reserve0: u128,            // V2 only (from V2Sync events)
+(B[m[31m-    pub reserve1: u128,            // V2 only (from V2Sync events)
+(B[m[31m-    pub sqrt_price_x96: [u8; 32],  // V3 only (from V3Swap)
+(B[m[31m-    pub liquidity: u128,           // V3 only (from V3Swap)
+(B[m[31m-    pub tick: i32,                 // V3 only (from V3Swap)
+(B[m[31m-    pub last_update: Instant,      // For flash highlighting
+(B[m[32m+    pub reserve0: u128,           // V2 only (from V2Sync events)
+(B[m[32m+    pub reserve1: u128,           // V2 only (from V2Sync events)
+(B[m[32m+    pub sqrt_price_x96: [u8; 32], // V3 only (from V3Swap)
+(B[m[32m+    pub liquidity: u128,          // V3 only (from V3Swap)
+(B[m[32m+    pub tick: i32,                // V3 only (from V3Swap)
+(B[m[32m+    pub last_update: Instant,     // For flash highlighting
+(B[m     pub last_block: u64,
+ }
+ 
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/pools.rs:104:
+                 // V3: price = (sqrt_price_x96 / 2^96)^2
+                 // Convert [u8; 32] to U256 first
+                 let price_x96 = u128::from_be_bytes([
+[31m-                    self.sqrt_price_x96[16], self.sqrt_price_x96[17],
+(B[m[31m-                    self.sqrt_price_x96[18], self.sqrt_price_x96[19],
+(B[m[31m-                    self.sqrt_price_x96[20], self.sqrt_price_x96[21],
+(B[m[31m-                    self.sqrt_price_x96[22], self.sqrt_price_x96[23],
+(B[m[31m-                    self.sqrt_price_x96[24], self.sqrt_price_x96[25],
+(B[m[31m-                    self.sqrt_price_x96[26], self.sqrt_price_x96[27],
+(B[m[31m-                    self.sqrt_price_x96[28], self.sqrt_price_x96[29],
+(B[m[31m-                    self.sqrt_price_x96[30], self.sqrt_price_x96[31],
+(B[m[32m+                    self.sqrt_price_x96[16],
+(B[m[32m+                    self.sqrt_price_x96[17],
+(B[m[32m+                    self.sqrt_price_x96[18],
+(B[m[32m+                    self.sqrt_price_x96[19],
+(B[m[32m+                    self.sqrt_price_x96[20],
+(B[m[32m+                    self.sqrt_price_x96[21],
+(B[m[32m+                    self.sqrt_price_x96[22],
+(B[m[32m+                    self.sqrt_price_x96[23],
+(B[m[32m+                    self.sqrt_price_x96[24],
+(B[m[32m+                    self.sqrt_price_x96[25],
+(B[m[32m+                    self.sqrt_price_x96[26],
+(B[m[32m+                    self.sqrt_price_x96[27],
+(B[m[32m+                    self.sqrt_price_x96[28],
+(B[m[32m+                    self.sqrt_price_x96[29],
+(B[m[32m+                    self.sqrt_price_x96[30],
+(B[m[32m+                    self.sqrt_price_x96[31],
+(B[m                 ]);
+ 
+                 if price_x96 == 0 {
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/pools.rs:122:
+                 let price = sqrt_price * sqrt_price;
+ 
+                 // Adjust for decimals
+[31m-                let decimals_factor = 10f64.powi((self.token1_decimals as i32) - (self.token0_decimals as i32));
+(B[m[32m+                let decimals_factor =
+(B[m[32m+                    10f64.powi((self.token1_decimals as i32) - (self.token0_decimals as i32));
+(B[m                 Some(price * decimals_factor)
+             }
+             _ => None,
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/pools.rs:156:
+ 
+     /// Format pool address as short hex
+     pub fn pool_short(&self) -> String {
+[31m-        format!("0x{:.4}...{:.4}",
+(B[m[32m+        format!(
+(B[m[32m+            "0x{:.4}...{:.4}",
+(B[m             hex::encode(&self.pool_address[0..2]),
+             hex::encode(&self.pool_address[18..20])
+         )
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/pools.rs:254:
+             pools.sort_by(|a, b| {
+                 let price_a = a.price().unwrap_or(0.0);
+                 let price_b = b.price().unwrap_or(0.0);
+[31m-                price_a.partial_cmp(&price_b).unwrap_or(std::cmp::Ordering::Equal)
+(B[m[32m+                price_a
+(B[m[32m+                    .partial_cmp(&price_b)
+(B[m[32m+                    .unwrap_or(std::cmp::Ordering::Equal)
+(B[m             });
+         }
+ 
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/pools.rs:284:
+         let chunks = Layout::default()
+             .direction(Direction::Vertical)
+             .constraints([
+[31m-                Constraint::Length(8),   // Pool state summary
+(B[m[31m-                Constraint::Min(0),      // Hierarchical pool list
+(B[m[32m+                Constraint::Length(8), // Pool state summary
+(B[m[32m+                Constraint::Min(0),    // Hierarchical pool list
+(B[m             ])
+             .split(area);
+ 
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/pools.rs:299:
+                 Span::styled("Total Pools:   ", Style::default().fg(Color::Gray)),
+                 Span::styled(
+                     format!("{:>8}", total_pools),
+[31m-                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+(B[m[32m+                    Style::default()
+(B[m[32m+                        .fg(Color::Cyan)
+(B[m[32m+                        .add_modifier(Modifier::BOLD),
+(B[m                 ),
+                 Span::styled("  (", Style::default().fg(Color::DarkGray)),
+                 Span::styled(
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/pools.rs:365:
+                 )),
+                 Line::from(""),
+                 Line::from(Span::styled(
+[31m-                    format!("({} pools loaded from Redis, waiting for live swaps)", self.pool_displays.len()),
+(B[m[32m+                    format!(
+(B[m[32m+                        "({} pools loaded from Redis, waiting for live swaps)",
+(B[m[32m+                        self.pool_displays.len()
+(B[m[32m+                    ),
+(B[m                     Style::default().fg(Color::DarkGray),
+                 )),
+             ])
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/pools.rs:387:
+ 
+             // Pair header row
+             let first_pool = &pools[0];
+[31m-            let pair_label = format!(
+(B[m[31m-                "{}/{}",
+(B[m[31m-                first_pool.token0_symbol, first_pool.token1_symbol
+(B[m[31m-            );
+(B[m[32m+            let pair_label = format!("{}/{}", first_pool.token0_symbol, first_pool.token1_symbol);
+(B[m 
+             let spread = self.calculate_spread(pools);
+             let spread_str = if let Some(s) = spread {
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/pools.rs:402:
+             let collapsed = self.collapsed_pairs.contains(pair_key);
+             let expand_icon = if collapsed { "▸" } else { "▾" };
+ 
+[31m-            rows.push(Row::new(vec![
+(B[m[31m-                format!("{} {}", expand_icon, pair_label),
+(B[m[31m-                format!("{} pools", pools.len()),
+(B[m[31m-                spread_str,
+(B[m[31m-                "".to_string(),
+(B[m[31m-                "".to_string(),
+(B[m[31m-                "".to_string(),
+(B[m[31m-            ]).style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)));
+(B[m[32m+            rows.push(
+(B[m[32m+                Row::new(vec![
+(B[m[32m+                    format!("{} {}", expand_icon, pair_label),
+(B[m[32m+                    format!("{} pools", pools.len()),
+(B[m[32m+                    spread_str,
+(B[m[32m+                    "".to_string(),
+(B[m[32m+                    "".to_string(),
+(B[m[32m+                    "".to_string(),
+(B[m[32m+                ])
+(B[m[32m+                .style(
+(B[m[32m+                    Style::default()
+(B[m[32m+                        .fg(Color::Cyan)
+(B[m[32m+                        .add_modifier(Modifier::BOLD),
+(B[m[32m+                ),
+(B[m[32m+            );
+(B[m 
+             // Individual pool rows (if expanded)
+             if !collapsed {
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/pools.rs:416:
+[31m-                for pool in pools.iter().take(20) {  // Limit to 20 per pair
+(B[m[32m+                for pool in pools.iter().take(20) {
+(B[m[32m+                    // Limit to 20 per pair
+(B[m                     let price_str = if let Some(price) = pool.price() {
+                         format!("{:.6}", price)
+                     } else {
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/pools.rs:439:
+                         Style::default().fg(Color::White)
+                     };
+ 
+[31m-                    rows.push(Row::new(vec![
+(B[m[31m-                        format!("  ├─ {}", pool.dex_name()),
+(B[m[31m-                        pool.protocol_name().to_string(),
+(B[m[31m-                        format!("{:.2}%", pool.fee_bps as f64 / 100.0),
+(B[m[31m-                        price_str,
+(B[m[31m-                        liquidity_str,
+(B[m[31m-                        pool.pool_short(),
+(B[m[31m-                    ]).style(style));
+(B[m[32m+                    rows.push(
+(B[m[32m+                        Row::new(vec![
+(B[m[32m+                            format!("  ├─ {}", pool.dex_name()),
+(B[m[32m+                            pool.protocol_name().to_string(),
+(B[m[32m+                            format!("{:.2}%", pool.fee_bps as f64 / 100.0),
+(B[m[32m+                            price_str,
+(B[m[32m+                            liquidity_str,
+(B[m[32m+                            pool.pool_short(),
+(B[m[32m+                        ])
+(B[m[32m+                        .style(style),
+(B[m[32m+                    );
+(B[m                 }
+             }
+ 
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/pools.rs:459:
+         let table = Table::new(
+             rows,
+             [
+[31m-                Constraint::Percentage(25),  // Pair/DEX
+(B[m[31m-                Constraint::Percentage(10),  // Protocol/Count
+(B[m[31m-                Constraint::Percentage(15),  // Fee/Spread
+(B[m[31m-                Constraint::Percentage(15),  // Price
+(B[m[31m-                Constraint::Percentage(15),  // Liquidity
+(B[m[31m-                Constraint::Percentage(20),  // Pool Address
+(B[m[32m+                Constraint::Percentage(25), // Pair/DEX
+(B[m[32m+                Constraint::Percentage(10), // Protocol/Count
+(B[m[32m+                Constraint::Percentage(15), // Fee/Spread
+(B[m[32m+                Constraint::Percentage(15), // Price
+(B[m[32m+                Constraint::Percentage(15), // Liquidity
+(B[m[32m+                Constraint::Percentage(20), // Pool Address
+(B[m             ],
+         )
+         .header(
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/pools.rs:471:
+[31m-            Row::new(vec!["Pair / DEX", "Proto", "Fee / Spread", "Price", "Liquidity", "Pool"])
+(B[m[31m-                .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)),
+(B[m[32m+            Row::new(vec![
+(B[m[32m+                "Pair / DEX",
+(B[m[32m+                "Proto",
+(B[m[32m+                "Fee / Spread",
+(B[m[32m+                "Price",
+(B[m[32m+                "Liquidity",
+(B[m[32m+                "Pool",
+(B[m[32m+            ])
+(B[m[32m+            .style(
+(B[m[32m+                Style::default()
+(B[m[32m+                    .fg(Color::Yellow)
+(B[m[32m+                    .add_modifier(Modifier::BOLD),
+(B[m[32m+            ),
+(B[m         )
+         .block(
+             Block::default()
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/strategy.rs:59:
+                     Span::styled("Opportunities Emitted: ", Style::default().fg(Color::Gray)),
+                     Span::styled(
+                         format!("{}", m.opportunities_emitted_total.unwrap_or(0)),
+[31m-                        Style::default().fg(Color::Green).add_modifier(Modifier::BOLD),
+(B[m[32m+                        Style::default()
+(B[m[32m+                            .fg(Color::Green)
+(B[m[32m+                            .add_modifier(Modifier::BOLD),
+(B[m                     ),
+                 ])),
+                 ListItem::new(""),
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal/src/views/strategy.rs:115:
+             ]
+         };
+ 
+[31m-        let list = List::new(items)
+(B[m[31m-            .block(Block::default().borders(Borders::ALL).title("Flash Arbitrage Strategy"));
+(B[m[32m+        let list = List::new(items).block(
+(B[m[32m+            Block::default()
+(B[m[32m+                .borders(Borders::ALL)
+(B[m[32m+                .title("Flash Arbitrage Strategy"),
+(B[m[32m+        );
+(B[m         f.render_widget(list, area);
+     }
+ 
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal-torq/src/bin/terminal-ui.rs:29:
+ 
+     // Load topology configuration
+     // Priority: MYCELIUM_TOPOLOGY env var > default path
+[31m-    let topology_path = std::env::var("MYCELIUM_TOPOLOGY")
+(B[m[31m-        .unwrap_or_else(|_| {
+(B[m[31m-            // Default to the polygon-arbitrage profile topology
+(B[m[31m-            let default_path = "profiles/polygon-arbitrage/topology.toml";
+(B[m[31m-            info!("MYCELIUM_TOPOLOGY not set, using default: {}", default_path);
+(B[m[31m-            default_path.to_string()
+(B[m[31m-        });
+(B[m[32m+    let topology_path = std::env::var("MYCELIUM_TOPOLOGY").unwrap_or_else(|_| {
+(B[m[32m+        // Default to the polygon-arbitrage profile topology
+(B[m[32m+        let default_path = "profiles/polygon-arbitrage/topology.toml";
+(B[m[32m+        info!("MYCELIUM_TOPOLOGY not set, using default: {}", default_path);
+(B[m[32m+        default_path.to_string()
+(B[m[32m+    });
+(B[m 
+     info!("Loading topology from: {}", topology_path);
+ 
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal-torq/src/bin/terminal-ui.rs:94:
+ 
+ fn spawn_event_reader() -> mpsc::UnboundedReceiver<Event> {
+     let (tx, rx) = mpsc::unbounded_channel();
+[31m-    std::thread::spawn(move || {
+(B[m[31m-        loop {
+(B[m[31m-            if crossterm::event::poll(Duration::from_millis(250)).unwrap_or(false) {
+(B[m[31m-                match crossterm::event::read() {
+(B[m[31m-                    Ok(event) => {
+(B[m[31m-                        if tx.send(event).is_err() {
+(B[m[31m-                            break;
+(B[m[31m-                        }
+(B[m[32m+    std::thread::spawn(move || loop {
+(B[m[32m+        if crossterm::event::poll(Duration::from_millis(250)).unwrap_or(false) {
+(B[m[32m+            match crossterm::event::read() {
+(B[m[32m+                Ok(event) => {
+(B[m[32m+                    if tx.send(event).is_err() {
+(B[m[32m+                        break;
+(B[m                     }
+[31m-                    Err(err) => {
+(B[m[31m-                        tracing::error!("Input error: {}", err);
+(B[m[31m-                    }
+(B[m[32m+                }
+(B[m[32m+                Err(err) => {
+(B[m[32m+                    tracing::error!("Input error: {}", err);
+(B[m                 }
+             }
+         }
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal-torq/src/app.rs:34:
+     }
+ 
+     fn all() -> &'static [AppTab] {
+[31m-        &[AppTab::Home, AppTab::DataFlow, AppTab::Pools, AppTab::Arbitrage]
+(B[m[32m+        &[
+(B[m[32m+            AppTab::Home,
+(B[m[32m+            AppTab::DataFlow,
+(B[m[32m+            AppTab::Pools,
+(B[m[32m+            AppTab::Arbitrage,
+(B[m[32m+        ]
+(B[m     }
+ }
+ 
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal-torq/src/app.rs:58:
+             .with_context(|| format!("Failed to load topology at {}", topology_path))?;
+         let bus = Arc::new(MessageBus::from_topology(topology, "polygon-terminal"));
+ 
+[31m-        let redis_url = std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+(B[m[32m+        let redis_url =
+(B[m[32m+            std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+(B[m         let postgres_url = std::env::var("POSTGRES_URL")
+             .unwrap_or_else(|_| "postgres://postgres:postgres@localhost/postgres".to_string());
+         let log_path = std::env::var("ADAPTER_LOG")
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal-torq/src/app.rs:94:
+                 Line::from(Span::styled(
+                     format!("{} {}", idx + 1, name),
+                     Style::default()
+[31m-                        .fg(if idx == self.active { Color::Cyan } else { Color::White })
+(B[m[32m+                        .fg(if idx == self.active {
+(B[m[32m+                            Color::Cyan
+(B[m[32m+                        } else {
+(B[m[32m+                            Color::White
+(B[m[32m+                        })
+(B[m                         .add_modifier(if idx == self.active {
+                             Modifier::BOLD
+                         } else {
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal-torq/src/app.rs:105:
+             .collect();
+ 
+         let tabs = Tabs::new(titles)
+[31m-            .block(Block::default().borders(Borders::ALL).title("Bandit Monitor"))
+(B[m[32m+            .block(
+(B[m[32m+                Block::default()
+(B[m[32m+                    .borders(Borders::ALL)
+(B[m[32m+                    .title("Bandit Monitor"),
+(B[m[32m+            )
+(B[m             .select(self.active)
+[31m-            .highlight_style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD));
+(B[m[32m+            .highlight_style(
+(B[m[32m+                Style::default()
+(B[m[32m+                    .fg(Color::Cyan)
+(B[m[32m+                    .add_modifier(Modifier::BOLD),
+(B[m[32m+            );
+(B[m         f.render_widget(tabs, chunks[0]);
+ 
+         let content = chunks[1];
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal-torq/src/views/arbitrage.rs:102:
+             .collect();
+ 
+         let table = Table::new(rows)
+[31m-            .header(Row::new(vec![
+(B[m[31m-                "Pool",
+(B[m[31m-                "Hops",
+(B[m[31m-                "Net ETH",
+(B[m[31m-                "Gross ETH",
+(B[m[31m-                "Gas ETH",
+(B[m[31m-                "Block",
+(B[m[31m-            ]).style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)))
+(B[m[32m+            .header(
+(B[m[32m+                Row::new(vec![
+(B[m[32m+                    "Pool",
+(B[m[32m+                    "Hops",
+(B[m[32m+                    "Net ETH",
+(B[m[32m+                    "Gross ETH",
+(B[m[32m+                    "Gas ETH",
+(B[m[32m+                    "Block",
+(B[m[32m+                ])
+(B[m[32m+                .style(
+(B[m[32m+                    Style::default()
+(B[m[32m+                        .fg(Color::Yellow)
+(B[m[32m+                        .add_modifier(Modifier::BOLD),
+(B[m[32m+                ),
+(B[m[32m+            )
+(B[m             .widths(&[
+                 Constraint::Length(20),
+                 Constraint::Length(5),
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal-torq/src/views/data_flow.rs:34:
+     }
+ 
+     fn all() -> &'static [DataTopic] {
+[31m-        &[DataTopic::V2Pools, DataTopic::V3Pools, DataTopic::Gas, DataTopic::Arbitrage]
+(B[m[32m+        &[
+(B[m[32m+            DataTopic::V2Pools,
+(B[m[32m+            DataTopic::V3Pools,
+(B[m[32m+            DataTopic::Gas,
+(B[m[32m+            DataTopic::Arbitrage,
+(B[m[32m+        ]
+(B[m     }
+ }
+ 
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal-torq/src/views/data_flow.rs:166:
+                                 .base_fee_per_gas
+                                 .checked_div(1_000_000_000)
+                                 .unwrap_or(0),
+[31m-                            update.avg_priority_fee
+(B[m[32m+                            update
+(B[m[32m+                                .avg_priority_fee
+(B[m                                 .checked_div(1_000_000_000)
+                                 .unwrap_or(0),
+                         );
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal-torq/src/views/data_flow.rs:242:
+                 format!(" {}:{} ", idx + 1, topic.title()),
+                 Style::default()
+                     .fg(if active { Color::Cyan } else { Color::White })
+[31m-                    .add_modifier(if active { Modifier::BOLD } else { Modifier::empty() }),
+(B[m[32m+                    .add_modifier(if active {
+(B[m[32m+                        Modifier::BOLD
+(B[m[32m+                    } else {
+(B[m[32m+                        Modifier::empty()
+(B[m[32m+                    }),
+(B[m             ));
+         }
+         let paragraph = Paragraph::new(Line::from(spans))
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal-torq/src/views/data_flow.rs:259:
+                 if let Some(err) = &state.error {
+                     format!("Total: {} | ERROR: {}", state.total, err)
+                 } else {
+[31m-                    format!("Total: {} | Showing last {}", state.total, state.last_lines.len())
+(B[m[32m+                    format!(
+(B[m[32m+                        "Total: {} | Showing last {}",
+(B[m[32m+                        state.total,
+(B[m[32m+                        state.last_lines.len()
+(B[m[32m+                    )
+(B[m                 }
+             }
+             None => "Waiting for data…".to_string(),
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal-torq/src/views/data_flow.rs:266:
+         };
+[31m-        let paragraph = Paragraph::new(text).block(Block::default().borders(Borders::ALL).title("Stats"));
+(B[m[32m+        let paragraph =
+(B[m[32m+            Paragraph::new(text).block(Block::default().borders(Borders::ALL).title("Stats"));
+(B[m         f.render_widget(paragraph, area);
+     }
+ 
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal-torq/src/views/data_flow.rs:275:
+         let lines: Vec<Line> = entry
+             .map(|state| state.last_lines.iter().cloned().map(Line::from).collect())
+             .unwrap_or_default();
+[31m-        let paragraph = Paragraph::new(lines)
+(B[m[31m-            .block(Block::default().borders(Borders::ALL).title("Messages"));
+(B[m[32m+        let paragraph =
+(B[m[32m+            Paragraph::new(lines).block(Block::default().borders(Borders::ALL).title("Messages"));
+(B[m         f.render_widget(paragraph, area);
+     }
+ 
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal-torq/src/views/home.rs:1:
+ use anyhow::Result;
+ use crossterm::event::KeyEvent;
+[31m-use redis::AsyncCommands;
+(B[m use ratatui::{
+     layout::{Constraint, Direction, Layout, Rect},
+     style::{Color, Style},
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal-torq/src/views/home.rs:7:
+     widgets::{Block, Borders, Paragraph},
+     Frame,
+ };
+[32m+use redis::AsyncCommands;
+(B[m use std::sync::Arc;
+ use tokio::{self, sync::RwLock, task::JoinHandle, time::Duration};
+ use tokio_postgres::NoTls;
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal-torq/src/views/home.rs:68:
+ 
+         let mut tasks = Vec::new();
+         tasks.push(Self::spawn_redis_probe(status.clone(), redis_url.clone()));
+[31m-        tasks.push(Self::spawn_postgres_probe(status.clone(), postgres_url.clone()));
+(B[m[32m+        tasks.push(Self::spawn_postgres_probe(
+(B[m[32m+            status.clone(),
+(B[m[32m+            postgres_url.clone(),
+(B[m[32m+        ));
+(B[m 
+         Self {
+             topology_path: topology_path.to_string(),
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal-torq/src/views/home.rs:168:
+             .block(Block::default().title("Health").borders(Borders::ALL));
+         f.render_widget(status_paragraph, layout[0]);
+ 
+[31m-        let profile_text = format!(
+(B[m[31m-            "Topology: {}\nLogs: {}",
+(B[m[31m-            self.topology_path, self.log_path
+(B[m[31m-        );
+(B[m[32m+        let profile_text = format!("Topology: {}\nLogs: {}", self.topology_path, self.log_path);
+(B[m         let profile_paragraph = Paragraph::new(profile_text)
+             .block(Block::default().title("Profile").borders(Borders::ALL));
+         f.render_widget(profile_paragraph, layout[1]);
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal-torq/src/views/pools.rs:190:
+         };
+ 
+         // Load topology and create MessageBus
+[31m-        let topology = Topology::load(topology_path)
+(B[m[31m-            .context("Failed to load topology configuration")?;
+(B[m[32m+        let topology =
+(B[m[32m+            Topology::load(topology_path).context("Failed to load topology configuration")?;
+(B[m 
+         let bus = Arc::new(MessageBus::from_topology(topology, "polygon-terminal"));
+ 
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal-torq/src/views/pools.rs:233:
+     async fn load_metadata_from_redis() -> Result<HashMap<[u8; 20], PoolMetadata>> {
+         use redis::AsyncCommands;
+ 
+[31m-        let client =
+(B[m[31m-            redis::Client::open(REDIS_URL).context("Failed to create Redis client")?;
+(B[m[32m+        let client = redis::Client::open(REDIS_URL).context("Failed to create Redis client")?;
+(B[m         let mut con = client
+             .get_multiplexed_async_connection()
+             .await
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal-torq/src/views/pools.rs:399:
+         tokio::spawn(async move {
+             while let Some(update) = v2_sub.recv().await {
+                 *v2_count.write().await += 1;
+[31m-                Self::process_v2_pool_state_update(&update, &pools_v2, &metadata_v2, &redis_v2).await;
+(B[m[32m+                Self::process_v2_pool_state_update(&update, &pools_v2, &metadata_v2, &redis_v2)
+(B[m[32m+                    .await;
+(B[m             }
+         });
+ 
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal-torq/src/views/pools.rs:426:
+         *status.write().await = "Connecting to polygon-adapter...".to_string();
+ 
+         // Get transport-agnostic subscribers via topology
+[31m-        let mut v2_sub = match bus.subscriber_from::<V2PoolStateUpdate>("polygon-adapter").await {
+(B[m[32m+        let mut v2_sub = match bus
+(B[m[32m+            .subscriber_from::<V2PoolStateUpdate>("polygon-adapter")
+(B[m[32m+            .await
+(B[m[32m+        {
+(B[m             Ok(sub) => {
+                 info!("✅ Subscribed to V2PoolStateUpdate from polygon-adapter");
+                 sub
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal-torq/src/views/pools.rs:437:
+             }
+         };
+ 
+[31m-        let mut v3_sub = match bus.subscriber_from::<V3PoolStateUpdate>("polygon-adapter").await {
+(B[m[32m+        let mut v3_sub = match bus
+(B[m[32m+            .subscriber_from::<V3PoolStateUpdate>("polygon-adapter")
+(B[m[32m+            .await
+(B[m[32m+        {
+(B[m             Ok(sub) => {
+                 info!("✅ Subscribed to V3PoolStateUpdate from polygon-adapter");
+                 sub
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal-torq/src/views/pools.rs:458:
+         tokio::spawn(async move {
+             while let Some(update) = v2_sub.recv().await {
+                 *v2_count.write().await += 1;
+[31m-                Self::process_v2_pool_state_update(&update, &pools_v2, &metadata_v2, &redis_v2).await;
+(B[m[32m+                Self::process_v2_pool_state_update(&update, &pools_v2, &metadata_v2, &redis_v2)
+(B[m[32m+                    .await;
+(B[m             }
+         });
+ 
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal-torq/src/views/pools.rs:588:
+         let key = format!("{}0x{}", POOL_METADATA_PREFIX, hex::encode(pool_address));
+ 
+         // Load hash fields
+[31m-        let fields: HashMap<String, String> = con
+(B[m[31m-            .hgetall(&key)
+(B[m[31m-            .await
+(B[m[31m-            .context(format!(
+(B[m[31m-                "Failed to load hash for pool 0x{}",
+(B[m[31m-                hex::encode(&pool_address[..4])
+(B[m[31m-            ))?;
+(B[m[32m+        let fields: HashMap<String, String> = con.hgetall(&key).await.context(format!(
+(B[m[32m+            "Failed to load hash for pool 0x{}",
+(B[m[32m+            hex::encode(&pool_address[..4])
+(B[m[32m+        ))?;
+(B[m 
+         // Parse fields
+         let token0_symbol = fields
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal-torq/src/views/pools.rs:687:
+         let mut sorted_pools: Vec<_> = pools_guard.values().collect();
+         sorted_pools.sort_by_key(|p| p.pool_address);
+ 
+[31m-        let mut pools_by_pair: HashMap<([u8; 20], [u8; 20]), Vec<&PoolDisplay>> =
+(B[m[31m-            HashMap::new();
+(B[m[32m+        let mut pools_by_pair: HashMap<([u8; 20], [u8; 20]), Vec<&PoolDisplay>> = HashMap::new();
+(B[m         for pool in sorted_pools {
+             // Normalize pair order (lower address first)
+             let pair = if pool.token0_address < pool.token1_address {
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal-torq/src/views/pools.rs:696:
+             } else {
+                 (pool.token1_address, pool.token0_address)
+             };
+[31m-            pools_by_pair.entry(pair).or_insert_with(Vec::new).push(pool);
+(B[m[32m+            pools_by_pair
+(B[m[32m+                .entry(pair)
+(B[m[32m+                .or_insert_with(Vec::new)
+(B[m[32m+                .push(pool);
+(B[m         }
+ 
+         // Calculate max spread for each pair
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal-torq/src/views/pools.rs:782:
+ 
+         for ((token0, token1), pair_pools) in sorted_pairs {
+             // Pair header row - full addresses in first column, symbols in second
+[31m-            let pair_addresses =
+(B[m[31m-                format!("{} / {}", hex::encode(token0), hex::encode(token1));
+(B[m[32m+            let pair_addresses = format!("{} / {}", hex::encode(token0), hex::encode(token1));
+(B[m 
+             // Get symbols in correct order for the normalized pair
+             let pair_symbols = if let Some(first_pool) = pair_pools.first() {
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal-torq/src/views/pools.rs:816:
+ 
+             rows.push(
+                 Row::new(vec![
+[31m-                    pair_addresses,     // Full addresses
+(B[m[31m-                    pair_symbols,       // Symbols
+(B[m[31m-                    "".to_string(),     // Protocol (empty for header)
+(B[m[31m-                    "".to_string(),     // Data (empty for header)
+(B[m[31m-                    "".to_string(),     // Price (empty for header)
+(B[m[31m-                    "".to_string(),     // Block (empty for header)
+(B[m[31m-                    spread_str,         // Spread in rightmost column
+(B[m[32m+                    pair_addresses, // Full addresses
+(B[m[32m+                    pair_symbols,   // Symbols
+(B[m[32m+                    "".to_string(), // Protocol (empty for header)
+(B[m[32m+                    "".to_string(), // Data (empty for header)
+(B[m[32m+                    "".to_string(), // Price (empty for header)
+(B[m[32m+                    "".to_string(), // Block (empty for header)
+(B[m[32m+                    spread_str,     // Spread in rightmost column
+(B[m                 ])
+                 .style(
+                     Style::default()
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal-torq/src/views/pools.rs:834:
+             // Pool rows for this pair
+             for pool in pair_pools {
+                 // Get DEX name, protocol, and fee from metadata
+[31m-                let (dex_name, protocol_str, fee_str) = if let Some(ref metadata) = metadata_guard
+(B[m[31m-                {
+(B[m[32m+                let (dex_name, protocol_str, fee_str) = if let Some(ref metadata) = metadata_guard {
+(B[m                     if let Some(meta) = metadata.get(&pool.pool_address) {
+                         let dex = if let Some(ref dex) = meta.dex_name {
+                             if !dex.is_empty() {
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal-torq/src/views/pools.rs:857:
+                         };
+                         (dex, protocol, fee)
+                     } else {
+[31m-                        (format!("dex#{}", pool.dex_id), "-".to_string(), "-".to_string())
+(B[m[32m+                        (
+(B[m[32m+                            format!("dex#{}", pool.dex_id),
+(B[m[32m+                            "-".to_string(),
+(B[m[32m+                            "-".to_string(),
+(B[m[32m+                        )
+(B[m                     }
+                 } else {
+[31m-                    (format!("dex#{}", pool.dex_id), "-".to_string(), "-".to_string())
+(B[m[32m+                    (
+(B[m[32m+                        format!("dex#{}", pool.dex_id),
+(B[m[32m+                        "-".to_string(),
+(B[m[32m+                        "-".to_string(),
+(B[m[32m+                    )
+(B[m                 };
+ 
+                 // Format reserves based on protocol type
+Diff in /Users/daws/repos/Bandit/crates/polygon-terminal-torq/src/views/pools.rs:935:
+         let table = Table::new(
+             visible_rows,
+             [
+[31m-                Constraint::Min(86),     // Pool/Pair addresses
+(B[m[31m-                Constraint::Length(12),  // DEX name
+(B[m[31m-                Constraint::Length(8),   // Protocol
+(B[m[31m-                Constraint::Length(24),  // Data
+(B[m[31m-                Constraint::Length(12),  // Price
+(B[m[31m-                Constraint::Length(12),  // Block
+(B[m[31m-                Constraint::Length(8),   // Fee/Spread
+(B[m[32m+                Constraint::Min(86),    // Pool/Pair addresses
+(B[m[32m+                Constraint::Length(12), // DEX name
+(B[m[32m+                Constraint::Length(8),  // Protocol
+(B[m[32m+                Constraint::Length(24), // Data
+(B[m[32m+                Constraint::Length(12), // Price
+(B[m[32m+                Constraint::Length(12), // Block
+(B[m[32m+                Constraint::Length(8),  // Fee/Spread
+(B[m             ],
+         )
+         .block(block);

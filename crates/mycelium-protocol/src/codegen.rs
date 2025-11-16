@@ -42,6 +42,7 @@ impl From<serde_yaml::Error> for CodegenError {
 /// Generate Rust code from a YAML contract file
 ///
 /// This is the main entry point for code generation used by build.rs.
+#[allow(dead_code)]
 pub fn generate_from_yaml<P: AsRef<Path>>(
     yaml_path: P,
     output_path: P,
@@ -52,6 +53,7 @@ pub fn generate_from_yaml<P: AsRef<Path>>(
 /// Generate Rust code from a YAML contract file with external imports
 ///
 /// Use this when generating code for external crates that depend on mycelium-protocol.
+#[allow(dead_code)] // Public API for external code generation
 pub fn generate_from_yaml_external<P: AsRef<Path>>(
     yaml_path: P,
     output_path: P,
@@ -84,6 +86,7 @@ fn generate_from_yaml_with_imports<P: AsRef<Path>>(
 #[derive(Debug, Deserialize)]
 struct Contracts {
     #[serde(default)]
+    #[allow(dead_code)] // Reserved for future schema versioning
     schema: Option<SchemaConfig>,
     #[serde(default)]
     tag_ranges: Option<TagRanges>,
@@ -273,9 +276,11 @@ fn generate_messages(contracts: &Contracts, use_external_imports: bool) -> Strin
 
     // Use appropriate import paths
     if use_external_imports {
+        code.push_str("#[allow(unused_imports)]\n");
         code.push_str("use mycelium_protocol::fixed_vec::{FixedStr, FixedVec};\n");
         code.push_str("use mycelium_protocol::Message;\n\n");
     } else {
+        code.push_str("#[allow(unused_imports)]\n");
         code.push_str("use crate::fixed_vec::{FixedStr, FixedVec};\n");
         code.push_str("use crate::Message;\n\n");
     }
@@ -538,6 +543,9 @@ fn calculate_message_size(contract: &MessageContract) -> usize {
 
     for (_field_name, field_contract) in &contract.fields {
         let field_type = &field_contract.field_type;
+        let max_length = |default: usize| -> usize {
+            get_max_length_from_validation(field_contract).unwrap_or(default)
+        };
 
         let size = match field_type.as_str() {
             "u8" => 1,
@@ -549,10 +557,24 @@ fn calculate_message_size(contract: &MessageContract) -> usize {
             "[u8; 16]" => 16,
             "[u8; 20]" => 20,
             "[u8; 32]" => 32,
-            "U256" => 32,                        // Stored as [u8; 32]
+            "[u8; 6]" => 6,
+            "U256" => 32,           // Stored as [u8; 32]
             "String" => 2 + 6 + 32, // FixedStr<32>: [count: u16][_padding: [u8; 6]][chars: [u8; 32]]
-            "Vec<[u8; 20]>" => 2 + 6 + (20 * 4), // FixedVec<[u8; 20], 4>: [count: u16][_padding: [u8; 6]][elements: [[u8; 20]; 4]]
-            "[[u8; 32]; 256]" => 32 * 256,       // Fixed array: 256 elements of 32 bytes each
+            "Vec<[u8; 20]>" => {
+                let max_len = max_length(4);
+                2 + 6 + (20 * max_len)
+            }
+            "Vec<[u8; 32]>" => {
+                let max_len = max_length(4);
+                2 + 6 + (32 * max_len)
+            }
+            "Vec<u8>" => {
+                let max_len = max_length(16);
+                2 + 6 + (1 * max_len)
+            }
+            "[[u8; 32]; 256]" => 32 * 256, // Fixed array: 256 elements of 32 bytes each
+            "[[u8; 32]; 6]" => 32 * 6,
+            "[[u8; 20]; 6]" => 20 * 6,
             _ => panic!("Unknown field type for size calculation: {}", field_type),
         };
 
@@ -689,7 +711,8 @@ fn map_contract_type_to_rust(contract_type: &str, field: &FieldContract) -> Stri
         "[u8; 16]" => "[u8; 16]".to_string(), // For u128 values
         "[u8; 20]" => "[u8; 20]".to_string(),
         "[u8; 32]" => "[u8; 32]".to_string(), // For hashes and raw bytes
-        "U256" => "[u8; 32]".to_string(),     // U256 stored as bytes for zerocopy
+        "[u8; 6]" => "[u8; 6]".to_string(),
+        "U256" => "[u8; 32]".to_string(), // U256 stored as bytes for zerocopy
         "String" => {
             let max_len = get_max_length_from_validation(field).unwrap_or(32);
             format!("FixedStr<{}>", max_len)
@@ -697,6 +720,14 @@ fn map_contract_type_to_rust(contract_type: &str, field: &FieldContract) -> Stri
         "Vec<[u8; 20]>" => {
             let max_len = get_max_length_from_validation(field).unwrap_or(4);
             format!("FixedVec<[u8; 20], {}>", max_len)
+        }
+        "Vec<[u8; 32]>" => {
+            let max_len = get_max_length_from_validation(field).unwrap_or(4);
+            format!("FixedVec<[u8; 32], {}>", max_len)
+        }
+        "Vec<u8>" => {
+            let max_len = get_max_length_from_validation(field).unwrap_or(16);
+            format!("FixedVec<u8, {}>", max_len)
         }
         // Support for fixed-size arrays of byte arrays
         s if s.starts_with("[[u8;") && s.ends_with("]") => contract_type.to_string(),

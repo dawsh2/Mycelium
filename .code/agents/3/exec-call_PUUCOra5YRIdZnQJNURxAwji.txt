@@ -1,0 +1,523 @@
+scripts/detect_duplication/src/main.rs:27:    let args: Vec<String> = std::env::args().collect();
+scripts/detect_duplication/src/main.rs:64:fn parse_threshold(args: &[String]) -> f64 {
+scripts/detect_duplication/src/main.rs:72:fn parse_path(args: &[String]) -> PathBuf {
+scripts/detect_duplication/src/main.rs:105:    fn scan_directory(&mut self, path: &Path) -> Result<(), String> {
+scripts/detect_duplication/src/main.rs:122:    fn analyze_file(&mut self, path: &Path) -> Result<(), String> {
+scripts/detect_duplication/src/main.rs:123:        let content = fs::read_to_string(path)
+scripts/detect_duplication/src/main.rs:176:    name: String,
+scripts/detect_duplication/src/main.rs:179:    signature: String,
+scripts/detect_duplication/src/main.rs:180:    body_normalized: String,
+scripts/detect_duplication/src/main.rs:181:    body_tokens: Vec<String>,
+scripts/detect_duplication/src/main.rs:192:        let name = func.sig.ident.to_string();
+scripts/detect_duplication/src/main.rs:223:fn normalize_signature(sig: &syn::Signature) -> String {
+scripts/detect_duplication/src/main.rs:224:    // Convert signature to string, normalizing parameter names
+scripts/detect_duplication/src/main.rs:225:    let mut s = String::new();
+scripts/detect_duplication/src/main.rs:227:    s.push_str(&sig.ident.to_string());
+scripts/detect_duplication/src/main.rs:237:                s.push_str(&quote::quote!(#pat_type).to_string());
+scripts/detect_duplication/src/main.rs:249:        s.push_str(&quote::quote!(#ty).to_string());
+scripts/detect_duplication/src/main.rs:255:fn normalize_body(block: &syn::Block) -> String {
+scripts/detect_duplication/src/main.rs:256:    // Convert body to string with normalized variable names
+scripts/detect_duplication/src/main.rs:257:    let body_str = quote::quote!(#block).to_string();
+scripts/detect_duplication/src/main.rs:265:fn tokenize_body(block: &syn::Block) -> Vec<String> {
+scripts/detect_duplication/src/main.rs:267:    let body_str = quote::quote!(#block).to_string();
+scripts/detect_duplication/src/main.rs:271:        .map(|s| s.to_string())
+scripts/detect_duplication/src/main.rs:329:fn token_similarity(tokens_a: &[String], tokens_b: &[String]) -> f64 {
+scripts/detect_duplication/src/main.rs:330:    let set_a: HashSet<&String> = tokens_a.iter().collect();
+scripts/detect_duplication/src/main.rs:331:    let set_b: HashSet<&String> = tokens_b.iter().collect();
+scripts/detect_duplication/src/main.rs:358:            (i + 1).to_string().yellow().bold(),
+examples/domain_specific/defi_arbitrage_demo.rs:5:/// 3. OrderedSubscriber - FIFO message ordering
+examples/domain_specific/defi_arbitrage_demo.rs:152:    // Feature 3: OrderedSubscriber - FIFO Message Ordering
+examples/domain_specific/defi_arbitrage_demo.rs:154:    println!("📋 Feature 3: OrderedSubscriber (optional ordering)\n");
+examples/domain_specific/defi_arbitrage_demo.rs:156:    // Regular subscriber (no ordering guarantees)
+examples/actor_demo.rs:30:    name: String,
+examples/actor_demo.rs:62:        name: "Counter1".to_string(),
+examples/actor_demo.rs:67:        name: "Counter2".to_string(),
+examples/generic/sensor_network.rs:133:    println!("   Works for: IoT sensors, industrial monitoring, smart homes, etc.");
+examples/generic/managed_service.rs:15:/// Generic event with sequence number for ordering
+examples/generic/managed_service.rs:120:    println!("  3. OrderedSubscriber - FIFO message ordering\n");
+examples/generic/managed_service.rs:144:    // Feature 3: OrderedSubscriber - FIFO ordering
+examples/generic/managed_service.rs:204:    // Check ordering stats
+examples/generic/managed_service.rs:206:    println!("📊 Ordering stats: {}", stats);
+examples/overhead_breakdown.rs:64:    let trace_id = "test_trace_id".to_string();
+tests/integration_test.rs:86:                name: "adapters".to_string(),
+tests/integration_test.rs:87:                services: vec!["polygon-adapter".to_string()],
+tests/integration_test.rs:92:                name: "strategies".to_string(),
+tests/integration_test.rs:93:                services: vec!["flash-arbitrage".to_string()],
+tests/integration_test.rs:147:                name: "adapters".to_string(),
+tests/integration_test.rs:148:                services: vec!["polygon-adapter".to_string()],
+tests/integration_test.rs:149:                host: Some("127.0.0.1".to_string()),
+tests/integration_test.rs:153:                name: "strategies".to_string(),
+tests/integration_test.rs:154:                services: vec!["flash-arbitrage".to_string()],
+tests/integration_test.rs:155:                host: Some("127.0.0.1".to_string()),
+tests/integration_test.rs:214:                name: "local-services".to_string(),
+tests/integration_test.rs:215:                services: vec!["service-a".to_string(), "service-b".to_string()],
+tests/integration_test.rs:220:                name: "remote-services".to_string(),
+tests/integration_test.rs:221:                services: vec!["service-c".to_string()],
+tests/integration_test.rs:222:                host: Some("127.0.0.1".to_string()),
+tests/lib.rs:3://! Organized test suite covering all aspects of the Mycelium messaging system:
+tests/transport_tests/local_transport.rs:175:    // Create large message to test memory sharing
+tests/integration/distributed.rs:128:                name: "adapters".to_string(),
+tests/integration/distributed.rs:129:                services: vec!["polygon-adapter".to_string()],
+tests/integration/distributed.rs:130:                host: Some("127.0.0.1".to_string()),
+tests/integration/distributed.rs:134:                name: "strategies".to_string(),
+tests/integration/distributed.rs:135:                services: vec!["flash-arbitrage".to_string()],
+tests/integration/distributed.rs:136:                host: Some("192.168.1.100".to_string()), // Different host
+tests/integration/error_handling.rs:25:            name: "test-node".to_string(),
+tests/integration/error_handling.rs:26:            services: vec!["existing-service".to_string()],
+tests/integration/error_handling.rs:183:                name: "adapters".to_string(),
+tests/integration/error_handling.rs:184:                services: vec!["polygon-adapter".to_string()],
+tests/integration/error_handling.rs:189:                name: "strategies".to_string(),
+tests/integration/error_handling.rs:190:                services: vec!["flash-arbitrage".to_string()],
+tests/integration/mixed.rs:154:                name: "adapters".to_string(),
+tests/integration/mixed.rs:155:                services: vec!["polygon-adapter".to_string()],
+tests/integration/mixed.rs:160:                name: "strategies".to_string(),
+tests/integration/mixed.rs:161:                services: vec!["flash-arbitrage".to_string()],
+tests/integration/mixed.rs:295:                name: "adapters".to_string(),
+tests/integration/mixed.rs:296:                services: vec!["polygon-adapter".to_string(), "ethereum-adapter".to_string()],
+tests/integration/mixed.rs:297:                host: Some("127.0.0.1".to_string()), // Local host
+tests/integration/mixed.rs:301:                name: "strategies".to_string(),
+tests/integration/mixed.rs:302:                services: vec!["flash-arbitrage".to_string()],
+tests/integration/mixed.rs:303:                host: Some("127.0.0.1".to_string()), // Same host - should use Unix
+tests/integration/mixed.rs:307:                name: "execution".to_string(),
+tests/integration/mixed.rs:308:                services: vec!["order-manager".to_string()],
+tests/integration/mixed.rs:309:                host: Some("192.168.1.100".to_string()), // Different host - should use TCP
+tests/integration/bundled.rs:187:                name: "adapters".to_string(),
+tests/integration/bundled.rs:188:                services: vec!["polygon-adapter".to_string(), "ethereum-adapter".to_string()],
+tests/integration/bundled.rs:193:                name: "strategies".to_string(),
+tests/integration/bundled.rs:194:                services: vec!["flash-arbitrage".to_string()],
+crates/mycelium-transport/src/bus.rs:36:    node_name: Option<String>,
+crates/mycelium-transport/src/bus.rs:39:    unix_transports: Arc<RwLock<HashMap<String, Arc<UnixTransport>>>>,
+crates/mycelium-transport/src/bus.rs:42:    tcp_transports: Arc<RwLock<HashMap<String, Arc<TcpTransport>>>>,
+crates/mycelium-transport/src/bus.rs:100:                    .to_string(),
+crates/mycelium-transport/src/bus.rs:105:            TransportError::ServiceNotFound("No node name configured".to_string())
+crates/mycelium-transport/src/bus.rs:189:    pub fn from_topology(topology: Topology, node_name: impl Into<String>) -> Self {
+crates/mycelium-transport/src/bus.rs:196:        node_name: impl Into<String>,
+crates/mycelium-transport/src/bus.rs:214:        cache: &RwLock<HashMap<String, Arc<T>>>,
+crates/mycelium-transport/src/bus.rs:238:            .insert(key.to_string(), Arc::clone(&arc));
+crates/mycelium-transport/src/bus.rs:390:                "No topology configured - use publisher() for monolith mode".to_string(),
+crates/mycelium-transport/src/bus.rs:395:            TransportError::ServiceNotFound("No node name configured".to_string())
+crates/mycelium-transport/src/bus.rs:450:                "No topology configured - use subscriber() for monolith mode".to_string(),
+crates/mycelium-transport/src/bus.rs:455:            TransportError::ServiceNotFound("No node name configured".to_string())
+crates/mycelium-transport/src/bus.rs:517:                    TransportError::ServiceNotFound("No services in my node".to_string())
+crates/mycelium-transport/src/bus.rs:897:                    name: "collectors".to_string(),
+crates/mycelium-transport/src/bus.rs:898:                    services: vec!["data-collector".to_string()],
+crates/mycelium-transport/src/bus.rs:903:                    name: "processors".to_string(),
+crates/mycelium-transport/src/bus.rs:904:                    services: vec!["processor".to_string()],
+crates/mycelium-transport/src/bus.rs:986:                    name: "collectors".to_string(),
+crates/mycelium-transport/src/bus.rs:987:                    services: vec!["data-collector".to_string()],
+crates/mycelium-transport/src/bus.rs:988:                    host: Some("127.0.0.1".to_string()),
+crates/mycelium-transport/src/bus.rs:992:                    name: "processors".to_string(),
+crates/mycelium-transport/src/bus.rs:993:                    services: vec!["processor".to_string()],
+crates/mycelium-transport/src/bus.rs:994:                    host: Some("127.0.0.1".to_string()),
+crates/mycelium-transport/src/bus.rs:1061:                name: "trading".to_string(),
+crates/mycelium-transport/src/bus.rs:1062:                services: vec!["state-manager".to_string(), "executor".to_string()],
+crates/mycelium-transport/src/bus.rs:1098:                    name: "manager".to_string(),
+crates/mycelium-transport/src/bus.rs:1099:                    services: vec!["state-manager".to_string()],
+crates/mycelium-transport/src/bus.rs:1104:                    name: "executor".to_string(),
+crates/mycelium-transport/src/bus.rs:1105:                    services: vec!["executor".to_string()],
+crates/mycelium-transport/src/bus.rs:1147:                    name: "manager".to_string(),
+crates/mycelium-transport/src/bus.rs:1148:                    services: vec!["state-manager".to_string()],
+crates/mycelium-transport/src/bus.rs:1149:                    host: Some("192.168.1.10".to_string()), // Different host
+crates/mycelium-transport/src/bus.rs:1153:                    name: "executor".to_string(),
+crates/mycelium-transport/src/bus.rs:1154:                    services: vec!["executor".to_string()],
+crates/mycelium-transport/src/bus.rs:1155:                    host: Some(executor_addr.ip().to_string()), // 127.0.0.1
+crates/mycelium-transport/src/bus.rs:1181:                name: "trading".to_string(),
+crates/mycelium-transport/src/bus.rs:1182:                services: vec!["state-manager".to_string(), "executor".to_string()],
+crates/mycelium-transport/src/bus.rs:1226:                name: "trading".to_string(),
+crates/mycelium-transport/src/bus.rs:1227:                services: vec!["state-manager".to_string()],
+crates/mycelium-transport/src/topics.rs:28:    pub fn broadcast(name: &str) -> String {
+crates/mycelium-transport/src/topics.rs:29:        name.to_string()
+crates/mycelium-transport/src/topics.rs:46:    pub fn actor_mailbox(actor_id: ActorId) -> String {
+crates/mycelium-transport/src/topics.rs:62:    pub fn partition(base: &str, partition: usize) -> String {
+crates/mycelium-transport/src/topics.rs:79:    pub fn partition_by_hash(base: &str, hash: u64, num_partitions: usize) -> String {
+crates/mycelium-transport/src/shared.rs:17:    channels: Arc<DashMap<String, broadcast::Sender<Envelope>>>,
+crates/mycelium-transport/src/shared.rs:36:    /// Get or create a broadcast channel for an explicit topic string (Phase 1: Actor-ready)
+crates/mycelium-transport/src/shared.rs:41:            .entry(topic.to_string())
+crates/mycelium-transport/src/shared.rs:69:    pub target: String,
+crates/mycelium-transport/src/shared.rs:256:        assert!(result.unwrap_err().to_string().contains("read_buffer"));
+crates/mycelium-transport/src/shared.rs:270:        assert!(result.unwrap_err().to_string().contains("write_buffer"));
+crates/mycelium-transport/src/shared.rs:284:        assert!(result.unwrap_err().to_string().contains("frame_buffer"));
+crates/mycelium-transport/src/shared.rs:328:        let err = TransportError::ServiceNotFound("my_service".to_string());
+crates/mycelium-transport/src/shared.rs:331:            enriched.to_string(),
+crates/mycelium-transport/src/actor/context.rs:9:/// Context provided to actors during message handling
+crates/mycelium-transport/src/actor/context.rs:92:                .to_string(),
+crates/mycelium-transport/src/actor/context.rs:160:            "Correlation-aware actor messaging is not implemented yet".to_string(),
+crates/mycelium-transport/src/actor/runtime.rs:186:                    let error_msg = if let Some(s) = panic_err.downcast_ref::<String>() {
+crates/mycelium-transport/src/actor/runtime.rs:189:                        (*s).to_string()
+crates/mycelium-transport/src/actor/runtime.rs:191:                        "Unknown panic".to_string()
+crates/mycelium-transport/src/actor/runtime.rs:277:                    let error_msg = if let Some(s) = panic_err.downcast_ref::<String>() {
+crates/mycelium-transport/src/actor/runtime.rs:280:                        (*s).to_string()
+crates/mycelium-transport/src/actor/runtime.rs:282:                        "Unknown panic".to_string()
+crates/mycelium-transport/src/actor/runtime.rs:525:        use std::sync::atomic::{AtomicBool, Ordering};
+crates/mycelium-transport/src/actor/runtime.rs:550:                self.on_error_called.store(true, Ordering::SeqCst);
+crates/mycelium-transport/src/actor/runtime.rs:553:                assert!(error.to_string().contains("panic"));
+crates/mycelium-transport/src/actor/runtime.rs:578:        assert!(error_flag.load(Ordering::SeqCst));
+crates/mycelium-transport/src/actor/runtime.rs:591:        use std::sync::atomic::{AtomicUsize, Ordering};
+crates/mycelium-transport/src/actor/runtime.rs:603:                self.message_count.fetch_add(1, Ordering::SeqCst);
+crates/mycelium-transport/src/actor/runtime.rs:636:        assert_eq!(counter.load(Ordering::SeqCst), 1);
+crates/mycelium-transport/src/actor/runtime.rs:647:        assert_eq!(counter.load(Ordering::SeqCst), 1);
+crates/mycelium-transport/src/service_metrics.rs:6:use std::sync::atomic::{AtomicU64, Ordering};
+crates/mycelium-transport/src/service_metrics.rs:44:        self.inner.emits_total.fetch_add(1, Ordering::Relaxed);
+crates/mycelium-transport/src/service_metrics.rs:47:            .fetch_add(latency_us, Ordering::Relaxed);
+crates/mycelium-transport/src/service_metrics.rs:52:        self.inner.errors_total.fetch_add(1, Ordering::Relaxed);
+crates/mycelium-transport/src/service_metrics.rs:57:        self.inner.restarts_total.fetch_add(1, Ordering::Relaxed);
+crates/mycelium-transport/src/service_metrics.rs:62:        self.inner.emits_total.load(Ordering::Relaxed)
+crates/mycelium-transport/src/service_metrics.rs:67:        let total = self.inner.emits_total.load(Ordering::Relaxed);
+crates/mycelium-transport/src/service_metrics.rs:71:        let latency_total = self.inner.emit_latency_us_total.load(Ordering::Relaxed);
+crates/mycelium-transport/src/service_metrics.rs:77:        self.inner.errors_total.load(Ordering::Relaxed)
+crates/mycelium-transport/src/service_metrics.rs:82:        self.inner.restarts_total.load(Ordering::Relaxed)
+crates/mycelium-transport/src/codec.rs:254:        // Verify true zero-copy (no allocation during deserialize)
+crates/mycelium-transport/src/pool.rs:76:    connections: Arc<RwLock<HashMap<String, Vec<PooledConnection<T>>>>>,
+crates/mycelium-transport/src/pool.rs:80:    target: String,
+crates/mycelium-transport/src/pool.rs:89:    pub fn new(target: String, config: ConnectionPoolConfig) -> Self {
+crates/mycelium-transport/src/pool.rs:207:        connections: &Arc<RwLock<HashMap<String, Vec<PooledConnection<T>>>>>,
+crates/mycelium-transport/src/pool.rs:225:    pub target: String,
+crates/mycelium-transport/src/pool.rs:256:        Self::new(addr.to_string(), config)
+crates/mycelium-transport/src/pool.rs:262:        Self::new(path.display().to_string(), config)
+crates/mycelium-transport/src/ordered.rs:3:/// This module provides FIFO ordering guarantees for pub/sub subscribers.
+crates/mycelium-transport/src/ordered.rs:4:/// Compatible with future actor mailboxes (which provide ordering naturally).
+crates/mycelium-transport/src/ordered.rs:8:/// - Actors provide per-mailbox FIFO ordering automatically
+crates/mycelium-transport/src/ordered.rs:9:/// - Pub/sub can achieve ordering via sequence numbers
+crates/mycelium-transport/src/ordered.rs:10:/// - OrderedSubscriber wraps regular Subscriber to add ordering
+crates/mycelium-transport/src/ordered.rs:17:/// - Any scenario requiring causal ordering
+crates/mycelium-transport/src/ordered.rs:24:/// Subscriber that enforces FIFO message ordering via sequence numbers
+crates/mycelium-transport/src/ordered.rs:53:    /// Sequence tracking and reordering
+crates/mycelium-transport/src/ordered.rs:108:    /// Get statistics about ordering and buffering
+crates/mycelium-transport/src/ordered.rs:109:    pub fn stats(&self) -> OrderingStats {
+crates/mycelium-transport/src/ordered.rs:137:    stats: OrderingStats,
+crates/mycelium-transport/src/ordered.rs:148:            stats: OrderingStats::default(),
+crates/mycelium-transport/src/ordered.rs:185:                    "Buffering out-of-order message"
+crates/mycelium-transport/src/ordered.rs:191:            // No sequence number - deliver immediately (bypass ordering)
+crates/mycelium-transport/src/ordered.rs:220:    fn stats(&self) -> OrderingStats {
+crates/mycelium-transport/src/ordered.rs:227:pub struct OrderingStats {
+crates/mycelium-transport/src/ordered.rs:231:    /// Messages delivered in-order (no buffering needed)
+crates/mycelium-transport/src/ordered.rs:234:    /// Messages delivered after reordering (were buffered)
+crates/mycelium-transport/src/ordered.rs:244:impl OrderingStats {
+crates/mycelium-transport/src/ordered.rs:253:    /// Calculate the percentage of messages that needed reordering
+crates/mycelium-transport/src/ordered.rs:262:impl std::fmt::Display for OrderingStats {
+crates/mycelium-transport/src/ordered.rs:266:            "OrderingStats {{ total: {}, in_order: {} ({:.1}%), reordered: {} ({:.1}%), dropped: {}, max_buffer: {} }}",
+crates/mycelium-transport/src/ordered.rs:379:    fn test_ordering_stats() {
+crates/mycelium-transport/src/ordered.rs:380:        let stats = OrderingStats {
+crates/mycelium-transport/src/service_runtime.rs:50:        let service_name = S::NAME.to_string();
+crates/mycelium-transport/src/service_runtime.rs:122:    service_name: String,
+crates/mycelium-transport/src/service_runtime.rs:184:fn generate_trace_id() -> String {
+crates/mycelium-transport/src/publisher.rs:44:                topic: M::TOPIC.to_string(),
+crates/mycelium-transport/src/publisher.rs:62:                topic: M::TOPIC.to_string(),
+crates/mycelium-transport/src/service.rs:62:    /// Optional: Handle errors during message processing
+crates/mycelium-transport/src/service.rs:89:    /// - Critical errors occurring
+crates/mycelium-transport/src/bounded.rs:251:/// Provides a fluent API for configuring bounded channels.
+crates/mycelium-transport/src/backpressure.rs:4://! with configurable strategies and monitoring.
+crates/mycelium-transport/src/backpressure.rs:9:use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+crates/mycelium-transport/src/backpressure.rs:105:            self.messages_sent.load(Ordering::Relaxed),
+crates/mycelium-transport/src/backpressure.rs:106:            self.messages_dropped.load(Ordering::Relaxed),
+crates/mycelium-transport/src/backpressure.rs:107:            self.messages_queued.load(Ordering::Relaxed),
+crates/mycelium-transport/src/backpressure.rs:108:            self.current_queue_size.load(Ordering::Relaxed),
+crates/mycelium-transport/src/backpressure.rs:109:            self.max_queue_size_seen.load(Ordering::Relaxed),
+crates/mycelium-transport/src/backpressure.rs:178:            self.stats.messages_dropped.fetch_add(1, Ordering::Relaxed);
+crates/mycelium-transport/src/backpressure.rs:184:                self.stats.messages_sent.fetch_add(1, Ordering::Relaxed);
+crates/mycelium-transport/src/backpressure.rs:185:                self.stats.messages_queued.fetch_add(1, Ordering::Relaxed);
+crates/mycelium-transport/src/backpressure.rs:193:                        self.stats.messages_dropped.fetch_add(1, Ordering::Relaxed);
+crates/mycelium-transport/src/backpressure.rs:194:                        self.stats.messages_sent.fetch_add(1, Ordering::Relaxed);
+crates/mycelium-transport/src/backpressure.rs:197:                        self.stats.messages_dropped.fetch_add(1, Ordering::Relaxed);
+crates/mycelium-transport/src/backpressure.rs:201:                    self.stats.messages_dropped.fetch_add(1, Ordering::Relaxed);
+crates/mycelium-transport/src/backpressure.rs:213:            self.stats.messages_sent.fetch_add(1, Ordering::Relaxed);
+crates/mycelium-transport/src/backpressure.rs:214:            self.stats.messages_queued.fetch_add(1, Ordering::Relaxed);
+crates/mycelium-transport/src/backpressure.rs:232:            self.stats.messages_dropped.fetch_add(1, Ordering::Relaxed);
+crates/mycelium-transport/src/backpressure.rs:246:        self.stats.backpressure_applied_count.fetch_add(1, Ordering::Relaxed);
+crates/mycelium-transport/src/backpressure.rs:268:            messages_sent: self.stats.messages_sent.load(Ordering::Relaxed),
+crates/mycelium-transport/src/backpressure.rs:269:            messages_dropped: self.stats.messages_dropped.load(Ordering::Relaxed),
+crates/mycelium-transport/src/backpressure.rs:270:            messages_queued: self.stats.messages_queued.load(Ordering::Relaxed),
+crates/mycelium-transport/src/backpressure.rs:274:            backpressure_applied_count: self.stats.backpressure_applied_count.load(Ordering::Relaxed),
+crates/mycelium-transport/src/backpressure.rs:298:            self.messages_received.fetch_add(1, Ordering::Relaxed);
+crates/mycelium-transport/src/backpressure.rs:306:            self.messages_received.fetch_add(1, Ordering::Relaxed);
+crates/mycelium-transport/src/backpressure.rs:312:        self.messages_received.load(Ordering::Relaxed)
+crates/mycelium-transport/src/backpressure.rs:340:        self.current_window.load(Ordering::Relaxed) < self.window_size
+crates/mycelium-transport/src/backpressure.rs:344:        let current = self.current_window.fetch_add(1, Ordering::Relaxed);
+crates/mycelium-transport/src/backpressure.rs:345:        self.total_sent.fetch_add(1, Ordering::Relaxed);
+crates/mycelium-transport/src/backpressure.rs:350:        let current = self.current_window.fetch_sub(1, Ordering::Relaxed);
+crates/mycelium-transport/src/backpressure.rs:351:        self.total_received.fetch_add(1, Ordering::Relaxed);
+crates/mycelium-transport/src/backpressure.rs:354:            self.current_window.store(0, Ordering::Relaxed);
+crates/mycelium-transport/src/backpressure.rs:361:            current_window: self.current_window.load(Ordering::Relaxed),
+crates/mycelium-transport/src/backpressure.rs:362:            total_sent: self.total_sent.load(Ordering::Relaxed),
+crates/mycelium-transport/src/backpressure.rs:363:            total_received: self.total_received.load(Ordering::Relaxed),
+crates/mycelium-transport/src/buffer_pool.rs:82:        }; // Release pools lock before acquiring stats lock
+crates/mycelium-transport/src/buffer_pool.rs:142:        } // Release pools lock before acquiring stats lock
+crates/mycelium-transport/src/buffer_pool.rs:211:/// Buffer pool statistics for monitoring and debugging
+crates/mycelium-transport/src/buffer_pool.rs:368:        // Spawn 10 threads, each acquiring 10 buffers
+crates/mycelium-transport/src/qos.rs:9:use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+crates/mycelium-transport/src/qos.rs:14:    /// Drop the oldest message (ring buffer behavior)
+crates/mycelium-transport/src/qos.rs:105:/// Mailbox metrics for monitoring and observability
+crates/mycelium-transport/src/qos.rs:132:        self.dropped_messages.fetch_add(1, Ordering::Relaxed);
+crates/mycelium-transport/src/qos.rs:137:        self.total_rejected.fetch_add(1, Ordering::Relaxed);
+crates/mycelium-transport/src/qos.rs:142:        self.total_processed.fetch_add(1, Ordering::Relaxed);
+crates/mycelium-transport/src/qos.rs:147:        self.queue_depth.store(depth, Ordering::Relaxed);
+crates/mycelium-transport/src/qos.rs:152:        let mut current = self.max_latency_us.load(Ordering::Relaxed);
+crates/mycelium-transport/src/qos.rs:157:                Ordering::Relaxed,
+crates/mycelium-transport/src/qos.rs:158:                Ordering::Relaxed,
+crates/mycelium-transport/src/qos.rs:168:        self.dropped_messages.load(Ordering::Relaxed)
+crates/mycelium-transport/src/qos.rs:173:        self.queue_depth.load(Ordering::Relaxed)
+crates/mycelium-transport/src/qos.rs:178:        self.max_latency_us.load(Ordering::Relaxed)
+crates/mycelium-transport/src/qos.rs:183:        self.total_processed.load(Ordering::Relaxed)
+crates/mycelium-transport/src/qos.rs:188:        self.total_rejected.load(Ordering::Relaxed)
+crates/mycelium-transport/src/lib.rs:30:// They require refactoring to work with the current API (mpsc doesn't expose .len(), missing config types, etc.)
+crates/mycelium-transport/src/lib.rs:47:pub use ordered::{OrderedSubscriber, OrderingStats};
+crates/mycelium-transport/src/stream_transport.rs:15:    pub(crate) channels: Arc<DashMap<String, broadcast::Sender<Envelope>>>,
+crates/mycelium-transport/src/stream_transport.rs:16:    pub(crate) type_to_topic: Arc<DashMap<u16, String>>,
+crates/mycelium-transport/src/stream_transport.rs:32:        self.type_to_topic.insert(M::TYPE_ID, M::TOPIC.to_string());
+crates/mycelium-transport/src/stream_transport.rs:37:            .entry(topic.to_string())
+crates/mycelium-transport/src/unix.rs:76:                socket_path.display().to_string(),
+crates/mycelium-transport/src/service_context.rs:20:    trace_id: String,
+crates/mycelium-transport/src/service_context.rs:39:        trace_id: String,
+crates/mycelium-transport/src/config.rs:15:    BundleNotFound(String),
+crates/mycelium-transport/src/config.rs:18:    ServiceNotFound(String),
+crates/mycelium-transport/src/config.rs:21:    InvalidConfig(String),
+crates/mycelium-transport/src/config.rs:60:    pub name: String,
+crates/mycelium-transport/src/config.rs:61:    pub services: Vec<String>,
+crates/mycelium-transport/src/config.rs:67:    pub host: Option<String>,
+crates/mycelium-transport/src/config.rs:88:    pub addr: Option<String>,
+crates/mycelium-transport/src/config.rs:120:        let contents = fs::read_to_string(path)?;
+crates/mycelium-transport/src/handler.rs:152:        assert_eq!(result.unwrap_err().to_string(), "Intentional error");
+crates/mycelium-transport/src/error.rs:6:    NoSubscribers { topic: String },
+crates/mycelium-transport/src/error.rs:24:    InvalidConfig(String),
+crates/mycelium-transport/src/error.rs:27:    ServiceNotFound(String),
+crates/mycelium-transport/src/error.rs:48:            topic: "test_topic".to_string(),
+crates/mycelium-transport/src/error.rs:51:            err.to_string(),
+crates/mycelium-transport/src/error.rs:56:        assert_eq!(err.to_string(), "Channel send failed");
+crates/mycelium-transport/src/error.rs:59:        assert_eq!(err.to_string(), "Channel is full (backpressure applied)");
+crates/mycelium-transport/src/error.rs:62:        assert_eq!(err.to_string(), "Channel is closed (receiver dropped)");
+crates/mycelium-transport/src/error.rs:65:        assert!(err.to_string().contains("timed out"));
+crates/mycelium-transport/src/error.rs:67:        let err = TransportError::InvalidConfig("buffer too small".to_string());
+crates/mycelium-transport/src/error.rs:68:        assert_eq!(err.to_string(), "Invalid configuration: buffer too small");
+crates/mycelium-transport/src/error.rs:70:        let err = TransportError::ServiceNotFound("my_service".to_string());
+crates/mycelium-transport/src/error.rs:71:        assert_eq!(err.to_string(), "Service not found: my_service");
+crates/mycelium-transport/src/subscriber.rs:60:    /// from the envelope metadata. Used by OrderedSubscriber for message reordering.
+crates/mycelium-transport/src/stream.rs:30:    channels: Arc<DashMap<String, broadcast::Sender<Envelope>>>,
+crates/mycelium-transport/src/stream.rs:31:    type_to_topic: Arc<DashMap<u16, String>>,
+crates/mycelium-transport/src/stream.rs:43:                    // Convert pooled buffer to Vec for Arc sharing
+crates/mycelium-transport/src/stream.rs:63:        // Store raw bytes in Arc for zero-copy sharing across subscribers
+crates/mycelium-transport/src/stream.rs:259:        let channels: Arc<DashMap<String, broadcast::Sender<Envelope>>> = Arc::new(DashMap::new());
+crates/mycelium-transport/src/stream.rs:260:        let type_to_topic: Arc<DashMap<u16, String>> = Arc::new(DashMap::new());
+crates/mycelium-transport/src/stream.rs:262:        channels.insert("test-stream".to_string(), tx);
+crates/mycelium-transport/src/stream.rs:263:        type_to_topic.insert(123, "test-stream".to_string());
+crates/mycelium-transport/tests/buffer_pool_integration.rs:171:            0 => "Short".to_string(),
+crates/mycelium-transport/tests/buffer_pool_integration.rs:172:            1 => "Medium length message".to_string(),
+crates/mycelium-transport/tests/buffer_pool_integration.rs:174:                .to_string(),
+crates/mycelium-protocol/codegen.rs:50:    let yaml_content = fs::read_to_string(yaml_path.as_ref())?;
+crates/mycelium-protocol/codegen.rs:72:    messages: HashMap<String, MessageContract>,
+crates/mycelium-protocol/codegen.rs:91:    core: Option<String>, // e.g., "1-999"
+crates/mycelium-protocol/codegen.rs:93:    app: Option<String>, // e.g., "1000-49999"
+crates/mycelium-protocol/codegen.rs:95:    experimental: Option<String>, // e.g., "50000-65535"
+crates/mycelium-protocol/codegen.rs:106:    fn parse(s: &str) -> Result<Self, String> {
+crates/mycelium-protocol/codegen.rs:219:    domain: String,
+crates/mycelium-protocol/codegen.rs:220:    description: String,
+crates/mycelium-protocol/codegen.rs:223:    required_prior_messages: Vec<String>,
+crates/mycelium-protocol/codegen.rs:225:    sensitivity: Option<String>,
+crates/mycelium-protocol/codegen.rs:230:    fields: indexmap::IndexMap<String, FieldContract>,
+crates/mycelium-protocol/codegen.rs:237:    field_type: String,
+crates/mycelium-protocol/codegen.rs:238:    description: String,
+crates/mycelium-protocol/codegen.rs:244:    validation: Vec<HashMap<String, serde_yaml::Value>>,
+crates/mycelium-protocol/codegen.rs:247:fn generate_messages(contracts: &Contracts) -> String {
+crates/mycelium-protocol/codegen.rs:248:    let mut code = String::new();
+crates/mycelium-protocol/codegen.rs:292:fn generate_validation_error(_contracts: &Contracts) -> String {
+crates/mycelium-protocol/codegen.rs:293:    let mut code = String::new();
+crates/mycelium-protocol/codegen.rs:319:fn generate_message_struct(name: &str, contract: &MessageContract) -> String {
+crates/mycelium-protocol/codegen.rs:320:    let mut code = String::new();
+crates/mycelium-protocol/codegen.rs:384:fn generate_message_impl(name: &str, contract: &MessageContract) -> String {
+crates/mycelium-protocol/codegen.rs:385:    let mut code = String::new();
+crates/mycelium-protocol/codegen.rs:411:fn generate_instrument_meta_impl() -> String {
+crates/mycelium-protocol/codegen.rs:412:    let mut code = String::new();
+crates/mycelium-protocol/codegen.rs:445:    code.push_str("    /// Get symbol as string\n");
+crates/mycelium-protocol/codegen.rs:453:fn generate_pool_state_impl() -> String {
+crates/mycelium-protocol/codegen.rs:454:    let mut code = String::new();
+crates/mycelium-protocol/codegen.rs:548:fn generate_arbitrage_signal_impl(contract: &MessageContract) -> String {
+crates/mycelium-protocol/codegen.rs:549:    let mut code = String::new();
+crates/mycelium-protocol/codegen.rs:610:fn generate_message_trait(name: &str, contract: &MessageContract) -> String {
+crates/mycelium-protocol/codegen.rs:611:    let mut code = String::new();
+crates/mycelium-protocol/codegen.rs:629:fn generate_message_tests(name: &str, contract: &MessageContract) -> String {
+crates/mycelium-protocol/codegen.rs:630:    let mut code = String::new();
+crates/mycelium-protocol/codegen.rs:654:fn generate_instrument_meta_tests() -> String {
+crates/mycelium-protocol/codegen.rs:655:    let mut code = String::new();
+crates/mycelium-protocol/codegen.rs:692:fn generate_pool_state_tests() -> String {
+crates/mycelium-protocol/codegen.rs:693:    let mut code = String::new();
+crates/mycelium-protocol/codegen.rs:729:fn generate_arbitrage_signal_tests() -> String {
+crates/mycelium-protocol/codegen.rs:730:    let mut code = String::new();
+crates/mycelium-protocol/codegen.rs:784:            "String" => 2 + 6 + 32, // FixedStr<32>: [count: u16][_padding: [u8; 6]][chars: [u8; 32]]
+crates/mycelium-protocol/codegen.rs:809:fn generate_buffer_pool_config(contracts: &Contracts) -> String {
+crates/mycelium-protocol/codegen.rs:810:    let mut code = String::new();
+crates/mycelium-protocol/codegen.rs:813:    let mut size_to_messages: HashMap<usize, Vec<(String, usize)>> = HashMap::new();
+crates/mycelium-protocol/codegen.rs:856:        let msg_list: Vec<String> = messages
+crates/mycelium-protocol/codegen.rs:911:fn map_contract_type_to_rust(contract_type: &str, field: &FieldContract) -> String {
+crates/mycelium-protocol/codegen.rs:913:        "u8" => "u8".to_string(),
+crates/mycelium-protocol/codegen.rs:914:        "u16" => "u16".to_string(),
+crates/mycelium-protocol/codegen.rs:915:        "u32" => "u32".to_string(),
+crates/mycelium-protocol/codegen.rs:916:        "u64" => "u64".to_string(),
+crates/mycelium-protocol/codegen.rs:917:        "i32" => "i32".to_string(),
+crates/mycelium-protocol/codegen.rs:918:        "f64" => "f64".to_string(),
+crates/mycelium-protocol/codegen.rs:919:        "[u8; 20]" => "[u8; 20]".to_string(),
+crates/mycelium-protocol/codegen.rs:920:        "U256" => "[u8; 32]".to_string(), // U256 stored as bytes for zerocopy
+crates/mycelium-protocol/codegen.rs:921:        "String" => {
+crates/mycelium-protocol/src/messages.rs:78:    /// Get symbol as string
+crates/mycelium-protocol/src/fixed_vec.rs:261:/// Fixed-capacity UTF-8 string with zero-copy serialization
+crates/mycelium-protocol/src/fixed_vec.rs:263:/// Stores UTF-8 string data in fixed-size array with length prefix.
+crates/mycelium-protocol/src/fixed_vec.rs:281:    /// Create new empty string
+crates/mycelium-protocol/src/fixed_vec.rs:290:    /// Create from string slice with validation
+crates/mycelium-protocol/src/fixed_vec.rs:307:    /// Get string slice of valid data
+crates/mycelium-protocol/src/fixed_vec.rs:312:    /// Get length of valid string data
+crates/mycelium-protocol/src/fixed_vec.rs:317:    /// Check if string is empty
+crates/mycelium-protocol/src/fixed_vec.rs:342:impl<const N: usize> TryFrom<String> for FixedStr<N> {
+crates/mycelium-protocol/src/fixed_vec.rs:345:    fn try_from(s: String) -> Result<Self, Self::Error> {
+crates/mycelium-protocol/src/fixed_vec.rs:418:        // Create from string
+crates/mycelium-protocol/src/fixed_vec.rs:427:        let long_str = "This string is definitely longer than 8 characters";
+crates/mycelium-protocol/tests/schema_evolution.rs:31:            name: "InstrumentMeta".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:33:                name: "symbol".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:34:                field_type: "String".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:46:                name: "InstrumentMeta".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:48:                    name: "symbol".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:49:                    field_type: "String".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:55:                name: "ArbitrageSignal".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:57:                    name: "opportunity_id".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:58:                    field_type: "u64".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:98:            name: "InstrumentMeta".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:100:                name: "symbol".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:101:                field_type: "String".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:111:            name: "InstrumentMeta".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:114:                    name: "symbol".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:115:                    field_type: "String".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:119:                    name: "decimals".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:120:                    field_type: "u8".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:139:            name: "InstrumentMeta".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:142:                    name: "symbol".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:143:                    field_type: "String".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:147:                    name: "decimals".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:148:                    field_type: "u8".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:159:            name: "InstrumentMeta".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:161:                name: "symbol".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:162:                field_type: "String".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:180:            name: "InstrumentMeta".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:182:                name: "decimals".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:183:                field_type: "u8".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:193:            name: "InstrumentMeta".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:195:                name: "decimals".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:196:                field_type: "u16".to_string(), // Type changed!
+crates/mycelium-protocol/tests/schema_evolution.rs:242:                name: "InstrumentMeta".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:244:                    name: "symbol".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:245:                    field_type: "String".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:251:                name: "PoolState".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:253:                    name: "reserves".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:254:                    field_type: "U256".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:266:                name: "InstrumentMeta".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:269:                        name: "symbol".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:270:                        field_type: "String".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:274:                        name: "decimals".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:275:                        field_type: "u8".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:282:                name: "PoolState".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:284:                    name: "reserves".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:285:                    field_type: "U256".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:291:                name: "ArbitrageSignal".to_string(), // New message type
+crates/mycelium-protocol/tests/schema_evolution.rs:293:                    name: "opportunity_id".to_string(),
+crates/mycelium-protocol/tests/schema_evolution.rs:294:                    field_type: "u64".to_string(),
+crates/mycelium-protocol/src/codegen.rs:70:    let yaml_content = fs::read_to_string(yaml_path.as_ref())?;
+crates/mycelium-protocol/src/codegen.rs:93:    messages: HashMap<String, MessageContract>,
+crates/mycelium-protocol/src/codegen.rs:112:    core: Option<String>, // e.g., "1-999"
+crates/mycelium-protocol/src/codegen.rs:114:    app: Option<String>, // e.g., "1000-49999"
+crates/mycelium-protocol/src/codegen.rs:116:    experimental: Option<String>, // e.g., "50000-65535"
+crates/mycelium-protocol/src/codegen.rs:127:    fn parse(s: &str) -> Result<Self, String> {
+crates/mycelium-protocol/src/codegen.rs:240:    domain: String,
+crates/mycelium-protocol/src/codegen.rs:241:    description: String,
+crates/mycelium-protocol/src/codegen.rs:244:    required_prior_messages: Vec<String>,
+crates/mycelium-protocol/src/codegen.rs:246:    sensitivity: Option<String>,
+crates/mycelium-protocol/src/codegen.rs:251:    fields: indexmap::IndexMap<String, FieldContract>,
+crates/mycelium-protocol/src/codegen.rs:258:    field_type: String,
+crates/mycelium-protocol/src/codegen.rs:259:    description: String,
+crates/mycelium-protocol/src/codegen.rs:265:    validation: Vec<HashMap<String, serde_yaml::Value>>,
+crates/mycelium-protocol/src/codegen.rs:268:fn generate_messages(contracts: &Contracts, use_external_imports: bool) -> String {
+crates/mycelium-protocol/src/codegen.rs:269:    let mut code = String::new();
+crates/mycelium-protocol/src/codegen.rs:319:fn generate_validation_error(_contracts: &Contracts) -> String {
+crates/mycelium-protocol/src/codegen.rs:320:    let mut code = String::new();
+crates/mycelium-protocol/src/codegen.rs:327:    code.push_str("    InvalidField(String),\n");
+crates/mycelium-protocol/src/codegen.rs:333:fn generate_validate_method(_name: &str, contract: &MessageContract) -> String {
+crates/mycelium-protocol/src/codegen.rs:334:    let mut code = String::new();
+crates/mycelium-protocol/src/codegen.rs:354:            // Handle not_empty validation for String fields
+crates/mycelium-protocol/src/codegen.rs:364:                code.push_str(&format!("            .map_err(|_| ValidationError::InvalidField(\"{}\".to_string()))?;\n", field_name));
+crates/mycelium-protocol/src/codegen.rs:366:                code.push_str(&format!("            return Err(ValidationError::InvalidField(\"{} cannot be empty\".to_string()));\n", field_name));
+crates/mycelium-protocol/src/codegen.rs:422:fn generate_message_struct(name: &str, contract: &MessageContract) -> String {
+crates/mycelium-protocol/src/codegen.rs:423:    let mut code = String::new();
+crates/mycelium-protocol/src/codegen.rs:478:fn generate_message_impl(name: &str, contract: &MessageContract) -> String {
+crates/mycelium-protocol/src/codegen.rs:479:    let mut code = String::new();
+crates/mycelium-protocol/src/codegen.rs:491:fn generate_message_trait(name: &str, contract: &MessageContract) -> String {
+crates/mycelium-protocol/src/codegen.rs:492:    let mut code = String::new();
+crates/mycelium-protocol/src/codegen.rs:510:fn generate_message_tests(name: &str, contract: &MessageContract) -> String {
+crates/mycelium-protocol/src/codegen.rs:511:    let mut code = String::new();
+crates/mycelium-protocol/src/codegen.rs:562:            "String" => 2 + 6 + 32, // FixedStr<32>: [count: u16][_padding: [u8; 6]][chars: [u8; 32]]
+crates/mycelium-protocol/src/codegen.rs:601:fn generate_buffer_pool_config(contracts: &Contracts) -> String {
+crates/mycelium-protocol/src/codegen.rs:602:    let mut code = String::new();
+crates/mycelium-protocol/src/codegen.rs:605:    let mut size_to_messages: HashMap<usize, Vec<(String, usize)>> = HashMap::new();
+crates/mycelium-protocol/src/codegen.rs:648:        let msg_list: Vec<String> = messages
+crates/mycelium-protocol/src/codegen.rs:703:fn map_contract_type_to_rust(contract_type: &str, field: &FieldContract) -> String {
+crates/mycelium-protocol/src/codegen.rs:705:        "u8" => "u8".to_string(),
+crates/mycelium-protocol/src/codegen.rs:706:        "u16" => "u16".to_string(),
+crates/mycelium-protocol/src/codegen.rs:707:        "u32" => "u32".to_string(),
+crates/mycelium-protocol/src/codegen.rs:708:        "u64" => "u64".to_string(),
+crates/mycelium-protocol/src/codegen.rs:709:        "i32" => "i32".to_string(),
+crates/mycelium-protocol/src/codegen.rs:710:        "f64" => "f64".to_string(),
+crates/mycelium-protocol/src/codegen.rs:711:        "[u8; 16]" => "[u8; 16]".to_string(), // For u128 values
+crates/mycelium-protocol/src/codegen.rs:712:        "[u8; 20]" => "[u8; 20]".to_string(),
+crates/mycelium-protocol/src/codegen.rs:713:        "[u8; 32]" => "[u8; 32]".to_string(), // For hashes and raw bytes
+crates/mycelium-protocol/src/codegen.rs:714:        "[u8; 6]" => "[u8; 6]".to_string(),
+crates/mycelium-protocol/src/codegen.rs:715:        "U256" => "[u8; 32]".to_string(), // U256 stored as bytes for zerocopy
+crates/mycelium-protocol/src/codegen.rs:716:        "String" => {
+crates/mycelium-protocol/src/codegen.rs:733:        s if s.starts_with("[[u8;") && s.ends_with("]") => contract_type.to_string(),
+crates/mycelium-protocol/src/lib.rs:8:// pub mod messages; // Manual implementation (for comparison) - disabled during zerocopy migration
+crates/mycelium-protocol/src/codec.rs:66:    SerializationFailed(String),
+crates/mycelium-protocol/src/codec.rs:69:    DeserializationFailed(String),
+crates/mycelium-protocol/src/envelope.rs:37:/// - `payload` uses `Arc<dyn Any>` for zero-copy message sharing across subscribers
+crates/mycelium-protocol/src/envelope.rs:46:/// - `sequence`: Message ordering (for OrderedSubscriber and actor mailboxes)
+crates/mycelium-protocol/src/envelope.rs:73:    /// When `Some(n)`, subscribers can use this to ensure FIFO ordering.
+crates/mycelium-protocol/src/envelope.rs:97:    /// Type-erased payload (Arc for zero-copy sharing)
+crates/mycelium-protocol/src/message.rs:7://! - Clone (for sharing across subscribers)
+crates/mycelium-protocol/src/schema_compat.rs:17:    pub name: String,
+crates/mycelium-protocol/src/schema_compat.rs:24:    pub name: String,
+crates/mycelium-protocol/src/schema_compat.rs:25:    pub field_type: String,
+crates/mycelium-protocol/src/schema_compat.rs:35:    pub messages: HashMap<String, MessageSchema>,
+crates/mycelium-protocol/src/schema_compat.rs:51:/// Specific compatibility issue found during checking
+crates/mycelium-protocol/src/schema_compat.rs:59:    MessageRemoved { name: String, type_id: u16 },
+crates/mycelium-protocol/src/schema_compat.rs:61:    RequiredFieldRemoved { message: String, field: String },
+crates/mycelium-protocol/src/schema_compat.rs:64:        message: String,
+crates/mycelium-protocol/src/schema_compat.rs:65:        field: String,
+crates/mycelium-protocol/src/schema_compat.rs:66:        old_type: String,
+crates/mycelium-protocol/src/schema_compat.rs:67:        new_type: String,
+crates/mycelium-protocol/src/schema_compat.rs:70:    FieldBecameRequired { message: String, field: String },
+crates/mycelium-protocol/src/schema_compat.rs:73:        message: String,
+crates/mycelium-protocol/src/schema_compat.rs:84:    pub warnings: Vec<String>,
+crates/mycelium-protocol/src/schema_compat.rs:109:    pub fn add_warning(&mut self, warning: String) {
+crates/mycelium-protocol/src/schema_compat.rs:177:            message: msg_name.to_string(),
+crates/mycelium-protocol/src/schema_compat.rs:203:                        message: msg_name.to_string(),
+crates/mycelium-protocol/src/schema_compat.rs:204:                        field: field_name.to_string(),
+crates/mycelium-protocol/src/schema_compat.rs:217:                        message: msg_name.to_string(),
+crates/mycelium-protocol/src/schema_compat.rs:218:                        field: field_name.to_string(),
+crates/mycelium-protocol/src/schema_compat.rs:226:                        message: msg_name.to_string(),
+crates/mycelium-protocol/src/schema_compat.rs:227:                        field: field_name.to_string(),
+crates/mycelium-protocol/src/schema_compat.rs:296:            name: name.to_string(),
+crates/mycelium-protocol/src/schema_compat.rs:303:            name: name.to_string(),
+crates/mycelium-protocol/src/schema_compat.rs:304:            field_type: field_type.to_string(),
+crates/mycelium-protocol/src/schema_compat.rs:311:            name: name.to_string(),
+crates/mycelium-protocol/src/schema_compat.rs:312:            field_type: field_type.to_string(),
+crates/mycelium-protocol/src/schema_compat.rs:323:                required_field("symbol", "String"),
+crates/mycelium-protocol/src/schema_compat.rs:358:            vec![required_field("symbol", "String")],
+crates/mycelium-protocol/src/schema_compat.rs:365:                required_field("symbol", "String"),
+crates/mycelium-protocol/src/schema_compat.rs:385:                required_field("symbol", "String"),
+crates/mycelium-protocol/src/schema_compat.rs:393:            vec![required_field("symbol", "String")],
+crates/mycelium-macro/src/lib.rs:15:    let struct_name_str = quote!(#struct_name).to_string();
+crates/mycelium-macro/src/lib.rs:24:            let method_name = method.sig.ident.to_string();
+crates/mycelium-macro/src/routing.rs:186:        "route_handler".to_string()
+crates/mycelium-macro/src/routing.rs:193:fn normalized_type_name(ty: &Type) -> String {
+crates/mycelium-macro/src/routing.rs:194:    let type_str = quote!(#ty).to_string();
+crates/mycelium-macro/src/routing.rs:195:    let mut normalized = String::with_capacity(type_str.len());
+crates/mycelium-macro/src/routing.rs:206:    normalized.trim_matches('_').to_string()
+crates/mycelium-macro/src/routing.rs:218:        assert_eq!(field_name.to_string(), "arbitrage_service");
+crates/mycelium-macro/src/routing.rs:225:        assert_eq!(method_name.to_string(), "route_v2_swap");
+crates/mycelium-macro/src/routing.rs:232:        assert_eq!(field_name.to_string(), "crate_adapters_risk_manager");
+crates/mycelium-macro/src/routing.rs:239:        assert_eq!(method_name.to_string(), "route_shard_handler_swap_message");
+crates/polygon-terminal-torq/src/app.rs:67:            std::env::var("REDIS_URL").unwrap_or_else(|_| "redis://127.0.0.1:6379".to_string());
+crates/polygon-terminal-torq/src/app.rs:69:            .unwrap_or_else(|_| "postgres://postgres:postgres@localhost/postgres".to_string());
+crates/polygon-terminal-torq/src/app.rs:71:            .unwrap_or_else(|_| "/tmp/bandit/logs/adapter.log".to_string());

@@ -1,0 +1,295 @@
+/Users/daws/repos/Bandit/crates/defi-cost-estimator/src/polygon/mod.rs:49:        // Protocol encoding: 1 = V2 (UniswapV2/SushiSwap), 2 = V3 (UniswapV3/Algebra)
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:12:    fixed_vec::FixedVec, FlashArbitrageExecutionRequest, FlashArbitrageOpportunity,
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:54:    opportunity: &FlashArbitrageOpportunity,
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:143:    /// Gas units per V2 swap (UniswapV2, SushiSwap)
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:208:    111_546 // p75 from 42 V2 swaps (QuickSwap + SushiSwap)
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:310:    opportunity_sub: Subscriber<FlashArbitrageOpportunity>,
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:352:            opportunity_sub: bus.subscriber::<FlashArbitrageOpportunity>(),
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:405:        opportunity: &FlashArbitrageOpportunity,
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:509:                "Opportunity net profit below threshold after gas adjustment"
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:531:        let request = FlashArbitrageExecutionRequest {
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:747:    use bandit_schemas::{fixed_vec::FixedVec, FlashArbitrageOpportunity};
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:758:    fn make_opportunity(net_profit: u128) -> FlashArbitrageOpportunity {
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:769:        FlashArbitrageOpportunity {
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:816:        let mut exec_sub = bus.subscriber::<FlashArbitrageExecutionRequest>();
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:817:        let opp_pub = bus.publisher::<FlashArbitrageOpportunity>();
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:859:        let mut exec_sub = bus.subscriber::<FlashArbitrageExecutionRequest>();
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:860:        let opp_pub = bus.publisher::<FlashArbitrageOpportunity>();
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:888:        let mut exec_sub = bus.subscriber::<FlashArbitrageExecutionRequest>();
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:889:        let opp_pub = bus.publisher::<FlashArbitrageOpportunity>();
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:917:        let mut exec_sub = bus.subscriber::<FlashArbitrageExecutionRequest>();
+/Users/daws/repos/Bandit/crates/polygon-execution-filter/src/lib.rs:918:        let opp_pub = bus.publisher::<FlashArbitrageOpportunity>();
+/Users/daws/repos/Bandit/crates/defi-cost-estimator/src/polygon/config.rs:16:    /// Gas units per V2 swap (UniswapV2, SushiSwap)
+/Users/daws/repos/Bandit/crates/defi-cost-estimator/src/polygon/config.rs:17:    /// Measured: p75 from 42 V2 swaps (QuickSwap + SushiSwap)
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:6:    PoolStateQuoteRequest, PoolStateQuoteResponse, PoolStateSnapshotRequest,
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:7:    PoolStateSnapshotResponse, PoolStateUpdate, V2Swap, V2Sync, V3Swap,
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:96:struct PoolState {
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:111:impl Default for PoolState {
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:129:pub struct PolygonPoolStateService {
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:130:    v2_sub: Subscriber<V2Swap>,
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:131:    v3_sub: Subscriber<V3Swap>,
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:136:    snapshot_req_sub: Subscriber<PoolStateSnapshotRequest>,
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:137:    quote_req_sub: Subscriber<PoolStateQuoteRequest>,
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:138:    pools: Arc<DashMap<[u8; 20], PoolState>>,
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:143:impl PolygonPoolStateService {
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:146:            v2_sub: bus.subscriber::<V2Swap>(),
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:147:            v3_sub: bus.subscriber::<V3Swap>(),
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:152:            snapshot_req_sub: bus.subscriber::<PoolStateSnapshotRequest>(),
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:153:            quote_req_sub: bus.subscriber::<PoolStateQuoteRequest>(),
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:160:    fn get_pool(&self, addr: &[u8; 20]) -> Option<PoolState> {
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:164:    fn store_pool(&self, addr: &[u8; 20], state: PoolState) {
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:190:        state: &PoolState,
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:237:        state: &PoolState,
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:282:        F: FnOnce(&mut PoolState),
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:317:impl PolygonPoolStateService {
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:429:impl PolygonPoolStateService {
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:472:                match serde_json::from_str::<StoredPoolState>(&json) {
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:474:                        let mut state = PoolState::default();
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:530:        let stored = StoredPoolState::from_pool(&state);
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:558:            let update = PoolStateUpdate {
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:583:impl PolygonPoolStateService {
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:584:    async fn handle_v2(&self, swap: V2Swap, ctx: &ServiceContext) -> Result<()> {
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:645:    async fn handle_v3(&self, swap: V3Swap, ctx: &ServiceContext) -> Result<()> {
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:764:        request: PoolStateSnapshotRequest,
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:775:                let entries: Vec<([u8; 20], PoolState)> = self
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:782:                    let response = PoolStateSnapshotResponse {
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:832:                let response = PoolStateSnapshotResponse {
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:856:        request: PoolStateQuoteRequest,
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:875:            let response = PoolStateQuoteResponse {
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:1006:        let response = PoolStateQuoteResponse {
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:1062:    fn make_v3_state(liquidity: u128, fee_bps: u32) -> PoolState {
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:1063:        let mut state = PoolState::default();
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:1073:        let service = PolygonPoolStateService::new(bus.clone(), None);
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:1092:        let mut response_sub = bus.subscriber::<PoolStateQuoteResponse>();
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:1093:        let request_pub = bus.publisher::<PoolStateQuoteRequest>();
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:1103:            .publish(PoolStateQuoteRequest {
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:1138:        let mut state = PoolState::default();
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:1174:        let mut state = PoolState::default();
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:1215:        let mut state = PoolState::default();
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:1317:) -> PoolStateSnapshotResponse {
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:1320:    PoolStateSnapshotResponse {
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:1358:struct StoredPoolState {
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:1391:impl StoredPoolState {
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:1392:    fn from_pool(state: &PoolState) -> Self {
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:1414:fn is_duplicate_event(state: &PoolState, event_id: &EventId) -> bool {
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:1419:fn record_event(state: &mut PoolState, event_id: EventId) {
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:1427:    state: &mut PoolState,
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/lib.rs:1435:    F: FnOnce(&mut PoolState),
+/Users/daws/repos/Bandit/crates/polygon-listener/src/lib.rs:3:/// Subscribes to Polygon blockchain via WebSocket and emits RawSwapEvent messages
+/Users/daws/repos/Bandit/crates/polygon-listener/src/lib.rs:15:    AlgebraFeeUpdate, ConcentratedLiquidityEvent, FlashLoanFeeUpdate, RawSwapEvent, V2Sync,
+/Users/daws/repos/Bandit/crates/polygon-listener/src/lib.rs:25:// Uniswap V2 Swap event signature
+/Users/daws/repos/Bandit/crates/polygon-listener/src/lib.rs:26:// event Swap(address indexed sender, uint amount0In, uint amount1In, uint amount0Out, uint amount1Out, address indexed to)
+/Users/daws/repos/Bandit/crates/polygon-listener/src/lib.rs:39:// Uniswap V3 Swap event signature
+/Users/daws/repos/Bandit/crates/polygon-listener/src/lib.rs:40:// event Swap(address indexed sender, address indexed recipient, int256 amount0, int256 amount1, uint160 sqrtPriceX96, uint128 liquidity, int24 tick)
+/Users/daws/repos/Bandit/crates/polygon-listener/src/lib.rs:156:        // V2 Swap event data layout (non-indexed parameters):
+/Users/daws/repos/Bandit/crates/polygon-listener/src/lib.rs:193:        // V3 Swap event data layout (non-indexed parameters):
+/Users/daws/repos/Bandit/crates/polygon-listener/src/lib.rs:195:        // We'll convert signed amounts to V2-style (in/out) for RawSwapEvent
+/Users/daws/repos/Bandit/crates/polygon-listener/src/lib.rs:254:    fn decode_raw_swap(&self, log: &Log, block_timestamp: u64) -> Result<RawSwapEvent> {
+/Users/daws/repos/Bandit/crates/polygon-listener/src/lib.rs:312:        Ok(RawSwapEvent {
+/Users/daws/repos/Bandit/crates/polygon-listener/src/lib.rs:411:            .ok_or_else(|| anyhow!("Swap log missing block number"))?;
+/Users/daws/repos/Bandit/crates/polygon-listener/src/lib.rs:757:            // Create filter for Swap, Mint/Burn, and Algebra fee events
+/Users/daws/repos/Bandit/crates/polygon-listener/src/lib.rs:785:            ctx.info("Subscribed to Swap events, waiting for logs...");
+/Users/daws/repos/Bandit/crates/polygon-listener/src/lib.rs:813:                            "Event stats: V2Swap={} V3Swap={} V2Sync={} V3Mint={} V3Burn={} Unknown={}",
+/Users/daws/repos/Bandit/crates/polygon-executor/src/tx_builder.rs:1:use bandit_schemas::FlashArbitrageExecutionRequest;
+/Users/daws/repos/Bandit/crates/polygon-executor/src/tx_builder.rs:15:    request: &FlashArbitrageExecutionRequest,
+/Users/daws/repos/Bandit/crates/polygon-executor/src/tx_builder.rs:60:    request: &FlashArbitrageExecutionRequest,
+/Users/daws/repos/Bandit/crates/polygon-executor/src/tx_builder.rs:81:fn encode_router_call(request: &FlashArbitrageExecutionRequest) -> Bytes {
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:12:    PoolStateSnapshotRequest, PoolStateSnapshotResponse, V2Swap, V3Swap,
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:15:use bandit_schemas::{FlashArbitrageExecutionRequest, FlashArbitrageOpportunity};
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:20:use polygon_pool_state::PolygonPoolStateService;
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:29:use polygon_flash_arbitrage::{PolygonFlashArbitrageService, StrategyConfig};
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:58:    V2Swap {
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:88:    V3Swap {
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:250:    let sim = PolygonPoolStateService::new(bus.clone(), None);
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:255:        let mut strategy_config = StrategyConfig::default();
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:258:        let strategy = PolygonFlashArbitrageService::new(bus.clone(), strategy_config);
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:294:        Some(bus.subscriber::<FlashArbitrageOpportunity>())
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:301:        Some(bus.subscriber::<FlashArbitrageExecutionRequest>())
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:308:    let snapshot_pub = bus.publisher::<PoolStateSnapshotResponse>();
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:309:    let v2_pub = bus.publisher::<V2Swap>();
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:310:    let v3_pub = bus.publisher::<V3Swap>();
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:342:                        .publish(PoolStateSnapshotResponse {
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:361:            ReplayEvent::V2Swap {
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:390:                    .publish(V2Swap {
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:410:            ReplayEvent::V3Swap {
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:440:                    .publish(V3Swap {
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:680:async fn drain_opportunities(sub: &mut Subscriber<FlashArbitrageOpportunity>) -> u64 {
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:689:                        "Opportunity #{}: net_profit={} gas_cost={} gross_profit={} path_hops={}",
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:706:async fn drain_execution_requests(sub: &mut Subscriber<FlashArbitrageExecutionRequest>) -> u64 {
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:720:    let mut snapshot_sub = bus.subscriber::<PoolStateSnapshotResponse>();
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:721:    let snapshot_req_pub = bus.publisher::<PoolStateSnapshotRequest>();
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:724:        .publish(PoolStateSnapshotRequest {
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:780:    v2_sub: mycelium_transport::Subscriber<V2Swap>,
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:781:    v3_sub: mycelium_transport::Subscriber<V3Swap>,
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:785:    snapshot_sub: mycelium_transport::Subscriber<PoolStateSnapshotResponse>,
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:799:            v2_sub: bus.subscriber::<V2Swap>(),
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:800:            v3_sub: bus.subscriber::<V3Swap>(),
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:804:            snapshot_sub: bus.subscriber::<PoolStateSnapshotResponse>(),
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:826:                        let event = ReplayEvent::V2Swap {
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/src/lib.rs:848:                        let event = ReplayEvent::V3Swap {
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/quote.rs:1:use crate::PoolState;
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/quote.rs:12:pub(crate) fn build_pool_state(state: &PoolState) -> Result<v3::PoolState, QuoteBuildError> {
+/Users/daws/repos/Bandit/crates/polygon-pool-state/src/quote.rs:39:    Ok(v3::PoolState::new(sqrt_price, liquidity, tick, fee_bps).with_ticks(ticks))
+/Users/daws/repos/Bandit/crates/polygon-executor-stub/src/lib.rs:7:use bandit_schemas::{FlashArbitrageExecutionRequest, GasMetrics};
+/Users/daws/repos/Bandit/crates/polygon-executor-stub/src/lib.rs:48:    execution_sub: mycelium_transport::Subscriber<FlashArbitrageExecutionRequest>,
+/Users/daws/repos/Bandit/crates/polygon-executor-stub/src/lib.rs:79:            execution_sub: bus.subscriber::<FlashArbitrageExecutionRequest>(),
+/Users/daws/repos/Bandit/crates/polygon-executor-stub/src/lib.rs:227:                                    "Opportunity deemed actionable (stub)"
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/tests/capture.rs:5:use bandit_schemas::{ConcentratedLiquidityEvent, GasMetrics, PoolStateSnapshotResponse, V3Swap};
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/tests/capture.rs:27:    let v3_pub = bus.publisher::<V3Swap>();
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/tests/capture.rs:30:    let snapshot_pub = bus.publisher::<PoolStateSnapshotResponse>();
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/tests/capture.rs:33:        .publish(V3Swap {
+/Users/daws/repos/Bandit/crates/polygon-replay-harness/tests/capture.rs:83:        .publish(PoolStateSnapshotResponse {
+/Users/daws/repos/Bandit/crates/polygon-terminal/src/views/events.rs:69:                Span::styled("V2 Swaps:        ", Style::default().fg(Color::Gray)),
+/Users/daws/repos/Bandit/crates/polygon-terminal/src/views/events.rs:73:                Span::styled("V3 Swaps:        ", Style::default().fg(Color::Gray)),
+/Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs:7:    PoolStateQuoteRequest, PoolStateQuoteResponse, PoolStateSnapshotResponse, V2Swap, V3Swap,
+/Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs:26:    snapshot_sub: Subscriber<PoolStateSnapshotResponse>,
+/Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs:27:    v2_sub: Subscriber<V2Swap>,
+/Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs:28:    v3_sub: Subscriber<V3Swap>,
+/Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs:29:    quote_req_sub: Subscriber<PoolStateQuoteRequest>,
+/Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs:30:    quote_resp_sub: Subscriber<PoolStateQuoteResponse>,
+/Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs:53:            snapshot_sub: bus.subscriber::<PoolStateSnapshotResponse>(),
+/Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs:54:            v2_sub: bus.subscriber::<V2Swap>(),
+/Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs:55:            v3_sub: bus.subscriber::<V3Swap>(),
+/Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs:56:            quote_req_sub: bus.subscriber::<PoolStateQuoteRequest>(),
+/Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs:57:            quote_resp_sub: bus.subscriber::<PoolStateQuoteResponse>(),
+/Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs:70:    fn update_snapshot(&self, snapshot: &PoolStateSnapshotResponse) {
+/Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs:223:                        self.update_snapshot(&PoolStateSnapshotResponse {
+/Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs:336:                        self.update_snapshot(&PoolStateSnapshotResponse {
+/Users/daws/repos/Bandit/crates/polygon-terminal/src/lib.rs:386:                        "UI summary - Quotes: {}/{} | Swaps: V2={} V3={} | Pools: {}",
+/Users/daws/repos/Bandit/crates/polygon-terminal/src/views/strategy.rs:1://! Strategy view - flash arbitrage strategy metrics
+/Users/daws/repos/Bandit/crates/polygon-terminal/src/views/strategy.rs:17:pub struct StrategyMetricsRecord {
+/Users/daws/repos/Bandit/crates/polygon-terminal/src/views/strategy.rs:26:pub struct StrategyView {
+/Users/daws/repos/Bandit/crates/polygon-terminal/src/views/strategy.rs:31:impl StrategyView {
+/Users/daws/repos/Bandit/crates/polygon-terminal/src/views/strategy.rs:43:    fn read_latest_metrics(&self) -> Option<StrategyMetricsRecord> {
+/Users/daws/repos/Bandit/crates/polygon-terminal/src/views/strategy.rs:74:                    Span::styled("Opportunity Rate:      ", Style::default().fg(Color::Gray)),
+/Users/daws/repos/Bandit/crates/polygon-terminal/src/views/strategy.rs:119:            .block(Block::default().borders(Borders::ALL).title("Flash Arbitrage Strategy"));
+/Users/daws/repos/Bandit/crates/polygon-terminal/src/app.rs:4:    events::EventsView, executor::ExecutorView, pools::PoolsView, strategy::StrategyView,
+/Users/daws/repos/Bandit/crates/polygon-terminal/src/app.rs:27:    strategy_view: StrategyView,
+/Users/daws/repos/Bandit/crates/polygon-terminal/src/app.rs:43:            tabs: vec!["Events", "Pools", "Strategy", "Executor"],
+/Users/daws/repos/Bandit/crates/polygon-terminal/src/app.rs:46:            strategy_view: StrategyView::new(strategy_metrics_path),
+/Users/daws/repos/Bandit/crates/amm-sim/src/v3.rs:111:pub struct PoolState {
+/Users/daws/repos/Bandit/crates/amm-sim/src/v3.rs:120:pub struct SwapResult {
+/Users/daws/repos/Bandit/crates/amm-sim/src/v3.rs:128:impl PoolState {
+/Users/daws/repos/Bandit/crates/amm-sim/src/v3.rs:171:    pub fn swap_exact_input(&self, amount_in: U256, zero_for_one: bool) -> Result<SwapResult> {
+/Users/daws/repos/Bandit/crates/amm-sim/src/v3.rs:173:            return Ok(SwapResult {
+/Users/daws/repos/Bandit/crates/amm-sim/src/v3.rs:245:        Ok(SwapResult {
+/Users/daws/repos/Bandit/crates/amm-sim/src/v3.rs:254:    fn swap_single_range(&self, amount_in: U256, zero_for_one: bool) -> Result<SwapResult> {
+/Users/daws/repos/Bandit/crates/amm-sim/src/v3.rs:284:        Ok(SwapResult {
+/Users/daws/repos/Bandit/crates/amm-sim/src/v3.rs:320:struct SwapStep {
+/Users/daws/repos/Bandit/crates/amm-sim/src/v3.rs:333:) -> Result<(SwapStep, U256)> {
+/Users/daws/repos/Bandit/crates/amm-sim/src/v3.rs:377:    let step = SwapStep {
+/Users/daws/repos/Bandit/crates/amm-sim/src/v3.rs:615:    fn base_state() -> PoolState {
+/Users/daws/repos/Bandit/crates/amm-sim/src/v3.rs:616:        PoolState::new(U256::from(2u128.pow(96)), 50_000_000_000_000u128, 0, 30).with_ticks(vec![
+/Users/daws/repos/Bandit/crates/amm-sim/src/v3.rs:673:        let state = PoolState::new(U256::from(2u128.pow(96)), 80_000_000_000_000u128, 0, 30);
+/Users/daws/repos/Bandit/crates/polygon-metadata-enrichment/src/multicall.rs:367:        // QuickSwap V2
+/Users/daws/repos/Bandit/crates/polygon-metadata-enrichment/src/multicall.rs:373:        // QuickSwap V3 (Algebra)
+/Users/daws/repos/Bandit/crates/polygon-metadata-enrichment/src/multicall.rs:385:        // SushiSwap V2
+/Users/daws/repos/Bandit/crates/polygon-executor/src/lib.rs:22:use bandit_schemas::{ExecutionResult, FlashArbitrageExecutionRequest, GasMetrics};
+/Users/daws/repos/Bandit/crates/polygon-executor/src/lib.rs:36:    execution_sub: Subscriber<FlashArbitrageExecutionRequest>,
+/Users/daws/repos/Bandit/crates/polygon-executor/src/lib.rs:59:            execution_sub: bus.subscriber::<FlashArbitrageExecutionRequest>(),
+/Users/daws/repos/Bandit/crates/polygon-executor/src/lib.rs:74:        request: Arc<FlashArbitrageExecutionRequest>,
+/Users/daws/repos/Bandit/crates/polygon-executor/src/lib.rs:313:        request: &FlashArbitrageExecutionRequest,
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:6:    fixed_vec::FixedVec, FlashArbitrageOpportunity, FlashLoanFeeUpdate, GasMetrics,
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:7:    PoolStateQuoteRequest, PoolStateQuoteResponse, PoolStateSnapshotRequest,
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:8:    PoolStateSnapshotResponse, PoolStateUpdate, V2Swap, V3Swap,
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:78:struct PoolState {
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:199:pub struct StrategyConfig {
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:249:impl Default for StrategyConfig {
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:315:struct StrategyMetricsSnapshot {
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:331:pub struct PolygonFlashArbitrageService {
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:332:    snapshot_sub: Subscriber<PoolStateSnapshotResponse>,
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:333:    state_update_sub: Subscriber<PoolStateUpdate>,
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:334:    v2_sub: Subscriber<V2Swap>,
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:335:    v3_sub: Subscriber<V3Swap>,
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:336:    quote_resp_sub: Subscriber<PoolStateQuoteResponse>,
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:339:    pools: Arc<DashMap<[u8; 20], PoolState>>,
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:346:    config: StrategyConfig,
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:369:impl PolygonFlashArbitrageService {
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:370:    pub fn new(bus: Arc<MessageBus>, config: StrategyConfig) -> Self {
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:395:                        "PolygonFlashArbitrageService failed to create flash-loan provider client: {}",
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:418:            snapshot_sub: bus.subscriber::<PoolStateSnapshotResponse>(),
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:419:            state_update_sub: bus.subscriber::<PoolStateUpdate>(),
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:420:            v2_sub: bus.subscriber::<V2Swap>(),
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:421:            v3_sub: bus.subscriber::<V3Swap>(),
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:422:            quote_resp_sub: bus.subscriber::<PoolStateQuoteResponse>(),
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:479:        let request = PoolStateQuoteRequest {
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:600:        response: &PoolStateQuoteResponse,
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:833:    fn handle_snapshot(&self, snapshot: &PoolStateSnapshotResponse) {
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:848:    fn handle_state_update(&self, update: &PoolStateUpdate) {
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1106:    fn handle_v2_swap(&self, swap: &V2Swap) {
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1126:    async fn handle_v3_swap(&self, swap: &V3Swap, ctx: &ServiceContext) -> Result<()> {
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1167:    fn preferred_directions(&self, swap: &V3Swap) -> Vec<bool> {
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1186:        response: &PoolStateQuoteResponse,
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1286:                    let opportunity = FlashArbitrageOpportunity {
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1383:        let snapshot = StrategyMetricsSnapshot {
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1401:            service = "PolygonFlashArbitrageService",
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1414:            "Strategy metrics snapshot"
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1434:        let request = PoolStateSnapshotRequest {
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1445:impl PolygonFlashArbitrageService {
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1447:        ctx.info("PolygonFlashArbitrageService starting");
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1544:        ctx.info("PolygonFlashArbitrageService exiting");
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1550:        println!("PolygonFlashArbitrageService initialized");
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1555:        println!("PolygonFlashArbitrageService shutting down");
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1563:    use bandit_schemas::PoolStateSnapshotResponse;
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1586:    fn make_snapshot(pool: [u8; 20], status: u8) -> PoolStateSnapshotResponse {
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1587:        PoolStateSnapshotResponse {
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1609:        let strategy = PolygonFlashArbitrageService::new(
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1611:            StrategyConfig {
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1619:                ..StrategyConfig::default()
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1630:        let publisher_snapshot = bus.publisher::<PoolStateSnapshotResponse>();
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1638:        let mut quote_sub = bus.subscriber::<PoolStateQuoteRequest>();
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1640:        let publisher_swap = bus.publisher::<V3Swap>();
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1643:            .publish(V3Swap {
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1664:            .publish(V3Swap {
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1705:        let strategy = PolygonFlashArbitrageService::new(bus, StrategyConfig::default());
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1719:        let strategy = PolygonFlashArbitrageService::new(bus, StrategyConfig::default());
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1737:        let mut config = StrategyConfig::default();
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1740:        let strategy = PolygonFlashArbitrageService::new(bus, config);
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1770:        let strategy = PolygonFlashArbitrageService::new(bus.clone(), StrategyConfig::default());
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1775:        bus.publisher::<PoolStateSnapshotResponse>()
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1782:        bus.publisher::<V3Swap>()
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1783:            .publish(V3Swap {
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1803:        let mut quote_sub = bus.subscriber::<PoolStateQuoteRequest>();
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1817:        let strategy = PolygonFlashArbitrageService::new(
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1819:            StrategyConfig {
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1827:                ..StrategyConfig::default()
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1838:        let publisher_snapshot = bus.publisher::<PoolStateSnapshotResponse>();
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1846:        let mut quote_sub = bus.subscriber::<PoolStateQuoteRequest>();
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1847:        let mut opportunity_sub = bus.subscriber::<FlashArbitrageOpportunity>();
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1848:        let quote_resp_pub = bus.publisher::<PoolStateQuoteResponse>();
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1850:        let publisher_swap = bus.publisher::<V3Swap>();
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1852:            .publish(V3Swap {
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1874:            .publish(V3Swap {
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1918:            .publish(PoolStateQuoteResponse {
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1952:        let mut config = StrategyConfig::default();
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/src/lib.rs:1955:        let service = PolygonFlashArbitrageService::new(bus, config);
+/Users/daws/repos/Bandit/crates/polygon-metadata-enrichment/src/lib.rs:3:/// Subscribes to RawSwapEvent messages, enriches them with token/pool metadata
+/Users/daws/repos/Bandit/crates/polygon-metadata-enrichment/src/lib.rs:4:/// using a 2-tier cache (DashMap → Redis), and emits V2Swap or V3Swap.
+/Users/daws/repos/Bandit/crates/polygon-metadata-enrichment/src/lib.rs:9:use bandit_schemas::{AlgebraFeeUpdate, ConcentratedLiquidityEvent, RawSwapEvent, V2Swap, V3Swap};
+/Users/daws/repos/Bandit/crates/polygon-metadata-enrichment/src/lib.rs:36:pub struct ConcentratedPoolState {
+/Users/daws/repos/Bandit/crates/polygon-metadata-enrichment/src/lib.rs:49:    raw_swap_subscriber: Subscriber<RawSwapEvent>,
+/Users/daws/repos/Bandit/crates/polygon-metadata-enrichment/src/lib.rs:56:    pool_state_cache: Arc<DashMap<[u8; 20], ConcentratedPoolState>>,
+/Users/daws/repos/Bandit/crates/polygon-metadata-enrichment/src/lib.rs:81:            raw_swap_subscriber: bus.subscriber::<RawSwapEvent>(),
+/Users/daws/repos/Bandit/crates/polygon-metadata-enrichment/src/lib.rs:129:    async fn get_pool_state(&self, pool: &[u8; 20]) -> ConcentratedPoolState {
+/Users/daws/repos/Bandit/crates/polygon-metadata-enrichment/src/lib.rs:141:        ConcentratedPoolState::default()
+/Users/daws/repos/Bandit/crates/polygon-metadata-enrichment/src/lib.rs:147:        state: &ConcentratedPoolState,
+/Users/daws/repos/Bandit/crates/polygon-metadata-enrichment/src/lib.rs:399:    async fn enrich_and_emit(&self, raw: RawSwapEvent, ctx: &ServiceContext) -> Result<()> {
+/Users/daws/repos/Bandit/crates/polygon-metadata-enrichment/src/lib.rs:439:                let enriched = V2Swap {
+/Users/daws/repos/Bandit/crates/polygon-metadata-enrichment/src/lib.rs:473:                let enriched = V3Swap {
+/Users/daws/repos/Bandit/crates/polygon-metadata-enrichment/src/lib.rs:740:) -> Result<Option<ConcentratedPoolState>> {
+/Users/daws/repos/Bandit/crates/polygon-metadata-enrichment/src/lib.rs:748:            let state: ConcentratedPoolState = serde_json::from_str(&json)?;
+/Users/daws/repos/Bandit/crates/polygon-metadata-enrichment/src/lib.rs:758:    state: &ConcentratedPoolState,
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/tests/replay.rs:9:    PoolStateQuoteRequest, PoolStateQuoteResponse, PoolStateSnapshotResponse, V3Swap,
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/tests/replay.rs:13:use polygon_flash_arbitrage::{PolygonFlashArbitrageService, StrategyConfig};
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/tests/replay.rs:14:use polygon_pool_state::PolygonPoolStateService;
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/tests/replay.rs:37:    V3Swap {
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/tests/replay.rs:72:async fn run_replay<P: AsRef<Path>>(fixture: P) -> Result<Vec<PoolStateQuoteResponse>> {
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/tests/replay.rs:76:    let sim = PolygonPoolStateService::new(bus.clone(), None);
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/tests/replay.rs:79:    let strategy = PolygonFlashArbitrageService::new(bus.clone(), StrategyConfig::default());
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/tests/replay.rs:82:    let mut quote_req_sub = bus.subscriber::<PoolStateQuoteRequest>();
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/tests/replay.rs:83:    let mut quote_resp_sub = bus.subscriber::<PoolStateQuoteResponse>();
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/tests/replay.rs:85:    let snapshot_pub = bus.publisher::<PoolStateSnapshotResponse>();
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/tests/replay.rs:86:    let v3swap_pub = bus.publisher::<V3Swap>();
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/tests/replay.rs:108:                    .publish(PoolStateSnapshotResponse {
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/tests/replay.rs:125:            ReplayEvent::V3Swap {
+/Users/daws/repos/Bandit/crates/polygon-flash-arbitrage/tests/replay.rs:134:                    .publish(V3Swap {

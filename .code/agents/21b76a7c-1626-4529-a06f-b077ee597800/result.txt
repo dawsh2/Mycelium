@@ -1,0 +1,105 @@
+Of course. Here is a detailed implementation plan to evolve `polygon-terminal` to match the capabilities of Torq's terminal UI, based on the requirements you've provided.
+
+### **Implementation Plan: `polygon-terminal` Feature Parity with Torq UI**
+
+This plan outlines a phased approach to enhance `polygon-terminal` with a rich, event-driven terminal UI, mirroring the functionality of Torq's observability terminal. The core principle is to leverage the existing Bandit ecosystem and Mycelium event bus for all real-time data, using Redis solely for initial state hydration.
+
+---
+
+#### **Phase 1: Discovery and Feature Mapping**
+
+This phase focuses on cataloging the target features and identifying the gaps with the current `polygon-terminal`.
+
+*   **1.1. Catalog Torq Terminal UI Capabilities (Assumed)**
+    Based on typical trading terminal UIs and the context of the Mycelium bus events, we can assume the Torq UI includes:
+    *   **Dashboard View:** A summary screen showing key metrics like total liquidity, 24h volume, swap counts, and top pools.
+    *   **Pools View:** A detailed, sortable table of all AMM pools, displaying address, token pairs, liquidity, volume, fees, and recent swap activity.
+    *   **Swaps View:** A real-time list or table of V2/V3 swaps as they occur, showing pool, token pair, amount, and direction.
+    *   **Quotes View:** A feed of quote requests and responses, detailing the requested amounts and the quotes provided by liquidity providers.
+    *   **Navigation:** Keyboard-driven navigation (e.g., tabs, arrow keys) to switch between these views and interact with widgets.
+
+*   **1.2. Gap Analysis**
+    *   **Current State:** `polygon-terminal` currently hydrates pool state from Redis and subscribes to a raw stream of bus events, likely with minimal data aggregation or UI complexity.
+    *   **Gaps:**
+        1.  Lack of distinct, feature-rich UI views (Dashboard, Pools, Swaps, Quotes).
+        2.  State management is likely simple; a robust, centralized store is needed to aggregate event data for different UI views.
+        3.  UI rendering is basic; needs sophisticated widgets (tables, lists, sparklines) and a navigable layout.
+        4.  Event processing may not be enriched; relies on raw bus events rather than processed state from a service like a Pool State Manager.
+
+---
+
+#### **Phase 2: Architecture & State Management Redesign**
+
+This phase lays the foundation for an event-driven architecture, ensuring the UI is a reactive reflection of in-memory state.
+
+*   **2.1. Central State Manager**
+    *   **Action:** Create a central `AppState` struct in a new `crates/polygon-terminal/src/state.rs` module.
+    *   **Details:** This struct will be the single source of truth for the UI. It will hold all data required for rendering, such as `pools: HashMap<Address, PoolState>`, `recent_swaps: VecDeque<SwapInfo>`, etc. It should be wrapped in an `Arc<Mutex<>>` or use message-passing (like Tokio channels) for safe concurrent access between the event listener and the UI rendering thread.
+
+*   **2.2. Event-Driven Updates**
+    *   **Action:** Refactor the Mycelium subscription logic in `crates/polygon-terminal/src/main.rs`.
+    *   **Details:** The subscription handler will receive events from the bus. Instead of directly printing to the console, it will parse these events and send them to the `AppState` manager for processing. This ensures the UI rendering loop is decoupled from the event consumption logic.
+    *   **Constraint:** This design explicitly forbids any polling of Redis or other services for updates. All runtime changes must be driven by events from the Mycelium bus.
+
+*   **2.3. Initial State Hydration**
+    *   **Action:** At startup, the `AppState` manager will perform a one-time fetch from the Pool State Manager's Redis cache.
+    *   **Details:** This "warm-start" populates the initial list of pools. Immediately after hydration, the application will switch to processing the live event stream. A mechanism (e.g., using message sequence numbers) should be implemented to handle any events that might have been missed between hydration and live subscription.
+
+---
+
+#### **Phase 3: UI Implementation with `ratatui`**
+
+This phase focuses on building the user-facing components. We assume the use of `ratatui` (the community-maintained fork of `tui-rs`), which is standard for modern Rust TUIs.
+
+*   **3.1. UI Layout and Navigation**
+    *   **Action:** Define the main UI layout in `crates/polygon-terminal/src/ui.rs`.
+    *   **Details:** Implement a tab-based navigation system to switch between the "Dashboard," "Pools," "Swaps," and "Quotes" views. The main application loop in `main.rs` will handle keyboard inputs to change the active tab in `AppState`.
+
+*   **3.2. Widget Implementation**
+    *   **Action:** Create separate modules for each major UI widget (e.g., `crates/polygon-terminal/src/ui/pools_view.rs`).
+    *   **Details:**
+        *   **Pools View:** Implement a `StatefulTable` widget to display sortable pool data.
+        *   **Swaps View:** Use a `List` or `Table` to show a real-time feed of swaps, with the newest entries appearing at the top.
+        *   **Dashboard View:** Combine several smaller widgets (e.g., `Paragraph` for stats, `Sparkline` for volume trends) into a single view.
+
+*   **3.3. Rendering Loop**
+    *   **Action:** The main loop in `main.rs` will repeatedly call a `draw` function.
+    *   **Details:** The `draw` function will acquire a lock on `AppState`, pass the relevant slice of state to the active UI view, and render the corresponding widgets. This ensures the UI always reflects the most current state.
+
+---
+
+#### **Phase 4: Data Integration**
+
+This phase connects the UI and state manager to Bandit's data sources.
+
+*   **4.1. Rely on Bandit Services**
+    *   **Action:** Ensure `polygon-terminal` subscribes to topics populated by established Bandit services, not raw node data.
+    *   **Details:** The terminal should rely on events from a future **Pool State Manager** or **Enriched Event Listeners**. These services are responsible for processing raw chain data, enriching it (e.g., calculating USD values, tracking volume), and publishing clean, structured events onto the Mycelium bus. This aligns with the requirement to ignore Torq's specific data flow.
+
+*   **4.2. Event-to-State Mapping**
+    *   **Action:** Implement the logic within `AppState` to process incoming events.
+    *   **Details:** A `match` statement on the event type (`mycelium_protocol::Message`) will delegate to specific update functions:
+        *   `PoolSnapshot` event -> Updates or inserts a pool in the `pools` HashMap.
+        *   `V2Swap`/`V3Swap` event -> Updates liquidity/volume for the corresponding pool and adds the swap to the `recent_swaps` list.
+        *   `QuoteRequest` event -> Adds to a `recent_quotes` list.
+
+---
+
+#### **Phase 5: Testing and Migration**
+
+*   **5.1. Unit & Integration Testing**
+    *   **Unit Tests:** Write tests for the `AppState` manager to verify that state is updated correctly based on a sequence of mock events.
+    *   **Integration Tests:** Create a test harness that simulates the Mycelium bus. This harness will send a pre-defined stream of events to a `polygon-terminal` instance and assert that the final `AppState` is correct. The `tests/integration` directory seems like a good place for this.
+
+*   **5.2. Migration Strategy**
+    *   **Phased Rollout:** Implement one UI tab completely before starting the next. The recommended order is: Pools -> Swaps -> Quotes -> Dashboard.
+    *   **Feature Flag:** The new UI can be developed behind a compile-time feature flag (e.g., `new-ui`) or a command-line argument (`--ui=new`) to allow developers to use the existing simple terminal while the new one is under construction.
+
+---
+
+#### **Phase 6: Rollout Considerations**
+
+*   **6.1. Performance Monitoring**
+    *   Before rollout, benchmark the terminal's performance under heavy event load. Key metrics to watch are CPU usage, memory footprint, and event processing latency. The existing `benches/emit_latency.rs` could be adapted for this.
+*   **6.2. Documentation**
+    *   Update the `README.md` and any relevant documentation in the `docs/` directory to reflect the new UI, its features, and keyboard navigation.

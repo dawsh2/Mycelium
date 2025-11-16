@@ -6,7 +6,7 @@ use mycelium_protocol::{codec::HEADER_SIZE, Envelope, Message};
 use std::any::Any;
 use std::marker::PhantomData;
 use std::sync::Arc;
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::AsyncReadExt;
 use tokio::sync::broadcast;
 
 /// Raw message frame stored after reading from stream
@@ -32,7 +32,7 @@ pub async fn handle_stream_connection<S>(
     buffer_pool: Option<&BufferPool>,
 ) -> Result<()>
 where
-    S: AsyncReadExt + AsyncWriteExt + Unpin + Send,
+    S: AsyncReadExt + Unpin + Send,
 {
     loop {
         // Read TLV frame from stream (use buffer pool if available)

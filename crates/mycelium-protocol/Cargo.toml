@@ -8,7 +8,7 @@ zerocopy = { version = "0.7", features = ["derive"] }
 rkyv = { workspace = true }
 thiserror = { workspace = true }
 primitive-types = { version = "0.12", default-features = false }  # For U256 support, disable zerocopy to avoid version conflict
-rand = "0.8"  # For ActorId and CorrelationId generation
+getrandom = "0.2"
 
 # Codegen dependencies (now that codegen is a public module in src/)
 serde = { workspace = true, features = ["derive"] }

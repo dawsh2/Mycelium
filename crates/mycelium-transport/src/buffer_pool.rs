@@ -404,4 +404,92 @@ mod tests {
         buf[0] = 42;
         assert_eq!(buf[0], 42);
     }
+
+    #[test]
+    fn test_zero_size_request() {
+        let mut config = HashMap::new();
+        config.insert(128, 10);
+        let pool = BufferPool::new(BufferPoolConfig::from_map(config));
+
+        let buf = pool.acquire(0);
+        assert_eq!(buf.len(), 128); // Still gets smallest available size class
+    }
+
+    #[test]
+    fn test_very_large_request() {
+        let mut config = HashMap::new();
+        config.insert(128, 10);
+        config.insert(256, 10);
+        let pool = BufferPool::new(BufferPoolConfig::from_map(config));
+
+        // Request larger than all size classes
+        let buf = pool.acquire(1024);
+        assert_eq!(buf.len(), 1024); // Falls back to exact allocation
+    }
+
+    #[test]
+    fn test_empty_config() {
+        let config = HashMap::new();
+        let pool = BufferPool::new(BufferPoolConfig::from_map(config));
+
+        // Should still work, just no pooling (allocates next power of 2)
+        let buf = pool.acquire(100);
+        assert_eq!(buf.len(), 128); // Rounds up to next power of 2
+
+        let stats = pool.stats();
+        assert_eq!(stats.total_allocations, 1);
+        assert_eq!(stats.hit_rate(), 0.0); // No hits without pool
+    }
+
+    #[test]
+    fn test_stats_initially_zero() {
+        let mut config = HashMap::new();
+        config.insert(128, 10);
+        let pool = BufferPool::new(BufferPoolConfig::from_map(config));
+
+        let stats = pool.stats();
+        assert_eq!(stats.total_allocations, 0);
+        assert_eq!(stats.total_acquires, 0);
+        assert_eq!(stats.total_returns, 0);
+        assert_eq!(stats.currently_in_use, 0);
+        assert_eq!(stats.hit_rate(), 0.0);
+    }
+
+    #[test]
+    fn test_rapid_acquire_release() {
+        let mut config = HashMap::new();
+        config.insert(128, 5);
+        let pool = BufferPool::new(BufferPoolConfig::from_map(config));
+
+        // Rapidly acquire and release to test pool stability
+        for _ in 0..1000 {
+            let _buf = pool.acquire(100);
+            // Immediately dropped, returning to pool
+        }
+
+        let stats = pool.stats();
+        assert_eq!(stats.total_acquires, 1000);
+        assert_eq!(stats.currently_in_use, 0);
+        assert!(stats.hit_rate() > 99.0); // Should have very high hit rate
+    }
+
+    #[test]
+    fn test_config_from_map() {
+        let mut map = HashMap::new();
+        map.insert(128, 10);
+        map.insert(256, 20);
+        map.insert(512, 15);
+
+        let config = BufferPoolConfig::from_map(map);
+        let pool = BufferPool::new(config);
+
+        // Verify all size classes work
+        let buf128 = pool.acquire(100);
+        let buf256 = pool.acquire(200);
+        let buf512 = pool.acquire(400);
+
+        assert_eq!(buf128.len(), 128);
+        assert_eq!(buf256.len(), 256);
+        assert_eq!(buf512.len(), 512);
+    }
 }

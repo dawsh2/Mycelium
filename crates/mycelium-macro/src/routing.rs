@@ -4,6 +4,7 @@
 //! Arc allocation and channel overhead (~65ns → ~2-3ns per handler).
 
 use heck::ToSnakeCase;
+use std::collections::HashSet;
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
 use syn::{
@@ -91,12 +92,11 @@ pub fn generate_routing_struct(config: RoutingConfig) -> TokenStream {
 
     // Collect all unique handler types
     let mut all_handlers = Vec::new();
+    let mut seen = HashSet::new();
     for route in &config.routes {
         for handler in &route.handlers {
-            if !all_handlers
-                .iter()
-                .any(|h| quote!(#h).to_string() == quote!(#handler).to_string())
-            {
+            let key = normalized_type_name(handler);
+            if seen.insert(key) {
                 all_handlers.push(handler.clone());
             }
         }
@@ -167,23 +167,48 @@ pub fn generate_routing_struct(config: RoutingConfig) -> TokenStream {
 
 /// Convert a type to a field name (e.g., ArbitrageService -> arbitrage_service)
 fn type_to_field_name(ty: &Type) -> Ident {
-    let type_str = quote!(#ty).to_string();
-    let snake_case = type_str.to_snake_case();
-    Ident::new(&snake_case, Span::call_site())
+    let snake_case = normalized_type_name(ty).to_snake_case();
+    let cleaned = snake_case.trim_matches('_');
+    let name = if cleaned.is_empty() {
+        "handler"
+    } else {
+        cleaned
+    };
+    Ident::new(name, Span::call_site())
 }
 
 /// Convert a message type to a method name (e.g., V2Swap -> route_v2_swap)
 fn type_to_method_name(ty: &Type) -> Ident {
-    let type_str = quote!(#ty).to_string();
-    let snake_case = type_str.to_snake_case();
-    let method_name = format!("route_{}", snake_case);
+    let type_name = normalized_type_name(ty);
+    let snake_case = type_name.to_snake_case();
+    let cleaned = snake_case.trim_matches('_');
+    let method_name = if cleaned.is_empty() {
+        "route_handler".to_string()
+    } else {
+        format!("route_{}", cleaned)
+    };
     Ident::new(&method_name, Span::call_site())
+}
+
+fn normalized_type_name(ty: &Type) -> String {
+    let type_str = quote!(#ty).to_string();
+    let mut normalized = String::with_capacity(type_str.len());
+    for ch in type_str.chars() {
+        if ch.is_ascii_alphanumeric() {
+            normalized.push(ch);
+        } else {
+            normalized.push('_');
+        }
+    }
+    while normalized.contains("__") {
+        normalized = normalized.replace("__", "_");
+    }
+    normalized.trim_matches('_').to_string()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use quote::quote;
     use syn::parse_quote;
 
     #[test]
@@ -198,5 +223,19 @@ mod tests {
         let ty: Type = parse_quote!(V2Swap);
         let method_name = type_to_method_name(&ty);
         assert_eq!(method_name.to_string(), "route_v2_swap");
+    }
+
+    #[test]
+    fn test_type_to_field_name_with_path() {
+        let ty: Type = parse_quote!(crate::adapters::RiskManager);
+        let field_name = type_to_field_name(&ty);
+        assert_eq!(field_name.to_string(), "crate_adapters_risk_manager");
+    }
+
+    #[test]
+    fn test_type_to_method_name_with_generic() {
+        let ty: Type = parse_quote!(ShardHandler<SwapMessage>);
+        let method_name = type_to_method_name(&ty);
+        assert_eq!(method_name.to_string(), "route_shard_handler_swap_message");
     }
 }
