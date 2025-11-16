@@ -33,6 +33,7 @@ impl_message!(ArbitrageSignal, 2, "arbitrage");
 pub struct OrderExecution {
     pub order_id: u64,
     pub success: u8, // 1 = true, 0 = false (bool not safe for zerocopy)
+    pub _padding: [u8; 7],
     pub timestamp: u64,
 }
 
@@ -71,6 +72,7 @@ pub fn create_test_order_execution(order_id: u64, success: bool) -> OrderExecuti
     OrderExecution {
         order_id,
         success: if success { 1 } else { 0 },
+        _padding: [0; 7],
         timestamp: 111111111 + order_id,
     }
 }

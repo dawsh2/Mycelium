@@ -6,6 +6,7 @@
 //! - TCP socket transport
 
 pub mod local_transport;
+pub mod bridge_handshake;
 // TODO: Re-enable these tests after migration
 // pub mod unix_transport;
 // pub mod tcp_transport;

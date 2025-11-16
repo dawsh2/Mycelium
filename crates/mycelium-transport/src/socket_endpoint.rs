@@ -274,7 +274,7 @@ impl BridgeContext {
         }
     }
 
-    async fn verify_handshake<S>(&self, stream: &mut S) -> Result<(), TransportError>
+    async fn verify_handshake<S>(&self, stream: &mut S) -> Result<()>
     where
         S: AsyncReadExt + Unpin,
     {
