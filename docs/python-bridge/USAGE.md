@@ -1,7 +1,35 @@
 # Python Bridge Usage Guide
 
-This document explains how to generate Python bindings from `contracts.yaml`
-and where the SDK pieces live.
+This document explains how to generate Python bindings from `contracts.yaml`,
+use the topology-aware MessageBus, and integrate Python services with Mycelium.
+
+## Quick Start (Topology-Aware API)
+
+**New in v0.2.0**: Python services can now use topology files for automatic routing!
+
+```python
+from mycelium import MessageBus
+from mycelium_protocol import SCHEMA_DIGEST
+from mycelium_protocol.messages import TradeSignal
+
+# Load topology and auto-configure transports
+bus = MessageBus.from_topology(
+    "topology.toml",
+    service_name="python-worker",
+    schema_digest=SCHEMA_DIGEST
+)
+
+# Auto-routes based on topology (Unix or TCP)
+pub = bus.publisher_to("strategy-service", TradeSignal)
+pub.publish(TradeSignal(symbol="BTC", action="buy"))
+
+# Subscribe locally
+sub = bus.subscriber(TradeSignal)
+for msg in sub:
+    print(f"Received: {msg}")
+```
+
+See [Cross-Language Integration](../architecture/CROSS_LANGUAGE_INTEGRATION.md) for architecture details and deployment patterns.
 
 ## 1. Generate Bindings
 

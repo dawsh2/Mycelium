@@ -1,7 +1,7 @@
 use mycelium_protocol::{codec::HEADER_SIZE, SCHEMA_DIGEST};
-use mycelium_transport::MessageBus;
+use mycelium_transport::{config::Topology, MessageBus};
 use std::collections::HashMap;
-use std::ffi::c_void;
+use std::ffi::{c_char, c_void, CStr};
 use std::slice;
 use std::sync::{
     atomic::{AtomicU64, Ordering},
@@ -27,6 +27,8 @@ pub const ERR_NULL: i32 = -1;
 pub const ERR_DIGEST: i32 = -2;
 pub const ERR_RUNTIME: i32 = -3;
 pub const ERR_SUBSCRIPTION: i32 = -4;
+pub const ERR_TOPOLOGY: i32 = -5;
+pub const ERR_SERVICE_NOT_FOUND: i32 = -6;
 
 type MessageCallback = unsafe extern "C" fn(u16, *const u8, usize, *mut c_void);
 
@@ -47,9 +49,66 @@ enum RuntimeCommand {
 /// Create a fresh runtime with its own MessageBus and Tokio executor.
 #[no_mangle]
 pub extern "C" fn mycelium_runtime_create() -> *mut MyceliumRuntime {
+    create_runtime_internal(MessageBus::new())
+}
+
+/// Create a runtime from a topology file.
+///
+/// # Arguments
+///
+/// * `topology_path` - Path to topology.toml file (null-terminated C string)
+/// * `service_name` - Name of this service in the topology (null-terminated C string)
+///
+/// # Returns
+///
+/// Pointer to MyceliumRuntime, or null if creation failed
+#[no_mangle]
+pub unsafe extern "C" fn mycelium_runtime_create_from_topology(
+    topology_path: *const c_char,
+    service_name: *const c_char,
+) -> *mut MyceliumRuntime {
+    if topology_path.is_null() || service_name.is_null() {
+        return std::ptr::null_mut();
+    }
+
+    let Ok(path_str) = CStr::from_ptr(topology_path).to_str() else {
+        return std::ptr::null_mut();
+    };
+
+    let Ok(service_str) = CStr::from_ptr(service_name).to_str() else {
+        return std::ptr::null_mut();
+    };
+
+    // Load topology
+    let topology = match Topology::load(path_str) {
+        Ok(t) => t,
+        Err(e) => {
+            tracing::error!("Failed to load topology: {}", e);
+            return std::ptr::null_mut();
+        }
+    };
+
+    // Validate service exists
+    if topology.find_node(service_str).is_none() {
+        tracing::error!("Service '{}' not found in topology", service_str);
+        return std::ptr::null_mut();
+    }
+
+    // Create MessageBus from topology
+    let bus = match MessageBus::from_topology(topology, service_str) {
+        Ok(b) => b,
+        Err(e) => {
+            tracing::error!("Failed to create MessageBus from topology: {}", e);
+            return std::ptr::null_mut();
+        }
+    };
+
+    create_runtime_internal(bus)
+}
+
+fn create_runtime_internal(bus: MessageBus) -> *mut MyceliumRuntime {
     match Runtime::new() {
         Ok(runtime) => {
-            let bus = MessageBus::new();
             let (tx, mut rx) = mpsc::unbounded_channel();
             let bus_clone = bus.clone();
             let worker = runtime.spawn(async move {

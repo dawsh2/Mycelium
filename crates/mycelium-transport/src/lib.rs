@@ -22,6 +22,8 @@ pub mod service_context;
 pub mod service_metrics;
 pub mod service_runtime;
 pub mod shared;
+pub mod shm;
+pub mod shm_ring;
 mod socket_endpoint;
 pub mod stream;
 mod stream_transport;
@@ -59,6 +61,8 @@ pub use service::{DegradedReason, HealthStatus, ManagedService, ServiceRunner, U
 pub use service_context::ServiceContext;
 pub use service_metrics::ServiceMetrics;
 pub use service_runtime::{Service, ServiceHandle, ServiceRuntime};
+pub use shm::{bind_shm_endpoint, ShmEndpointHandle};
+pub use shm_ring::{ShmError, ShmReader, ShmWriter};
 
 // Re-export proc macros
 pub use mycelium_macro::{routing_config, service};

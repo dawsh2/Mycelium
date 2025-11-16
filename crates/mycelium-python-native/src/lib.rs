@@ -5,9 +5,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use mycelium_ffi::{
-    mycelium_publish, mycelium_runtime_create, mycelium_runtime_destroy, mycelium_subscribe,
-    mycelium_unsubscribe, mycelium_verify_schema_digest, MyceliumRuntime, ERR_DIGEST,
-    ERR_SUBSCRIPTION, SUCCESS,
+    mycelium_publish, mycelium_runtime_create, mycelium_runtime_create_from_topology,
+    mycelium_runtime_destroy, mycelium_subscribe, mycelium_unsubscribe,
+    mycelium_verify_schema_digest, MyceliumRuntime, ERR_DIGEST, ERR_SUBSCRIPTION, SUCCESS,
 };
 use mycelium_protocol::SCHEMA_DIGEST;
 use pyo3::exceptions::{PyRuntimeError, PyTypeError, PyValueError};
@@ -23,11 +23,29 @@ struct Runtime {
 #[pymethods]
 impl Runtime {
     #[new]
-    fn new(schema_digest: Option<&Bound<'_, PyAny>>) -> PyResult<Self> {
+    #[pyo3(signature = (schema_digest=None, topology_path=None, service_name=None))]
+    fn new(
+        schema_digest: Option<&Bound<'_, PyAny>>,
+        topology_path: Option<String>,
+        service_name: Option<String>,
+    ) -> PyResult<Self> {
         let digest_buf = schema_digest
             .map(|obj| obj.extract::<Vec<u8>>())
             .transpose()?;
-        let state = RuntimeState::new(digest_buf.as_deref())?;
+
+        // If topology args provided, use topology-aware creation
+        let state = match (topology_path, service_name) {
+            (Some(path), Some(name)) => {
+                RuntimeState::new_from_topology(&path, &name, digest_buf.as_deref())?
+            }
+            (None, None) => RuntimeState::new(digest_buf.as_deref())?,
+            _ => {
+                return Err(PyValueError::new_err(
+                    "Must provide both topology_path and service_name, or neither",
+                ))
+            }
+        };
+
         Ok(Self { state })
     }
 
@@ -98,6 +116,32 @@ struct RuntimeState {
 impl RuntimeState {
     fn new(user_digest: Option<&[u8]>) -> PyResult<Arc<Self>> {
         let handle_ptr = mycelium_runtime_create();
+        Self::finalize_runtime_creation(handle_ptr, user_digest)
+    }
+
+    fn new_from_topology(
+        topology_path: &str,
+        service_name: &str,
+        user_digest: Option<&[u8]>,
+    ) -> PyResult<Arc<Self>> {
+        use std::ffi::CString;
+
+        let path_cstr = CString::new(topology_path)
+            .map_err(|_| PyValueError::new_err("Invalid topology path"))?;
+        let name_cstr = CString::new(service_name)
+            .map_err(|_| PyValueError::new_err("Invalid service name"))?;
+
+        let handle_ptr = unsafe {
+            mycelium_runtime_create_from_topology(path_cstr.as_ptr(), name_cstr.as_ptr())
+        };
+
+        Self::finalize_runtime_creation(handle_ptr, user_digest)
+    }
+
+    fn finalize_runtime_creation(
+        handle_ptr: *mut MyceliumRuntime,
+        user_digest: Option<&[u8]>,
+    ) -> PyResult<Arc<Self>> {
         let Some(ptr) = NonNull::new(handle_ptr) else {
             return Err(PyRuntimeError::new_err("failed to create mycelium runtime"));
         };

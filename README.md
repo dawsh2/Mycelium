@@ -1,42 +1,21 @@
 # Mycelium <img src="docs/assets/cultures.svg" alt="Mycelium" width="48" style="vertical-align: middle; margin-bottom: -8px;">
 
-Typed message bus for Rust services that can run in a single process or across
-multiple processes without changing application code. Mycelium keeps
-message-shape definitions, transport selection, and actor supervision in one
-place so the same service logic works with shared memory (Arc), Unix sockets, or
-TCP.
+Typed, schema-first plumbing for trading systems and other low-latency services.
+Define messages once, generate codecs for Rust/Python/OCaml, and choose how data
+moves—shared memory, Unix sockets, TCP, or native FFI—without rewriting
+business logic.
 
-- Messages are defined once in `contracts.yaml`. Code generation produces Rust
-  structs with serialization, validation, and TLV encoders.
-- Services are plain structs annotated with `#[service]`. The macro wires in a
-  `ServiceContext` that exposes async publishers/subscribers plus tracing and
-  metrics hooks.
-- `MessageBus` encapsulates the transport. Swap the transport at startup; the
-  service code stays untouched.
-- For single-process deployments you can bypass the bus entirely with
-  `routing_config!`, which generates compile-time routers that issue direct
-  function calls (no Arc, no heap, ~2–3 ns per handler).
+## Why Mycelium?
 
-## Core pieces
+- **Single source of truth** – `contracts.yaml` feeds codegen for every runtime.
+- **Configurable transports** – swap Arc/Unix/TCP bridges per node; services stay
+  unchanged.
+- **Polyglot in-process access** – Python (PyO3) and OCaml embed the Rust bus via
+  `mycelium-ffi`, so non-Rust code can publish/subscribe without a bridge hop.
+- **Production hardening** – `ServiceRuntime` supervises tasks, applies restart
+  backoff, emits telemetry, and exposes health checks.
 
-| Component | Location | Role |
-| --- | --- | --- |
-| `contracts.yaml` | project root | Source of truth for message schemas. The build script in `crates/mycelium-protocol` generates strongly typed Rust APIs. Codegen can emit Python (`python-sdk/`) and OCaml (`ocaml-sdk/`) bindings used by their bridges. |
-| `ServiceContext` | `crates/mycelium-transport/src/service.rs` | Runtime handle passed to every service method. Provides `emit`, `subscribe`, shutdown signals, metrics, and tracing spans. |
-| `MessageBus` | `crates/mycelium-transport/src/bus.rs` | Transport abstraction. Supports `Arc` (single process), Unix domain sockets, and TCP. |
-| `ServiceRuntime` | `crates/mycelium-transport/src/service_runtime.rs` | Owns task supervision. Spawns `#[service]` actors, applies exponential backoff, and coordinates shutdown. |
-| `routing_config!` | `crates/mycelium-transport/src/routing.rs` | Optional compile-time router that maps message types to handlers with direct function calls. |
-
-## Deployment options
-
-| Use case | Transport | How to configure |
-| --- | --- | --- |
-| All services in one binary (lowest latency) | `MessageBus::new()` (Arc) | Pass the same `Arc<MessageBus>` to every service and spawn them in one `ServiceRuntime`. |
-| Multiple binaries on one host | `MessageBus::with_unix_transport(path)` | Start a listener process with the Unix transport; other processes connect to the same path. |
-| Cross-host / distributed | `MessageBus::with_tcp_transport(addr)` | Run a TCP listener and point clients at the host:port. |
-
-Switching between the three changes only the `MessageBus` constructor; the
-service code and generated message types are identical.
+## Architecture at a glance
 
 ```
                  ┌──────────────┐  Unix/TCP bridge  ┌──────────────┐
@@ -51,15 +30,26 @@ service code and generated message types are identical.
                 │PyO3 adapter   │                     │Runtime     │
                 └───────────────┘                     └────────────┘
 
-Messages are described once (contracts), then each node chooses its transport:
-- Single binary: everyone talks to the shared bus (Arc transport).
-- Multi-process: add Unix/TCP bridges; Python/OCaml workers can connect either
-  via sockets or via the in-process FFI shown above.
+Messages are described once; each node decides whether to run entirely in
+process (Arc transport), expose a Unix/TCP bridge, or mix the two. Native
+adapters talk to the same `MessageBus`, so Python/OCaml code can live in the
+critical path when needed.
 ```
 
-## Quick start
+## Core components
 
-1. **Describe messages.** Edit `contracts.yaml`:
+| Piece | Location | Role |
+| --- | --- | --- |
+| Schema (`contracts.yaml`) | repo root | Defines TLV IDs, topics, and field types. Build scripts generate Rust types; codegen emits Python/OCaml bindings for bridges/native mode. |
+| `ServiceContext` | `crates/mycelium-transport/src/service.rs` | Handle passed to each `#[service]` impl. Provides publishers/subscribers, metrics, tracing, and shutdown signals. |
+| `MessageBus` | `crates/mycelium-transport/src/bus.rs` | Transport abstraction (Arc / Unix / TCP). Handles publishers, fan-out, bridge taps. |
+| `ServiceRuntime` | `crates/mycelium-transport/src/service_runtime.rs` | Supervises async services, restarts failures with exponential backoff, and coordinates shutdown. |
+| `routing_config!` | `crates/mycelium-transport/src/routing.rs` | Optional compile-time router for single-process setups (~ns latency). |
+| Native adapters | `crates/mycelium-python-native`, `ocaml-sdk/` | PyO3 extension + OCaml runtime that call `mycelium-ffi` for in-process interop. |
+
+## Quick start (Rust)
+
+1. **Describe messages.**
 
    ```yaml
    messages:
@@ -71,89 +61,55 @@ Messages are described once (contracts), then each node chooses its transport:
          base_fee_per_gas: "[u8; 32]"
    ```
 
-2. **Build once.** `cargo build` regenerates `bandit_messages::GasMetrics` (and
-   the associated `Message` trait impl) during the build script phase.
+2. **Generate/Build.** `cargo build` runs the protocol build script and exports
+   `bandit_messages::GasMetrics` (or whatever your schema names).
 
-3. **Write a service.**
+3. **Implement a service.**
 
    ```rust
-   use anyhow::Result;
    use mycelium_transport::{service, ServiceContext};
 
    pub struct GasLogger;
 
    #[service]
    impl GasLogger {
-       async fn run(&mut self, ctx: &ServiceContext) -> Result<()> {
+       async fn run(&mut self, ctx: &ServiceContext) -> anyhow::Result<()> {
            let mut sub = ctx.subscribe::<bandit_messages::GasMetrics>().await?;
-
            while let Some(metric) = sub.recv().await {
                tracing::info!(block = metric.block_number, "gas metric");
            }
-
            Ok(())
        }
    }
    ```
 
-4. **Choose a transport and spawn.**
+4. **Choose transport at startup.**
 
    ```rust
-   use mycelium_transport::{MessageBus, ServiceRuntime};
-
    #[tokio::main]
-   async fn main() -> Result<(), anyhow::Error> {
-       let bus = MessageBus::new();            // swap for Unix/TCP as needed
-       let runtime = ServiceRuntime::new(bus);
-
+   async fn main() -> anyhow::Result<()> {
+       let bus = mycelium_transport::MessageBus::new(); // Arc transport
+       let runtime = mycelium_transport::ServiceRuntime::new(bus);
        runtime.spawn_service(GasLogger).await?;
-
        tokio::signal::ctrl_c().await?;
        runtime.shutdown().await?;
        Ok(())
    }
    ```
 
-## Observability and resilience
+Swap `MessageBus::new()` for the Unix/TCP helpers when you want out-of-process
+routes; service code stays the same.
 
-- `ServiceContext::emit` attaches tracing spans and counters. The overhead is ~120
-  ns with instrumentation enabled, ~65 ns without.
-- Services can call `ctx.is_shutting_down()` or register shutdown hooks to stop
-  gracefully when the runtime receives a termination signal.
-- Failures inside a service task trigger exponential backoff restarts. The
-  backoff parameters live in `crates/mycelium-transport/src/service_runtime.rs`.
+## Native runtimes (Python & OCaml)
 
-## When to use compile-time routing
-
-`routing_config!` generates a struct that routes messages by direct function
-calls (no dynamic dispatch, no `Arc<T>`). It gives you monolith-level latency
-with ~2–3 ns per handler invocation. Use it when you run fully single-process
-and need the absolute floor on overhead. For anything that crosses process
-boundaries or prefers dynamic subscriptions, stick with the runtime bus.
-
-## Testing tips
-
-- Services implement pure structs; in unit tests you can instantiate them and
-  drive the async methods with `tokio::test` plus a mock `MessageBus` (use the
-  Arc transport and issue messages directly).
-- Integration tests often start a `ServiceRuntime` with the Arc transport to keep
-  things fast, even if production swaps to Unix/TCP.
-
-## Native FFI dev env
-
-Mycelium ships native Python/OCaml adapters that link directly against the
-`mycelium-ffi` crate. You can source `scripts/env/native.sh` to load the
-expected environment variables (pyenv CPython path, PyO3 `RUSTFLAGS`, and opam
-switch). The helper assumes you built a shared CPython via
-`pyenv install 3.11.10 --enable-shared`.
+Source `scripts/env/native.sh` to configure the shared CPython + PyO3
+`RUSTFLAGS` + opam switch:
 
 ```bash
 source scripts/env/native.sh
-# cargo test -p mycelium-python-native
-# cd ocaml-sdk && dune build
+cargo test -p mycelium-python-native
+cd ocaml-sdk && dune build
 ```
-
-Data flow for native runtimes:
 
 ```
 ┌──────────┐      TLV bytes + callbacks       ┌───────────────────────┐
@@ -168,13 +124,55 @@ Data flow for native runtimes:
                                              └────────────────────────┘
 ```
 
+### Python
+- PyO3 extension crate lives in `crates/mycelium-python-native`.
+- Tests run via `cargo test -p mycelium-python-native` once the env helper is
+  sourced.
+- `pipx run --spec maturin maturin build --release` (or the CI job) outputs
+  `target/wheels/mycelium_native-*.whl`.
+
+### OCaml
+- Native runtime + C stubs live in `ocaml-sdk/lib`.
+- `cargo build -p mycelium-ffi --release` must run first to produce
+  `target/release/libmycelium_ffi.dylib`.
+- `cd ocaml-sdk && opam exec -- dune build` builds the OCaml library and tests.
+
+## Deployment patterns
+
+| Scenario | Recommendation |
+| --- | --- |
+| Single monolith | `MessageBus::new()` (Arc). Optionally use `routing_config!` for direct call routing. |
+| Same host, different processes | Start a Unix bridge via `MessageBus::bind_unix_endpoint_with_digest`, have workers use `Mycelium.Transport.connect_unix`. |
+| Cross-host cluster | Use TCP bridges (`bind_tcp_endpoint`). Each worker chooses the nearest transport; Python/OCaml can connect via sockets or native FFI. |
+| Mixed workloads | Combine Arc (in-process actors) with Unix/TCP fan-out. Native adapters can embed the bus when they share the process, or fall back to sockets for isolation. |
+
+## Operational notes
+
+- `ServiceRuntime` restarts tasks with exponential backoff; hook into
+  `ctx.is_shutting_down()` for graceful exits.
+- All publishers/subscribers understand TLV envelopes (`Envelope` carries
+  sequence, trace IDs, destination hints).
+- Telemetry hooks live in `ServiceContext`, `ServiceMetrics`, and the bridge
+  stats collectors.
+
+## Development workflow
+
+1. `cargo fmt && cargo clippy --workspace --all-features -- -D warnings`
+2. `cargo test --workspace` (includes doc tests).
+3. For native mode: `source scripts/env/native.sh`, rebuild `mycelium-ffi`, run
+   `dune build`, then `cargo test -p mycelium-python-native`.
+4. Use `scripts/run_native_checks.sh` (if sourced) to automate the above.
+
 ## FAQ
 
-**Does each process need the same `contracts.yaml`?** Yes. Generated code is part
-of the workspace, so keep schemas in sync across binaries.
+**Why not just ZeroMQ?** ZMQ gives you sockets; Mycelium gives you schema
+discipline, typed codecs, transport supervision, and native adapters that reuse
+the same runtime. You don’t reimplement schemas, tracing, or restarts per
+language.
 
-**Can transports mix?** You can run multiple transports simultaneously (e.g., Arc
-inside a binary with a TCP bridge), but most deployments pick one per runtime.
+**Can I mix transports?** Yes. Nodes can host Arc actors, expose Unix/TCP bridges
+for other processes, and embed Python/OCaml workers, all driven by the same
+schemas.
 
-**Where are benchmarks?** See `docs/perf/README.md` for the latest latency
-measurements across transports and routing modes.
+**Benchmarks?** See `docs/perf/README.md` for Arc vs. Unix vs. TCP latency and
+throughput numbers.
