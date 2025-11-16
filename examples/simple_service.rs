@@ -8,8 +8,8 @@
 
 use anyhow::Result;
 use mycelium_protocol::impl_message;
-use mycelium_transport::{service, ServiceContext, ServiceRuntime};
 use mycelium_transport::MessageBus;
+use mycelium_transport::{service, ServiceContext, ServiceRuntime};
 use std::time::Duration;
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
 

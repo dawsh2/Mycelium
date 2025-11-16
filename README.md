@@ -21,7 +21,7 @@ TCP.
 
 | Component | Location | Role |
 | --- | --- | --- |
-| `contracts.yaml` | project root | Source of truth for message schemas. The build script in `crates/mycelium-protocol` generates strongly typed Rust APIs. |
+| `contracts.yaml` | project root | Source of truth for message schemas. The build script in `crates/mycelium-protocol` generates strongly typed Rust APIs. Codegen can emit Python (`python-sdk/`) and OCaml (`ocaml-sdk/`) bindings used by their bridges. |
 | `ServiceContext` | `crates/mycelium-transport/src/service.rs` | Runtime handle passed to every service method. Provides `emit`, `subscribe`, shutdown signals, metrics, and tracing spans. |
 | `MessageBus` | `crates/mycelium-transport/src/bus.rs` | Transport abstraction. Supports `Arc` (single process), Unix domain sockets, and TCP. |
 | `ServiceRuntime` | `crates/mycelium-transport/src/service_runtime.rs` | Owns task supervision. Spawns `#[service]` actors, applies exponential backoff, and coordinates shutdown. |
@@ -37,6 +37,25 @@ TCP.
 
 Switching between the three changes only the `MessageBus` constructor; the
 service code and generated message types are identical.
+
+```
+                 ┌──────────────┐  Unix/TCP bridge  ┌──────────────┐
+                 │   Node A     │◀───────────────▶│    Node B    │
+                 │ (Rust bus)   │                  │ (Rust bus)   │
+                 └──────┬───────┘                  └──────┬───────┘
+                        │                                   │
+         in-process FFI │                                   │ in-process FFI
+                        │                                   │
+                ┌───────▼───────┐                     ┌─────▼──────┐
+                │Python Native  │                     │OCaml Native│
+                │PyO3 adapter   │                     │Runtime     │
+                └───────────────┘                     └────────────┘
+
+Messages are described once (contracts), then each node chooses its transport:
+- Single binary: everyone talks to the shared bus (Arc transport).
+- Multi-process: add Unix/TCP bridges; Python/OCaml workers can connect either
+  via sockets or via the in-process FFI shown above.
+```
 
 ## Quick start
 
@@ -119,6 +138,35 @@ boundaries or prefers dynamic subscriptions, stick with the runtime bus.
   Arc transport and issue messages directly).
 - Integration tests often start a `ServiceRuntime` with the Arc transport to keep
   things fast, even if production swaps to Unix/TCP.
+
+## Native FFI dev env
+
+Mycelium ships native Python/OCaml adapters that link directly against the
+`mycelium-ffi` crate. You can source `scripts/env/native.sh` to load the
+expected environment variables (pyenv CPython path, PyO3 `RUSTFLAGS`, and opam
+switch). The helper assumes you built a shared CPython via
+`pyenv install 3.11.10 --enable-shared`.
+
+```bash
+source scripts/env/native.sh
+# cargo test -p mycelium-python-native
+# cd ocaml-sdk && dune build
+```
+
+Data flow for native runtimes:
+
+```
+┌──────────┐      TLV bytes + callbacks       ┌───────────────────────┐
+│ Python   │ publish/subscribe via PyO3/FFI ─▶│  mycelium-ffi (C ABI) │
+│ or OCaml │─────────────────────────────────▶│  mycelium_runtime_*   │
+└──────────┘                                 └──────────┬────────────┘
+                                                       │ Rust boundary
+                                                       ▼
+                                             ┌────────────────────────┐
+                                             │ MessageBus / Tokio /   │
+                                             │ existing Rust services │
+                                             └────────────────────────┘
+```
 
 ## FAQ
 

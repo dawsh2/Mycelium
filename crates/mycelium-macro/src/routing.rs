@@ -4,9 +4,9 @@
 //! Arc allocation and channel overhead (~65ns → ~2-3ns per handler).
 
 use heck::ToSnakeCase;
-use std::collections::HashSet;
 use proc_macro2::{Span, TokenStream};
 use quote::quote;
+use std::collections::HashSet;
 use syn::{
     parse::{Parse, ParseStream},
     punctuated::Punctuated,

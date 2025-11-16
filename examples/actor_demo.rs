@@ -36,7 +36,10 @@ impl Actor for CounterActor {
 
     async fn handle(&mut self, msg: Self::Message, _ctx: &mut ActorContext<Self>) {
         self.count += msg.amount;
-        println!("[{}] Count increased by {}. New total: {}", self.name, msg.amount, self.count);
+        println!(
+            "[{}] Count increased by {}. New total: {}",
+            self.name, msg.amount, self.count
+        );
     }
 
     async fn started(&mut self, ctx: &mut ActorContext<Self>) {
@@ -57,15 +60,19 @@ async fn main() {
     println!("=== Actor System Demo ===\n");
 
     // Spawn multiple counter actors
-    let counter1 = runtime.spawn(CounterActor {
-        count: 0,
-        name: "Counter1".to_string(),
-    }).await;
+    let counter1 = runtime
+        .spawn(CounterActor {
+            count: 0,
+            name: "Counter1".to_string(),
+        })
+        .await;
 
-    let counter2 = runtime.spawn(CounterActor {
-        count: 100,
-        name: "Counter2".to_string(),
-    }).await;
+    let counter2 = runtime
+        .spawn(CounterActor {
+            count: 100,
+            name: "Counter2".to_string(),
+        })
+        .await;
 
     println!("\n--- Sending Messages ---\n");
 

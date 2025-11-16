@@ -1,3 +1,4 @@
+use mycelium_protocol::{impl_message, Message};
 /// Generic managed service example - lifecycle management
 ///
 /// Demonstrates ManagedService trait, BoundedPublisher, and OrderedSubscriber
@@ -8,7 +9,6 @@ use mycelium_transport::{
     BoundedPublisher, BoundedSubscriber, HealthStatus, ManagedService, MessageBus,
     OrderedSubscriber,
 };
-use mycelium_protocol::{impl_message, Message};
 use std::sync::Arc;
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
@@ -28,8 +28,8 @@ impl_message!(DataEvent, 1, "events");
 #[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
 #[repr(C)]
 struct Alert {
-    severity: u64,     // 1-4 (info, warning, error, critical) - u64 to avoid padding
-    event_count: u64,  // Events processed before alert
+    severity: u64,    // 1-4 (info, warning, error, critical) - u64 to avoid padding
+    event_count: u64, // Events processed before alert
     value: i64,
 }
 
@@ -105,14 +105,17 @@ impl DataProcessor {
             if let Err(e) = self.alert_publisher.publish(alert).await {
                 println!("⚠️  [Processor] Failed to publish alert: {}", e);
             } else {
-                println!("🔔 [Processor] Alert published at event #{}", self.event_count);
+                println!(
+                    "🔔 [Processor] Alert published at event #{}",
+                    self.event_count
+                );
             }
         }
     }
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("\n=== Mycelium: Generic Managed Service Demo ===\n");
     println!("Demonstrates:");
     println!("  1. ManagedService - Lifecycle management");
@@ -162,7 +165,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 4 => "CRITICAL",
                 _ => "UNKNOWN",
             };
-            println!("🔔 [Alert Consumer] {} - Event count: {}", severity, alert.event_count);
+            println!(
+                "🔔 [Alert Consumer] {} - Event count: {}",
+                severity, alert.event_count
+            );
             // Simulate slow consumer to demonstrate backpressure
             tokio::time::sleep(tokio::time::Duration::from_millis(50)).await;
         }

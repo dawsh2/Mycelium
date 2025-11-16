@@ -25,6 +25,7 @@ struct ArbitrageOpportunity {
     pool_a: u64,
     pool_b: u64,
     timestamp: u64,
+    _padding: [u8; 8],
 }
 
 impl_message!(ArbitrageOpportunity, 2, "arbitrage");
@@ -87,12 +88,14 @@ async fn test_bundled_deployment_simple() {
                 services: vec!["polygon-adapter".to_string()],
                 host: None,
                 port: None,
+                endpoint: None,
             },
             Node {
                 name: "strategies".to_string(),
                 services: vec!["flash-arbitrage".to_string()],
                 host: None,
                 port: None,
+                endpoint: None,
             },
         ],
         socket_dir: dir.path().to_path_buf(),
@@ -148,12 +151,14 @@ async fn test_distributed_deployment_simple() {
                 services: vec!["polygon-adapter".to_string()],
                 host: Some("127.0.0.1".to_string()),
                 port: Some(0),
+                endpoint: None,
             },
             Node {
                 name: "strategies".to_string(),
                 services: vec!["flash-arbitrage".to_string()],
                 host: Some("127.0.0.1".to_string()),
                 port: Some(0),
+                endpoint: None,
             },
         ],
         socket_dir: std::path::PathBuf::from("/tmp/mycelium"),
@@ -215,12 +220,14 @@ async fn test_mixed_transport_deployment() {
                 services: vec!["service-a".to_string(), "service-b".to_string()],
                 host: None,
                 port: None,
+                endpoint: None,
             },
             Node {
                 name: "remote-services".to_string(),
                 services: vec!["service-c".to_string()],
                 host: Some("127.0.0.1".to_string()),
                 port: Some(0),
+                endpoint: None,
             },
         ],
         socket_dir: dir.path().to_path_buf(),

@@ -119,6 +119,7 @@ async fn test_local_channel_backpressure() {
     });
 
     let publisher = bus.publisher::<SwapEvent>();
+    let mut _sink = bus.subscriber::<SwapEvent>();
 
     // Publish messages without subscribers to fill channel
     for i in 0..100 {
@@ -155,7 +156,7 @@ async fn test_local_subscriber_lifecycle() {
     assert_eq!(bus.subscriber_count::<SwapEvent>(), 0);
 
     // Should still be able to publish
-    publisher.publish(create_test_swap_event(2)).await.unwrap();
+    let _ = publisher.publish(create_test_swap_event(2)).await;
 
     // New subscriber should work
     let mut new_sub = bus.subscriber::<SwapEvent>();

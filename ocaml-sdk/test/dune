@@ -1,0 +1,8 @@
+(tests
+ (names test_codec test_runtime)
+ (libraries alcotest mycelium))
+
+(executable
+ (name ocaml_bridge_echo)
+ (modules ocaml_bridge_echo)
+ (libraries mycelium yojson))

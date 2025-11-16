@@ -13,9 +13,9 @@ use zerocopy::{AsBytes, FromBytes, FromZeroes};
 #[repr(C)]
 struct SensorReading {
     sensor_id: u64,
-    value: i64,        // Raw sensor value (scaled to i64)
+    value: i64, // Raw sensor value (scaled to i64)
     timestamp_ms: u64,
-    quality: u64,      // 0-100 quality indicator (u64 to avoid padding)
+    quality: u64, // 0-100 quality indicator (u64 to avoid padding)
 }
 
 impl_message!(SensorReading, 1, "sensors");
@@ -27,7 +27,7 @@ struct SensorAlert {
     sensor_id: u64,
     threshold_exceeded: i64,
     current_value: i64,
-    severity: u64,     // 1=low, 2=medium, 3=high, 4=critical (u64 to avoid padding)
+    severity: u64, // 1=low, 2=medium, 3=high, 4=critical (u64 to avoid padding)
 }
 
 impl_message!(SensorAlert, 2, "alerts");
@@ -104,11 +104,11 @@ async fn main() {
     println!("🔄 Collecting sensor data...\n");
 
     let sensor_data = vec![
-        (101, 450, 95),   // Normal reading
-        (102, 780, 92),   // Normal reading
-        (101, 1250, 90),  // Exceeds threshold -> alert
-        (103, 520, 88),   // Normal reading
-        (102, 2100, 85),  // Critical threshold -> alert
+        (101, 450, 95),  // Normal reading
+        (102, 780, 92),  // Normal reading
+        (101, 1250, 90), // Exceeds threshold -> alert
+        (103, 520, 88),  // Normal reading
+        (102, 2100, 85), // Critical threshold -> alert
     ];
 
     for (sensor_id, value, quality) in sensor_data {

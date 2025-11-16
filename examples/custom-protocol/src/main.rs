@@ -33,8 +33,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             timestamp: 1234567890,
         };
         codec::write_message(&mut client, &login).await?;
-        println!("  → Sent PlayerLogin (type_id={}, player_id={})",
-            PlayerLogin::TYPE_ID, login.player_id);
+        println!(
+            "  → Sent PlayerLogin (type_id={}, player_id={})",
+            PlayerLogin::TYPE_ID,
+            login.player_id
+        );
 
         // Send PlayerPosition message
         let position = PlayerPosition {
@@ -45,8 +48,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             rotation: 3.14159,
         };
         codec::write_message(&mut client, &position).await?;
-        println!("  → Sent PlayerPosition (type_id={}, pos=[{:.1}, {:.1}, {:.1}])",
-            PlayerPosition::TYPE_ID, position.x, position.y, position.z);
+        println!(
+            "  → Sent PlayerPosition (type_id={}, pos=[{:.1}, {:.1}, {:.1}])",
+            PlayerPosition::TYPE_ID,
+            position.x,
+            position.y,
+            position.z
+        );
 
         // Send GameState message
         let game_state = GameState {
@@ -56,8 +64,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             elapsed_time: 3600,
         };
         codec::write_message(&mut client, &game_state).await?;
-        println!("  → Sent GameState (type_id={}, tick={}, players={})",
-            GameState::TYPE_ID, game_state.tick, game_state.player_count);
+        println!(
+            "  → Sent GameState (type_id={}, tick={}, players={})",
+            GameState::TYPE_ID,
+            game_state.tick,
+            game_state.player_count
+        );
 
         // Send ChatMessage
         let chat = ChatMessage {
@@ -67,8 +79,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             timestamp: 1234567899,
         };
         codec::write_message(&mut client, &chat).await?;
-        println!("  → Sent ChatMessage (type_id={}, sender={})",
-            ChatMessage::TYPE_ID, chat.sender_id);
+        println!(
+            "  → Sent ChatMessage (type_id={}, sender={})",
+            ChatMessage::TYPE_ID,
+            chat.sender_id
+        );
 
         // Send ItemTransaction
         let transaction = ItemTransaction {
@@ -79,8 +94,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             quantity: 10,
         };
         codec::write_message(&mut client, &transaction).await?;
-        println!("  → Sent ItemTransaction (type_id={}, item={}, qty={})",
-            ItemTransaction::TYPE_ID, transaction.item_id, transaction.quantity);
+        println!(
+            "  → Sent ItemTransaction (type_id={}, item={}, qty={})",
+            ItemTransaction::TYPE_ID,
+            transaction.item_id,
+            transaction.quantity
+        );
 
         Ok::<_, Box<dyn std::error::Error + Send + Sync>>(())
     });
@@ -98,8 +117,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             PlayerLogin::TYPE_ID => {
                 let payload = &buffer[mycelium_protocol::codec::HEADER_SIZE..];
                 let msg: PlayerLogin = codec::deserialize_message(payload)?;
-                println!("  ← Received PlayerLogin: player_id={}, token=0x{:X}, timestamp={}",
-                    msg.player_id, msg.session_token, msg.timestamp);
+                println!(
+                    "  ← Received PlayerLogin: player_id={}, token=0x{:X}, timestamp={}",
+                    msg.player_id, msg.session_token, msg.timestamp
+                );
             }
             PlayerPosition::TYPE_ID => {
                 let payload = &buffer[mycelium_protocol::codec::HEADER_SIZE..];
@@ -110,27 +131,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             GameState::TYPE_ID => {
                 let payload = &buffer[mycelium_protocol::codec::HEADER_SIZE..];
                 let msg: GameState = codec::deserialize_message(payload)?;
-                println!("  ← Received GameState: game_id={}, tick={}, players={}, elapsed={}s",
-                    msg.game_id, msg.tick, msg.player_count, msg.elapsed_time);
+                println!(
+                    "  ← Received GameState: game_id={}, tick={}, players={}, elapsed={}s",
+                    msg.game_id, msg.tick, msg.player_count, msg.elapsed_time
+                );
             }
             ChatMessage::TYPE_ID => {
                 let payload = &buffer[mycelium_protocol::codec::HEADER_SIZE..];
                 let msg: ChatMessage = codec::deserialize_message(payload)?;
-                println!("  ← Received ChatMessage: sender={}, channel={}, hash=0x{:X}",
-                    msg.sender_id, msg.channel_id, msg.message_hash);
+                println!(
+                    "  ← Received ChatMessage: sender={}, channel={}, hash=0x{:X}",
+                    msg.sender_id, msg.channel_id, msg.message_hash
+                );
             }
             ItemTransaction::TYPE_ID => {
                 let payload = &buffer[mycelium_protocol::codec::HEADER_SIZE..];
                 let msg: ItemTransaction = codec::deserialize_message(payload)?;
-                println!("  ← Received ItemTransaction: {} → {}, item={}, qty={}",
-                    msg.from_player, msg.to_player, msg.item_id, msg.quantity);
+                println!(
+                    "  ← Received ItemTransaction: {} → {}, item={}, qty={}",
+                    msg.from_player, msg.to_player, msg.item_id, msg.quantity
+                );
             }
             _ => println!("  ← Unknown message type: {}", type_id),
         }
     }
 
     match client_handle.await {
-        Ok(Ok(_)) => {},
+        Ok(Ok(_)) => {}
         Ok(Err(e)) => return Err(format!("Client error: {}", e).into()),
         Err(e) => return Err(format!("Join error: {}", e).into()),
     }

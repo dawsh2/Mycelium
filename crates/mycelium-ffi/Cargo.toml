@@ -1,0 +1,19 @@
+[package]
+name = "mycelium-ffi"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+
+[dependencies]
+mycelium-transport = { path = "../mycelium-transport" }
+mycelium-protocol = { path = "../mycelium-protocol" }
+tokio = { workspace = true }
+once_cell = "1.19"
+tracing = { workspace = true }
+
+[dev-dependencies]
+zerocopy = { workspace = true }

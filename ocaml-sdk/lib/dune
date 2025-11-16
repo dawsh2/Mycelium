@@ -1,0 +1,11 @@
+(library
+ (name mycelium)
+ (public_name mycelium)
+ (libraries ocplib-endian threads.posix)
+ (modules Runtime Codec Transport Messages Native_runtime)
+ (foreign_stubs
+  (language c)
+  (names mycelium_native_stubs))
+ (c_library_flags
+  (-L../../../target/release)
+  (-lmycelium_ffi)))

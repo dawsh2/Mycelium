@@ -11,7 +11,9 @@
 use std::fmt::Debug;
 use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
-pub trait Message: AsBytes + FromBytes + FromZeroes + Send + Sync + Debug + Clone + 'static {
+pub trait Message:
+    AsBytes + FromBytes + FromZeroes + Send + Sync + Debug + Clone + 'static
+{
     /// Unique message type ID (for TLV encoding)
     const TYPE_ID: u16;
 
@@ -52,10 +54,7 @@ mod tests {
 
     #[test]
     fn test_zerocopy_roundtrip() {
-        let original = TestMessage {
-            id: 42,
-            value: 100,
-        };
+        let original = TestMessage { id: 42, value: 100 };
 
         // Serialize with zerocopy (zero-copy)
         let bytes = original.as_bytes();

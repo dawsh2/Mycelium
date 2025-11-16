@@ -1,8 +1,12 @@
 use crate::any::{AnyPublisher, AnySubscriber};
 use crate::bounded::{BoundedPublisher, BoundedSubscriber};
+use crate::bridge::BridgeFrame;
 use crate::config::{EndpointKind, Node, Topology, TransportConfig, TransportType};
 use crate::local::LocalTransport;
-use crate::socket_endpoint::{bind_tcp_endpoint, bind_unix_endpoint, SocketEndpointHandle};
+use crate::raw::RawMessageStream;
+use crate::socket_endpoint::{
+    bind_tcp_endpoint, bind_unix_endpoint, EndpointStats, SocketEndpointHandle,
+};
 use crate::tcp::{TcpPublisher, TcpSubscriber, TcpTransport};
 use crate::unix::{UnixPublisher, UnixSubscriber, UnixTransport};
 use crate::{Publisher, Result, Subscriber, TransportError};
@@ -58,7 +62,37 @@ impl MessageBus {
         &self,
         socket_path: P,
     ) -> Result<SocketEndpointHandle> {
-        bind_unix_endpoint(socket_path.as_ref().to_path_buf(), self.local.clone()).await
+        bind_unix_endpoint(
+            socket_path.as_ref().to_path_buf(),
+            self.local.clone(),
+            None,
+            None,
+        )
+        .await
+    }
+
+    pub async fn bind_unix_endpoint_with_digest<P: AsRef<std::path::Path>>(
+        &self,
+        socket_path: P,
+        schema_digest: [u8; 32],
+    ) -> Result<SocketEndpointHandle> {
+        self.bind_unix_endpoint_with_digest_and_stats(socket_path, schema_digest, None)
+            .await
+    }
+
+    pub(crate) async fn bind_unix_endpoint_with_digest_and_stats<P: AsRef<std::path::Path>>(
+        &self,
+        socket_path: P,
+        schema_digest: [u8; 32],
+        stats: Option<Arc<EndpointStats>>,
+    ) -> Result<SocketEndpointHandle> {
+        bind_unix_endpoint(
+            socket_path.as_ref().to_path_buf(),
+            self.local.clone(),
+            Some(schema_digest),
+            stats,
+        )
+        .await
     }
 
     /// Bind a TCP endpoint (e.g. 127.0.0.1:9091) that mirrors all local bus messages.
@@ -68,7 +102,7 @@ impl MessageBus {
         &self,
         addr: SocketAddr,
     ) -> Result<(SocketEndpointHandle, SocketAddr)> {
-        bind_tcp_endpoint(addr, self.local.clone()).await
+        bind_tcp_endpoint(addr, self.local.clone(), None, None).await
     }
 
     /// Automatically bind socket endpoints based on topology configuration.
@@ -111,7 +145,10 @@ impl MessageBus {
             .iter()
             .find(|n| &n.name == node_name)
             .ok_or_else(|| {
-                TransportError::ServiceNotFound(format!("Node '{}' not found in topology", node_name))
+                TransportError::ServiceNotFound(format!(
+                    "Node '{}' not found in topology",
+                    node_name
+                ))
             })?;
 
         // Check if endpoint is configured
@@ -254,6 +291,21 @@ impl MessageBus {
     /// Subscribers are independent - each gets a copy (via Arc).
     pub fn subscriber<M: Message>(&self) -> Subscriber<M> {
         self.local.subscriber()
+    }
+
+    /// Publish a raw TLV payload (type ID + bytes) into the bus.
+    pub fn publish_raw(&self, type_id: u16, payload: &[u8]) -> Result<()> {
+        let envelope = self.local.build_envelope_from_payload(type_id, payload)?;
+        self.local.dispatch_envelope(envelope.clone())?;
+
+        let frame = BridgeFrame::from_payload(type_id, envelope.topic.clone(), payload);
+        self.local.bridge_fanout().send(frame);
+        Ok(())
+    }
+
+    /// Subscribe to the raw TLV stream emitted by the bus.
+    pub fn subscribe_raw(&self) -> RawMessageStream {
+        RawMessageStream::new(self.local.bridge_fanout().subscribe())
     }
 
     /// Get a publisher for an explicit topic (Phase 1: Actor-ready)

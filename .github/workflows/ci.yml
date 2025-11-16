@@ -38,6 +38,23 @@ jobs:
           path: target
           key: ${{ runner.os }}-target-${{ hashFiles('**/Cargo.lock') }}
 
+      - name: Install OCaml toolchain
+        uses: ocaml/setup-ocaml@v2
+        with:
+          ocaml-compiler: '4.14.1'
+          dune-cache: true
+
+      - name: Install OCaml dependencies
+        run: opam install . --deps-only --with-test
+        working-directory: ocaml-sdk
+
+      - name: Build OCaml SDK & fixture
+        run: |
+          dune build
+          dune test
+          dune build test/ocaml_bridge_echo.exe
+        working-directory: ocaml-sdk
+
       - name: Run tests
         run: cargo test --workspace --all-features
 
@@ -128,10 +145,65 @@ jobs:
       - name: Build all targets
         run: cargo build --workspace --all-features --release
 
+  python-native:
+    name: Python Native Adapter
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential zlib1g-dev libssl-dev \
+            libreadline-dev libbz2-dev libsqlite3-dev libncurses5-dev \
+            libffi-dev liblzma-dev tk-dev xz-utils curl
+
+      - name: Set up pyenv
+        uses: pyenv/actions@v2
+        with:
+          python-version: 3.11.10
+
+      - name: Configure PyO3 environment
+        run: |
+          PYENV_PY="$(pyenv root)/versions/3.11.10"
+          echo "PYENV_PY=$PYENV_PY" >> $GITHUB_ENV
+          echo "PYO3_PYTHON=$PYENV_PY/bin/python3.11" >> $GITHUB_ENV
+          echo "RUSTFLAGS=-C link-arg=-L$PYENV_PY/lib -C link-arg=-lpython3.11 -C link-arg=-ldl -C link-arg=-lm -C link-arg=-lpthread -C link-arg=-lutil -C link-arg=-Wl,-rpath,$PYENV_PY/lib" >> $GITHUB_ENV
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-py-native-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v3
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-py-native-cargo-git-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Install maturin
+        run: pyenv exec python -m pip install maturin
+
+      - name: Run python native tests
+        run: cargo test -p mycelium-python-native
+
+      - name: Build Python wheel
+        run: pyenv exec maturin build --release --out target/wheels
+
+      - name: Upload wheel artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: python-native-wheel
+          path: target/wheels/*.whl
+
   # Summary job that depends on all others
   ci-success:
     name: CI Success
-    needs: [test, fmt, clippy, duplication, build]
+    needs: [test, fmt, clippy, duplication, build, python-native]
     runs-on: ubuntu-latest
     steps:
       - name: Mark CI as successful

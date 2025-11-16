@@ -3,8 +3,9 @@
 //! This provides basic metrics collection without external dependencies.
 //! In production, these could be exported to Prometheus, StatsD, etc.
 
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 
 /// Metrics collected for a service
 #[derive(Clone)]
@@ -24,6 +25,9 @@ struct ServiceMetricsInner {
 
     /// Number of service restarts
     restarts_total: AtomicU64,
+
+    /// Custom per-service counter metrics
+    custom_counters: Mutex<HashMap<&'static str, u64>>,
 }
 
 impl ServiceMetrics {
@@ -35,6 +39,7 @@ impl ServiceMetrics {
                 emit_latency_us_total: AtomicU64::new(0),
                 errors_total: AtomicU64::new(0),
                 restarts_total: AtomicU64::new(0),
+                custom_counters: Mutex::new(HashMap::new()),
             }),
         }
     }
@@ -82,14 +87,51 @@ impl ServiceMetrics {
         self.inner.restarts_total.load(Ordering::Relaxed)
     }
 
+    /// Increment a custom counter for the service
+    pub fn incr_counter(&self, name: &'static str, delta: u64) {
+        if delta == 0 {
+            return;
+        }
+        let mut counters = self
+            .inner
+            .custom_counters
+            .lock()
+            .expect("custom counters lock");
+        *counters.entry(name).or_insert(0) += delta;
+    }
+
+    /// Fetch the current value of a custom counter, if present
+    pub fn counter(&self, name: &'static str) -> Option<u64> {
+        let counters = self
+            .inner
+            .custom_counters
+            .lock()
+            .expect("custom counters lock");
+        counters.get(name).copied()
+    }
+
+    fn custom_counters_snapshot(&self) -> Vec<(String, u64)> {
+        let counters = self
+            .inner
+            .custom_counters
+            .lock()
+            .expect("custom counters lock");
+        counters
+            .iter()
+            .map(|(k, v)| ((*k).to_string(), *v))
+            .collect()
+    }
+
     /// Print metrics summary
     pub fn print_summary(&self, service_name: &str) {
+        let custom_counters = self.custom_counters_snapshot();
         tracing::info!(
             service = service_name,
             emits_total = self.emits_total(),
             emit_latency_us_avg = self.emit_latency_us_avg(),
             errors_total = self.errors_total(),
             restarts_total = self.restarts_total(),
+            custom_counters = ?custom_counters,
             "Service metrics summary"
         );
     }
