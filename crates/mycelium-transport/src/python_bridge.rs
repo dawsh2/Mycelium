@@ -9,6 +9,7 @@ use tokio::process::{Child, Command};
 use crate::bus::MessageBus;
 use crate::socket_endpoint::SocketEndpointHandle;
 use crate::{service, ServiceContext};
+use mycelium_protocol::SCHEMA_DIGEST;
 
 /// Configuration for launching Python workers (optional).
 #[derive(Debug, Clone)]
@@ -34,6 +35,7 @@ impl Default for PythonChildConfig {
 #[derive(Debug, Clone)]
 pub struct PythonBridgeConfig {
     pub socket_path: PathBuf,
+    pub schema_digest: [u8; 32],
     pub child: Option<PythonChildConfig>,
 }
 
@@ -41,6 +43,7 @@ impl PythonBridgeConfig {
     pub fn new<P: AsRef<Path>>(socket_path: P) -> Self {
         Self {
             socket_path: socket_path.as_ref().to_path_buf(),
+            schema_digest: SCHEMA_DIGEST,
             child: None,
         }
     }
@@ -69,6 +72,10 @@ impl PythonBridgeService {
         let mut cmd = Command::new(&cfg.program);
         cmd.args(&cfg.args);
         cmd.env("MYCELIUM_SOCKET", &self.config.socket_path);
+        cmd.env(
+            "MYCELIUM_SCHEMA_DIGEST",
+            hex_digest(&self.config.schema_digest),
+        );
         for (k, v) in &cfg.env {
             cmd.env(k, v);
         }
@@ -104,7 +111,10 @@ impl PythonBridgeService {
             "Binding Python bridge socket at {}",
             self.config.socket_path.display()
         ));
-        let handle = self.bus.bind_unix_endpoint(&self.config.socket_path).await?;
+        let handle = self
+            .bus
+            .bind_unix_endpoint_with_digest(&self.config.socket_path, self.config.schema_digest)
+            .await?;
         self.handle = Some(handle);
 
         if let Some(child_cfg) = self.config.child.clone() {
@@ -137,4 +147,12 @@ where
     while let Ok(Some(line)) = lines.next_line().await {
         tracing::info!(bridge = label, "{}", line);
     }
+}
+
+fn hex_digest(bytes: &[u8; 32]) -> String {
+    let mut out = String::with_capacity(64);
+    for b in bytes {
+        out.push_str(&format!("{:02x}", b));
+    }
+    out
 }

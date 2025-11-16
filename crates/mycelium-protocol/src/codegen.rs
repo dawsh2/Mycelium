@@ -5,6 +5,7 @@
 //! This module is used internally by build.rs to generate message types at compile time.
 
 use serde::Deserialize;
+use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -69,12 +70,13 @@ fn generate_from_yaml_with_imports<P: AsRef<Path>>(
     // Read and parse YAML
     let yaml_content = fs::read_to_string(yaml_path.as_ref())?;
     let contracts: Contracts = serde_yaml::from_str(&yaml_content)?;
+    let digest = Sha256::digest(yaml_content.as_bytes());
 
     // Validate tag ranges
     validate_tag_ranges(&contracts)?;
 
     // Generate code
-    let generated_code = generate_messages(&contracts, use_external_imports);
+    let generated_code = generate_messages(&contracts, use_external_imports, &digest);
 
     // Write output
     fs::write(output_path.as_ref(), generated_code)?;
@@ -90,10 +92,11 @@ pub fn generate_python_from_yaml<P: AsRef<Path>>(
 ) -> Result<(), CodegenError> {
     let yaml_content = fs::read_to_string(yaml_path.as_ref())?;
     let contracts: Contracts = serde_yaml::from_str(&yaml_content)?;
+    let digest = Sha256::digest(yaml_content.as_bytes());
 
     validate_tag_ranges(&contracts)?;
 
-    let python_module = generate_python_module(&contracts);
+    let python_module = generate_python_module(&contracts, &digest);
     fs::write(output_path.as_ref(), python_module)?;
 
     Ok(())
@@ -120,6 +123,8 @@ struct SchemaConfig {
     #[serde(default)]
     #[allow(dead_code)]
     min_compatible: Option<u16>,
+    #[serde(default)]
+    digest_algo: Option<String>,
 }
 
 /// Tag ranges for preventing conflicts
@@ -282,7 +287,7 @@ struct FieldContract {
     validation: Vec<HashMap<String, serde_yaml::Value>>,
 }
 
-fn generate_messages(contracts: &Contracts, use_external_imports: bool) -> String {
+fn generate_messages(contracts: &Contracts, use_external_imports: bool, digest: &[u8]) -> String {
     let mut code = String::new();
 
     // Add header
@@ -302,6 +307,16 @@ fn generate_messages(contracts: &Contracts, use_external_imports: bool) -> Strin
         code.push_str("use crate::Message;\n\n");
     }
     code.push_str("pub use primitive_types::U256;\n\n");
+
+    // Schema digest const for runtime handshake
+    code.push_str("pub const SCHEMA_DIGEST: [u8; 32] = [");
+    for (idx, byte) in digest.iter().enumerate() {
+        if idx % 8 == 0 {
+            code.push_str("\n    ");
+        }
+        code.push_str(&format!("0x{:02X}, ", byte));
+    }
+    code.push_str("\n];\n\n");
 
     // Generate validation error enum
     code.push_str(&generate_validation_error(contracts));
@@ -758,7 +773,7 @@ struct PythonFieldSpec {
     field_expr: String,
 }
 
-fn generate_python_module(contracts: &Contracts) -> String {
+fn generate_python_module(contracts: &Contracts, digest: &[u8]) -> String {
     let mut code = String::new();
 
     code.push_str("\"\"\"AUTO-GENERATED from contracts.yaml - DO NOT EDIT\n");
@@ -779,6 +794,12 @@ fn generate_python_module(contracts: &Contracts) -> String {
 
     let mut sorted: Vec<_> = contracts.messages.iter().collect();
     sorted.sort_by_key(|(name, _)| *name);
+
+    let digest_hex: String = digest.iter().map(|b| format!("{:02x}", b)).collect();
+    code.push_str(&format!(
+        "SCHEMA_DIGEST = bytes.fromhex(\"{}\")\n\n",
+        digest_hex
+    ));
 
     code.push_str("__all__ = [");
     for (idx, (name, _)) in sorted.iter().enumerate() {
@@ -802,8 +823,14 @@ fn generate_python_class(code: &mut String, name: &str, contract: &MessageContra
 
     code.push_str("@dataclass\n");
     code.push_str(&format!("class {}:\n", name));
-    code.push_str(&format!("    \"\"\"{} (domain: {})\"\"\"\n\n", contract.description, contract.domain));
-    code.push_str(&format!("    TYPE_ID: ClassVar[int] = {}\n", contract.tlv_type));
+    code.push_str(&format!(
+        "    \"\"\"{} (domain: {})\"\"\"\n\n",
+        contract.description, contract.domain
+    ));
+    code.push_str(&format!(
+        "    TYPE_ID: ClassVar[int] = {}\n",
+        contract.tlv_type
+    ));
     code.push_str(&format!("    TOPIC: ClassVar[str] = \"{}\"\n", topic));
     code.push_str("    __definition__: ClassVar[MessageDef]\n\n");
 

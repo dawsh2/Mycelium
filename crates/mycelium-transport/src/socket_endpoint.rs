@@ -48,6 +48,7 @@ impl Drop for SocketEndpointHandle {
 pub(crate) async fn bind_unix_endpoint(
     socket_path: PathBuf,
     local: LocalTransport,
+    schema_digest: Option<[u8; 32]>,
 ) -> Result<SocketEndpointHandle> {
     if let Some(parent) = socket_path.parent() {
         tokio::fs::create_dir_all(parent).await?;
@@ -56,7 +57,7 @@ pub(crate) async fn bind_unix_endpoint(
 
     let listener = UnixListener::bind(&socket_path)?;
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
-    let bridge = BridgeContext::new(local);
+    let bridge = BridgeContext::new(local, schema_digest);
 
     let join = tokio::spawn(run_unix_listener(
         listener,
@@ -74,11 +75,12 @@ pub(crate) async fn bind_unix_endpoint(
 pub(crate) async fn bind_tcp_endpoint(
     addr: SocketAddr,
     local: LocalTransport,
+    schema_digest: Option<[u8; 32]>,
 ) -> Result<(SocketEndpointHandle, SocketAddr)> {
     let listener = TcpListener::bind(addr).await?;
     let listen_addr = listener.local_addr()?;
     let (shutdown_tx, shutdown_rx) = watch::channel(false);
-    let bridge = BridgeContext::new(local);
+    let bridge = BridgeContext::new(local, schema_digest);
 
     let join = tokio::spawn(run_tcp_listener(listener, bridge, shutdown_rx));
 
@@ -101,7 +103,11 @@ async fn run_unix_listener(
         tokio::select! {
             _ = shutdown.changed() => break,
             accept_res = listener.accept() => match accept_res {
-                Ok((stream, _addr)) => {
+                Ok((mut stream, _addr)) => {
+                    if let Err(err) = bridge.verify_handshake(&mut stream).await {
+                        tracing::warn!("Unix bridge handshake failed: {}", err);
+                        continue;
+                    }
                     spawn_stream_pump_unix(stream, bridge.clone(), shutdown.clone());
                 }
                 Err(err) => {
@@ -124,8 +130,12 @@ async fn run_tcp_listener(
         tokio::select! {
             _ = shutdown.changed() => break,
             accept_res = listener.accept() => match accept_res {
-                Ok((stream, addr)) => {
+                Ok((mut stream, addr)) => {
                     tracing::debug!("Accepted TCP bridge client: {}", addr);
+                    if let Err(err) = bridge.verify_handshake(&mut stream).await {
+                        tracing::warn!("TCP bridge handshake failed: {}", err);
+                        continue;
+                    }
                     spawn_stream_pump_tcp(stream, bridge.clone(), shutdown.clone());
                 }
                 Err(err) => {
@@ -219,12 +229,17 @@ fn spawn_reader<R>(
 struct BridgeContext {
     local: LocalTransport,
     fanout: BridgeFanout,
+    schema_digest: Option<[u8; 32]>,
 }
 
 impl BridgeContext {
-    fn new(local: LocalTransport) -> Self {
+    fn new(local: LocalTransport, schema_digest: Option<[u8; 32]>) -> Self {
         let fanout = local.bridge_fanout();
-        Self { local, fanout }
+        Self {
+            local,
+            fanout,
+            schema_digest,
+        }
     }
 
     async fn handle_incoming(&self, type_id: u16, bytes: Vec<u8>) {
@@ -257,5 +272,34 @@ impl BridgeContext {
                 );
             }
         }
+    }
+
+    async fn verify_handshake<S>(&self, stream: &mut S) -> Result<(), TransportError>
+    where
+        S: AsyncReadExt + Unpin,
+    {
+        let Some(expected) = self.schema_digest else {
+            return Ok(());
+        };
+
+        let mut len_buf = [0u8; 2];
+        stream.read_exact(&mut len_buf).await?;
+        let len = u16::from_le_bytes(len_buf) as usize;
+        if len != expected.len() {
+            return Err(TransportError::HandshakeFailed(format!(
+                "expected digest length {}, got {}",
+                expected.len(),
+                len
+            )));
+        }
+
+        let mut received = vec![0u8; len];
+        stream.read_exact(&mut received).await?;
+        if received.as_slice() != expected {
+            return Err(TransportError::HandshakeFailed(
+                "schema digest mismatch".to_string(),
+            ));
+        }
+        Ok(())
     }
 }

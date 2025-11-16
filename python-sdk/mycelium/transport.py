@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import queue
 import socket
+import struct
 import threading
-from typing import Dict, List, Optional, Type
+from typing import Dict, List, Optional, Tuple, Type
 
 from mycelium.protocol.runtime import get_message_definition
 
@@ -84,27 +85,37 @@ class _SocketTransport:
 
 
 class UnixTransport(_SocketTransport):
-    def __init__(self, path: str) -> None:
+    def __init__(self, path: str, schema_digest: bytes) -> None:
         super().__init__()
         self._path = path
+        self._schema_digest = schema_digest
 
     def connect(self) -> None:
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         sock.connect(self._path)
+        _send_handshake(sock, self._schema_digest)
         self._socket = sock
         self._ensure_reader()
 
 
 class TcpTransport(_SocketTransport):
-    def __init__(self, host: str, port: int) -> None:
+    def __init__(self, host: str, port: int, schema_digest: bytes) -> None:
         super().__init__()
         self._host = host
         self._port = port
+        self._schema_digest = schema_digest
 
     def connect(self) -> None:
         sock = socket.create_connection((self._host, self._port))
+        _send_handshake(sock, self._schema_digest)
         self._socket = sock
         self._ensure_reader()
+
+
+def _send_handshake(sock: socket.socket, digest: bytes) -> None:
+    packet = struct.pack("<H", len(digest)) + digest
+    sock.sendall(packet)
+
 
 
 __all__ = ["UnixTransport", "TcpTransport", "TransportError"]

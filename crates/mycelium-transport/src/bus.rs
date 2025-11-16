@@ -58,7 +58,20 @@ impl MessageBus {
         &self,
         socket_path: P,
     ) -> Result<SocketEndpointHandle> {
-        bind_unix_endpoint(socket_path.as_ref().to_path_buf(), self.local.clone()).await
+        bind_unix_endpoint(socket_path.as_ref().to_path_buf(), self.local.clone(), None).await
+    }
+
+    pub async fn bind_unix_endpoint_with_digest<P: AsRef<std::path::Path>>(
+        &self,
+        socket_path: P,
+        schema_digest: [u8; 32],
+    ) -> Result<SocketEndpointHandle> {
+        bind_unix_endpoint(
+            socket_path.as_ref().to_path_buf(),
+            self.local.clone(),
+            Some(schema_digest),
+        )
+        .await
     }
 
     /// Bind a TCP endpoint (e.g. 127.0.0.1:9091) that mirrors all local bus messages.
@@ -68,7 +81,7 @@ impl MessageBus {
         &self,
         addr: SocketAddr,
     ) -> Result<(SocketEndpointHandle, SocketAddr)> {
-        bind_tcp_endpoint(addr, self.local.clone()).await
+        bind_tcp_endpoint(addr, self.local.clone(), None).await
     }
 
     /// Automatically bind socket endpoints based on topology configuration.
@@ -111,7 +124,10 @@ impl MessageBus {
             .iter()
             .find(|n| &n.name == node_name)
             .ok_or_else(|| {
-                TransportError::ServiceNotFound(format!("Node '{}' not found in topology", node_name))
+                TransportError::ServiceNotFound(format!(
+                    "Node '{}' not found in topology",
+                    node_name
+                ))
             })?;
 
         // Check if endpoint is configured

@@ -30,8 +30,9 @@ pub use schema_compat::{
 // Export generated types as the primary API
 pub use generated::{
     // Example message types from contracts.yaml
-    TextMessage,
-    CounterUpdate,
     BatchOperation,
+    CounterUpdate,
+    TextMessage,
     ValidationError,
+    SCHEMA_DIGEST,
 };

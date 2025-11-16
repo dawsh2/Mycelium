@@ -34,6 +34,9 @@ pub enum TransportError {
 
     #[error("Codec error: {0}")]
     Codec(#[from] crate::codec::CodecError),
+
+    #[error("Handshake failed: {0}")]
+    HandshakeFailed(String),
 }
 
 pub type Result<T> = std::result::Result<T, TransportError>;

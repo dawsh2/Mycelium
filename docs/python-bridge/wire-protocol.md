@@ -52,14 +52,25 @@ Message: `TradeTick { price: 101_500u64, size: 2_500u64 }`, TYPE_ID = 1200.
 000E: C4 09 00 00 00 00 00 00   # size  (u64 LE)
 ```
 
-## Handshake (Future Work)
+## Handshake
 
-- Python SDK and bridge will exchange a schema digest and protocol version upon
-  connection. Until implemented, clients must ensure they are generated from
-  the exact same `contracts.yaml` as the server.
+Before streaming TLV frames, clients send a schema digest so the bridge can
+reject mismatched schemas:
+
+```
+┌────────────┬──────────────┐
+│ Digest Len │ Digest Bytes │
+│ 2 bytes LE │ N bytes      │
+└────────────┴──────────────┘
+```
+
+- Digest is the SHA-256 of `contracts.yaml` (exposed as `SCHEMA_DIGEST` in both
+  Rust and Python bindings).
+- Bridges compare the provided digest with their expected value and drop the
+  connection on mismatch.
+- After a successful handshake, standard TLV frames flow as usual.
 
 ## References
 
 - `crates/mycelium-transport/src/codec.rs`
 - `docs/implementation/PYTHON_BRIDGE_PLAN.md`
-
