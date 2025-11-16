@@ -3,6 +3,7 @@ members = [
     "crates/mycelium-protocol",
     "crates/mycelium-transport",
     "crates/mycelium-macro",
+    "crates/mycelium-codegen",
     "examples/custom-protocol",
 ]
 exclude = [
