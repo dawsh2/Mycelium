@@ -1,3 +1,5 @@
+extern crate self as mycelium_transport;
+
 pub mod actor;
 pub mod any;
 pub mod bounded;
@@ -12,6 +14,7 @@ pub mod local;
 pub mod ordered;
 pub mod publisher;
 pub mod qos;
+pub mod python_bridge;
 pub mod service;
 pub mod service_context;
 pub mod service_metrics;
@@ -47,6 +50,7 @@ pub use local::LocalTransport;
 pub use ordered::{OrderedSubscriber, OrderingStats};
 pub use publisher::Publisher;
 pub use qos::{DropPolicy, MailboxMetrics, SpawnOptions};
+pub use python_bridge::{PythonBridgeConfig, PythonBridgeService, PythonChildConfig};
 pub use service::{DegradedReason, HealthStatus, ManagedService, ServiceRunner, UnhealthyReason};
 pub use service_context::ServiceContext;
 pub use service_metrics::ServiceMetrics;
