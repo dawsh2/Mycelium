@@ -58,4 +58,17 @@ impl BridgeFrame {
             bytes: Arc::new(buffer),
         }
     }
+
+    pub(crate) fn from_payload(type_id: u16, topic: Arc<str>, payload: &[u8]) -> Self {
+        let mut buffer = Vec::with_capacity(HEADER_SIZE + payload.len());
+        buffer.extend_from_slice(&type_id.to_le_bytes());
+        buffer.extend_from_slice(&(payload.len() as u32).to_le_bytes());
+        buffer.extend_from_slice(payload);
+
+        Self {
+            type_id,
+            topic,
+            bytes: Arc::new(buffer),
+        }
+    }
 }

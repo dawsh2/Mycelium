@@ -1,5 +1,6 @@
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
+use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
@@ -7,7 +8,7 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::{Child, Command};
 
 use crate::bus::MessageBus;
-use crate::socket_endpoint::SocketEndpointHandle;
+use crate::socket_endpoint::{EndpointStats, SocketEndpointHandle};
 use crate::{service, ServiceContext};
 use mycelium_protocol::SCHEMA_DIGEST;
 
@@ -56,6 +57,7 @@ pub struct PythonBridgeService {
     config: PythonBridgeConfig,
     handle: Option<SocketEndpointHandle>,
     child: Option<Child>,
+    stats: Arc<EndpointStats>,
 }
 
 impl PythonBridgeService {
@@ -65,6 +67,7 @@ impl PythonBridgeService {
             config,
             handle: None,
             child: None,
+            stats: Arc::new(EndpointStats::default()),
         }
     }
 
@@ -107,13 +110,18 @@ impl PythonBridgeService {
 #[service]
 impl PythonBridgeService {
     async fn run(&mut self, ctx: &ServiceContext) -> Result<()> {
+        self.stats.attach_metrics(ctx.metrics().clone());
         ctx.info(&format!(
             "Binding Python bridge socket at {}",
             self.config.socket_path.display()
         ));
         let handle = self
             .bus
-            .bind_unix_endpoint_with_digest(&self.config.socket_path, self.config.schema_digest)
+            .bind_unix_endpoint_with_digest_and_stats(
+                &self.config.socket_path,
+                self.config.schema_digest,
+                Some(self.stats.clone()),
+            )
             .await?;
         self.handle = Some(handle);
 
@@ -122,7 +130,8 @@ impl PythonBridgeService {
         }
 
         while !ctx.is_shutting_down() {
-            ctx.sleep(Duration::from_secs(1)).await;
+            ctx.sleep(Duration::from_secs(5)).await;
+            self.log_stats();
         }
 
         Ok(())
@@ -135,6 +144,7 @@ impl PythonBridgeService {
         if let Some(handle) = self.handle.take() {
             handle.shutdown().await?;
         }
+        self.log_stats();
         Ok(())
     }
 }
@@ -155,4 +165,16 @@ fn hex_digest(bytes: &[u8; 32]) -> String {
         out.push_str(&format!("{:02x}", b));
     }
     out
+}
+
+impl PythonBridgeService {
+    fn log_stats(&self) {
+        let (connections, failures, frames) = self.stats.snapshot();
+        tracing::info!(
+            connections,
+            handshake_failures = failures,
+            frames_forwarded = frames,
+            "python bridge stats"
+        );
+    }
 }

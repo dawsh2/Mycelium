@@ -1,4 +1,4 @@
-use mycelium_protocol::{ArbitrageSignal, PoolStateUpdate};
+use mycelium_protocol::{impl_message, Message};
 /// Example demonstrating the three new mycelium features:
 /// 1. ManagedService - Service lifecycle management
 /// 2. BoundedPublisher - Backpressure and flow control
@@ -14,6 +14,7 @@ use mycelium_transport::{
     OrderedSubscriber,
 };
 use std::sync::Arc;
+use zerocopy::{AsBytes, FromBytes, FromZeroes};
 
 /// Example handler that processes pool state updates
 ///
@@ -86,22 +87,17 @@ impl PoolMonitorHandler {
         self.update_count += 1;
 
         println!(
-            "📊 Processing update #{}: Pool {:02x}{:02x}...{:02x}",
-            self.update_count,
-            update.pool_address[0],
-            update.pool_address[1],
-            update.pool_address[19]
+            "📊 Processing update #{}: Pool {}",
+            self.update_count, update.pool_id
         );
 
         // Example: Detect arbitrage opportunity (simplified)
         if self.update_count % 100 == 0 {
-            use primitive_types::U256;
-
             let signal = ArbitrageSignal {
                 opportunity_id: self.update_count,
-                path: vec![update.pool_address, Default::default()],
+                pool_id: update.pool_id,
                 estimated_profit_usd: 150.0,
-                gas_estimate_wei: U256::from(21000),
+                gas_estimate_wei: 21_000,
                 deadline_block: update.block_number + 5,
             };
 
@@ -116,7 +112,7 @@ impl PoolMonitorHandler {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     println!("\n=== Mycelium: ManagedService, BoundedPublisher & OrderedSubscriber Demo ===\n");
 
     // Create message bus
@@ -184,21 +180,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let publisher = bus.publisher::<PoolStateUpdate>();
 
     for i in 0..150 {
-        use primitive_types::U256;
-
-        let mut pool_addr = [0u8; 20];
-        pool_addr[0] = 0x12;
-        pool_addr[1] = 0x34;
-        pool_addr[19] = i as u8;
-
         let update = PoolStateUpdate {
-            pool_address: pool_addr,
+            pool_id: i as u64,
             venue_id: 1, // Uniswap V2
-            reserve0: Some(U256::from(1000000)),
-            reserve1: Some(U256::from(2000000)),
-            liquidity: None,
-            sqrt_price_x96: None,
-            tick: None,
+            reserve0: 1_000_000 + i as u64,
+            reserve1: 2_000_000 - i as u64,
             block_number: 1000 + i as u64,
         };
 
@@ -227,3 +213,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     Ok(())
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+#[repr(C)]
+struct PoolStateUpdate {
+    pool_id: u64,
+    venue_id: u64,
+    reserve0: u64,
+    reserve1: u64,
+    block_number: u64,
+}
+
+impl_message!(PoolStateUpdate, 6001, "pool-state");
+
+#[derive(Debug, Clone, Copy, PartialEq, AsBytes, FromBytes, FromZeroes)]
+#[repr(C)]
+struct ArbitrageSignal {
+    opportunity_id: u64,
+    pool_id: u64,
+    estimated_profit_usd: f64,
+    gas_estimate_wei: u64,
+    deadline_block: u64,
+}
+
+impl_message!(ArbitrageSignal, 6002, "arbitrage-signals");

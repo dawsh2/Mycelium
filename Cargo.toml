@@ -5,6 +5,8 @@ members = [
     "crates/mycelium-macro",
     "crates/mycelium-codegen",
     "examples/custom-protocol",
+    "crates/mycelium-ffi",
+    "crates/mycelium-python-native",
 ]
 exclude = [
     "scripts",
@@ -34,6 +36,8 @@ tracing-subscriber = { workspace = true }
 [dev-dependencies]
 tempfile = "3.8"
 criterion = { version = "0.5", features = ["async_tokio"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
 
 [[bench]]
 name = "emit_latency"

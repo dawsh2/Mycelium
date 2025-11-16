@@ -13,9 +13,9 @@ use zerocopy::{AsBytes, FromBytes, FromZeroes};
 #[repr(C)]
 struct PlayerAction {
     player_id: u64,
-    action_type: u64,  // 1=move, 2=attack, 3=use_item (u64 to avoid padding)
-    target_x: i64,     // i64 to avoid padding
-    target_y: i64,     // i64 to avoid padding
+    action_type: u64, // 1=move, 2=attack, 3=use_item (u64 to avoid padding)
+    target_x: i64,    // i64 to avoid padding
+    target_y: i64,    // i64 to avoid padding
     timestamp_ms: u64,
 }
 
@@ -26,9 +26,9 @@ impl_message!(PlayerAction, 10, "game.actions");
 #[repr(C)]
 struct StateUpdate {
     player_id: u64,
-    position_x: i64,   // i64 to avoid padding
-    position_y: i64,   // i64 to avoid padding
-    health: u64,       // u64 to avoid padding
+    position_x: i64, // i64 to avoid padding
+    position_y: i64, // i64 to avoid padding
+    health: u64,     // u64 to avoid padding
     tick: u64,
 }
 
@@ -39,7 +39,7 @@ impl_message!(StateUpdate, 11, "game.state");
 #[repr(C)]
 struct ChatMessage {
     player_id: u64,
-    message_len: u64,  // u64 to avoid padding
+    message_len: u64, // u64 to avoid padding
     message_id: u64,
 }
 
@@ -52,8 +52,10 @@ async fn main() {
     let bus = MessageBus::new();
 
     // Player action channel (with backpressure to prevent spam)
-    let (action_pub, mut action_recv): (BoundedPublisher<PlayerAction>, BoundedSubscriber<PlayerAction>) =
-        bus.bounded_pair(100);
+    let (action_pub, mut action_recv): (
+        BoundedPublisher<PlayerAction>,
+        BoundedSubscriber<PlayerAction>,
+    ) = bus.bounded_pair(100);
 
     // State updates (broadcast to all clients)
     let state_pub = bus.publisher::<StateUpdate>();
@@ -123,7 +125,10 @@ async fn main() {
     // Chat listener
     tokio::spawn(async move {
         while let Some(msg) = chat_sub.recv().await {
-            println!("💬 [Chat] Player {} sent message #{}", msg.player_id, msg.message_id);
+            println!(
+                "💬 [Chat] Player {} sent message #{}",
+                msg.player_id, msg.message_id
+            );
         }
     });
 

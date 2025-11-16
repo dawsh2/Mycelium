@@ -1,0 +1,100 @@
+(lang dune 3.20)
+(name mycelium)
+(version 0.1.0)
+(sections (lib .) (libexec .) (doc ../../doc/mycelium) (stublibs ../stublibs))
+(files
+ (lib
+  (META
+   codec.ml
+   codec.mli
+   dune-package
+   libmycelium_stubs.a
+   messages.ml
+   mycelium.a
+   mycelium.cma
+   mycelium.cmi
+   mycelium.cmt
+   mycelium.cmx
+   mycelium.cmxa
+   mycelium.ml
+   mycelium__Codec.cmi
+   mycelium__Codec.cmt
+   mycelium__Codec.cmti
+   mycelium__Codec.cmx
+   mycelium__Messages.cmi
+   mycelium__Messages.cmt
+   mycelium__Messages.cmx
+   mycelium__Native_runtime.cmi
+   mycelium__Native_runtime.cmt
+   mycelium__Native_runtime.cmti
+   mycelium__Native_runtime.cmx
+   mycelium__Runtime.cmi
+   mycelium__Runtime.cmt
+   mycelium__Runtime.cmti
+   mycelium__Runtime.cmx
+   mycelium__Transport.cmi
+   mycelium__Transport.cmt
+   mycelium__Transport.cmti
+   mycelium__Transport.cmx
+   native_runtime.ml
+   native_runtime.mli
+   opam
+   runtime.ml
+   runtime.mli
+   transport.ml
+   transport.mli))
+ (libexec (mycelium.cmxs))
+ (doc (README.md))
+ (stublibs (dllmycelium_stubs.so)))
+(library
+ (name mycelium)
+ (kind normal)
+ (archives (byte mycelium.cma) (native mycelium.cmxa))
+ (plugins (byte mycelium.cma) (native mycelium.cmxs))
+ (foreign_objects mycelium_native_stubs.o)
+ (foreign_archives (archives (for all) (files libmycelium_stubs.a)))
+ (foreign_dll_files ../stublibs/dllmycelium_stubs.so)
+ (native_archives mycelium.a)
+ (requires ocplib-endian threads.posix)
+ (main_module_name Mycelium)
+ (modes byte native)
+ (modules
+  (wrapped
+   (group
+    (alias
+     (obj_name mycelium)
+     (visibility public)
+     (kind alias)
+     (source (path Mycelium) (impl (path mycelium.ml-gen))))
+    (name Mycelium)
+    (modules
+     (module
+      (obj_name mycelium__Codec)
+      (visibility public)
+      (source (path Codec) (intf (path codec.mli)) (impl (path codec.ml))))
+     (module
+      (obj_name mycelium__Messages)
+      (visibility public)
+      (source (path Messages) (impl (path messages.ml))))
+     (module
+      (obj_name mycelium__Native_runtime)
+      (visibility public)
+      (source
+       (path Native_runtime)
+       (intf (path native_runtime.mli))
+       (impl (path native_runtime.ml))))
+     (module
+      (obj_name mycelium__Runtime)
+      (visibility public)
+      (source
+       (path Runtime)
+       (intf (path runtime.mli))
+       (impl (path runtime.ml))))
+     (module
+      (obj_name mycelium__Transport)
+      (visibility public)
+      (source
+       (path Transport)
+       (intf (path transport.mli))
+       (impl (path transport.ml))))))
+   (wrapped true))))

@@ -1,0 +1,28 @@
+[build-system]
+requires = ["maturin>=1.6,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "mycelium-native"
+version = "0.1.0"
+description = "Native (in-process) runtime bindings for the Mycelium bus"
+requires-python = ">=3.9"
+authors = [{ name = "Mycelium Developers" }]
+readme = "../../docs/native-host/USAGE.md"
+license = { text = "MIT OR Apache-2.0" }
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Rust",
+]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.maturin]
+bindings = "pyo3"
+strip = true

@@ -1,0 +1,19 @@
+[package]
+name = "mycelium-python-native"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lib]
+name = "mycelium_native"
+crate-type = ["cdylib"]
+
+[dependencies]
+mycelium-ffi = { path = "../mycelium-ffi" }
+mycelium-protocol = { path = "../mycelium-protocol" }
+pyo3 = { version = "0.21", features = ["extension-module", "abi3-py39"] }
+tracing = { workspace = true }
+
+[dev-dependencies]
+pyo3 = { version = "0.21", features = ["auto-initialize"] }

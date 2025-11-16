@@ -4,15 +4,30 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "mycelium-sdk"
-version = "0.0.1"
+version = "0.1.0"
 description = "Python client SDK for the Mycelium message bus"
 readme = "README.md"
 requires-python = ">=3.9"
-license = { text = "Apache-2.0" }
+license = "Apache-2.0"
 authors = [{ name = "Mycelium Developers" }]
 dependencies = [
     "typing-extensions>=4.0",
 ]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Software Development :: Libraries",
+]
+keywords = ["messaging", "trading", "tlv", "sdk"]
+
+[project.urls]
+Homepage = "https://github.com/dawsh2/Mycelium"
+Documentation = "https://github.com/dawsh2/Mycelium/tree/feature/python-bridge/docs/python-bridge"
 
 [project.optional-dependencies]
 dev = ["pytest", "pytest-asyncio"]

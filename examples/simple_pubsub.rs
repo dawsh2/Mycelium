@@ -38,7 +38,10 @@ async fn main() {
     let mut subscriber2 = bus.subscriber::<DataEvent>();
 
     println!("Created 1 publisher and 2 subscribers");
-    println!("Subscriber count: {}\n", bus.subscriber_count::<DataEvent>());
+    println!(
+        "Subscriber count: {}\n",
+        bus.subscriber_count::<DataEvent>()
+    );
 
     // Spawn subscriber tasks
     let sub1_handle = tokio::spawn(async move {

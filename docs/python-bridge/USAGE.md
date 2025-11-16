@@ -33,8 +33,33 @@ is detected early.
 - `python-sdk/mycelium/protocol/runtime.py` – shared encoder/decoder helpers
   that the generated module imports.
 
-## 3. Next Steps
+## 3. Observability & Handshake
 
-With bindings in place we can flesh out the transport client (Unix/TCP), the
-Rust bridge service, and observability hooks described in
-`docs/implementation/PYTHON_BRIDGE_PLAN.md`.
+- Every generated Python transport requires the 32-byte `SCHEMA_DIGEST`. Import
+  it from `mycelium_protocol` and pass it to `UnixTransport`/`TcpTransport` so
+  the bridge can reject incompatible clients before streaming TLVs.
+- The Rust bridge now records connection counts, handshake failures, and
+  forwarded-frame totals using `ServiceMetrics`. These counters show up in the
+  service log every few seconds and in the shutdown summary, so you can plug the
+  bridge into the same monitoring dashboards as native Rust actors.
+
+## 4. Integration Test Harness
+
+A cross-language test lives in `tests/transport_tests/python_bridge_service.rs`.
+It launches the bridge service inside `ServiceRuntime`, spawns a supervised
+Python worker (see `tests/fixtures/python_bridge_echo.py`), and asserts that:
+
+1. Python publishes a `TextMessage` that Rust subscribers observe, and
+2. Rust publishes a `TextMessage` that the Python worker captures and records.
+
+This test runs via `cargo test python_bridge_service` and doubles as a sample of
+the environment variables (`MYCELIUM_SOCKET`, `MYCELIUM_SCHEMA_DIGEST`,
+`MYCELIUM_TEST_OUTPUT`) that supervised workers rely on.
+
+## 5. Next Steps
+
+With bindings in place we can flesh out additional transports (TCP), integrate
+Python metrics into cluster dashboards, and follow the roadmap in
+`docs/implementation/PYTHON_BRIDGE_PLAN.md`. See also
+`docs/ocaml-bridge/USAGE.md` for the OCaml bridge, which reuses the same wire
+protocol and supervision infrastructure.

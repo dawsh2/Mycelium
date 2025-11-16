@@ -1,0 +1,7 @@
+version = "0.1.0"
+description = ""
+requires = "ocplib-endian threads.posix"
+archive(byte) = "mycelium.cma"
+archive(native) = "mycelium.cmxa"
+plugin(byte) = "mycelium.cma"
+plugin(native) = "mycelium.cmxs"

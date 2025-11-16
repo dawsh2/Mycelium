@@ -1,8 +1,8 @@
 //! Detailed breakdown of overhead in ServiceContext::emit()
 
 use mycelium_protocol::impl_message;
-use mycelium_transport::ServiceMetrics;
 use mycelium_transport::MessageBus;
+use mycelium_transport::ServiceMetrics;
 use std::sync::Arc;
 use std::time::Instant;
 use zerocopy::{AsBytes, FromBytes, FromZeroes};

@@ -43,10 +43,7 @@ async fn test_unix_endpoint_schema_handshake_roundtrip() {
     frame.extend_from_slice(&SwapEvent::TYPE_ID.to_le_bytes());
     frame.extend_from_slice(&(mem::size_of::<SwapEvent>() as u32).to_le_bytes());
     frame.extend_from_slice(event.as_bytes());
-    stream
-        .write_all(&frame)
-        .await
-        .expect("send tlv frame");
+    stream.write_all(&frame).await.expect("send tlv frame");
 
     let received = subscriber.recv().await.expect("receive swap event");
     assert_eq!(*received, event);

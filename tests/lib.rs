@@ -8,9 +8,9 @@
 //! - Error handling and edge cases
 
 pub mod common;
-pub mod transport_tests;
 pub mod deployment_tests;
 pub mod performance_tests;
+pub mod transport_tests;
 // TODO: Re-enable after migration - error handling tests exist in integration/error_handling.rs
 // pub mod error_handling_tests;
 
