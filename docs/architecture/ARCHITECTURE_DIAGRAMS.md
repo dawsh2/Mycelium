@@ -1500,6 +1500,363 @@ graph TB
 
 ---
 
+## Downsides and Limitations
+
+### Complexity Cost
+
+```mermaid
+graph TD
+    Complexity[Mycelium Complexity Tax]
+
+    Complexity --> Learn[Learning Curve]
+    Complexity --> Debug[Debugging Difficulty]
+    Complexity --> Ops[Operational Overhead]
+    Complexity --> Dev[Development Time]
+
+    Learn --> Learn1["• Multiple languages (Rust/Python/OCaml)"]
+    Learn --> Learn2["• Transport modes (Arc/FFI/Shm/Socket)"]
+    Learn --> Learn3["• Actor model thinking"]
+    Learn --> Learn4["• TLV schema management"]
+
+    Debug --> Debug1["• FFI boundary issues hard to trace"]
+    Debug --> Debug2["• Cross-process debugging"]
+    Debug --> Debug3["• Shared memory corruption"]
+    Debug --> Debug4["• Schema version mismatches"]
+
+    Ops --> Ops1["• Multiple processes to manage"]
+    Ops --> Ops2["• Shared memory file cleanup"]
+    Ops --> Ops3["• Process coordination (startup/shutdown)"]
+    Ops --> Ops4["• Monitoring across boundaries"]
+
+    Dev --> Dev1["• Build all trading components yourself"]
+    Dev --> Dev2["• No pre-built exchange adapters"]
+    Dev --> Dev3["• Schema evolution management"]
+    Dev --> Dev4["• FFI bindings for each language"]
+
+    style Complexity fill:#ff6b6b
+    style Learn fill:#ffcdd2
+    style Debug fill:#ffcdd2
+    style Ops fill:#ffcdd2
+    style Dev fill:#ffcdd2
+```
+
+### Real-World Tradeoffs
+
+```mermaid
+graph LR
+    subgraph "What You Get"
+        Pro1[Deployment Flexibility]
+        Pro2[Sub-μs Latency]
+        Pro3[Language Choice]
+        Pro4[Process Isolation]
+    end
+
+    subgraph "What You Pay"
+        Con1[High Complexity]
+        Con2[Build Everything]
+        Con3[Multi-Language Debugging]
+        Con4[Immature Ecosystem]
+    end
+
+    Pro1 -.->|Costs| Con1
+    Pro2 -.->|Costs| Con3
+    Pro3 -.->|Costs| Con3
+    Pro4 -.->|Costs| Con1
+
+    style Pro1 fill:#c8e6c9
+    style Pro2 fill:#c8e6c9
+    style Pro3 fill:#c8e6c9
+    style Pro4 fill:#c8e6c9
+    style Con1 fill:#ffcdd2
+    style Con2 fill:#ffcdd2
+    style Con3 fill:#ffcdd2
+    style Con4 fill:#ffcdd2
+```
+
+### Critical Limitations
+
+#### 1. **Unavoidable Serialization Overhead**
+
+```mermaid
+graph LR
+    subgraph "Cross-Language Communication"
+        R[Rust<br/>Native Type]
+        TLV[TLV Encoding<br/>~200-300ns]
+        P[Python<br/>Object]
+    end
+
+    R -->|Serialize| TLV
+    TLV -->|Deserialize| P
+
+    Note1["Cannot eliminate this!<br/>Required for language interop"]
+
+    TLV -.-> Note1
+
+    style TLV fill:#ffcdd2
+    style Note1 fill:#fff9c4
+```
+
+**Reality Check:**
+- **Pure Rust**: ~100ns (zero-copy Arc)
+- **Rust ↔ Python**: ~100-500ns (TLV overhead unavoidable)
+- **Gap**: 2-5x slower just from crossing language boundary
+- **No workaround**: This is the price of multi-language support
+
+#### 2. **Maturity vs Established Frameworks**
+
+| Aspect | Mycelium | NautilusTrader | Traditional C++ HFT |
+|--------|----------|----------------|---------------------|
+| **Production Use** | ❌ New, untested | ✅ Battle-tested | ✅ Industry standard |
+| **Community** | ❌ None yet | ✅ Active | ✅ Large |
+| **Pre-built Components** | ❌ Build yourself | ✅ Batteries included | ✅ Commercial libs |
+| **Documentation** | 🟡 Good but new | ✅ Extensive | ✅ Deep expertise |
+| **Bug Discovery** | ❌ Unknown unknowns | ✅ Known issues | ✅ Well-understood |
+| **Hiring** | ❌ Hard to find devs | 🟡 Growing pool | ✅ Many experts |
+
+#### 3. **Debugging Nightmare Scenarios**
+
+```mermaid
+sequenceDiagram
+    participant Dev as Developer
+    participant Rust as Rust Service
+    participant FFI as FFI Layer
+    participant Py as Python Service
+    participant Shm as Shared Memory
+    participant OCaml as OCaml Service
+
+    Dev->>Rust: Deploy system
+    Rust->>FFI: Message
+    FFI->>Py: Crash! 💥
+
+    Note over Dev,Py: Where did it crash?<br/>• Python exception?<br/>• FFI boundary?<br/>• TLV encoding bug?<br/>• Schema mismatch?
+
+    Dev->>Py: Fix, redeploy
+    Py->>Shm: Write message
+    Shm->>OCaml: Read corrupted data
+    OCaml->>OCaml: Silent corruption ⚠️
+
+    Note over Dev,OCaml: Now what?<br/>• Shared memory corruption?<br/>• Schema version mismatch?<br/>• Sequence number bug?<br/>• Ring buffer overflow?
+
+    Dev->>Dev: Hours of debugging...
+
+    style FFI fill:#ffcdd2
+    style Shm fill:#ffcdd2
+```
+
+**Pain Points:**
+- **FFI crashes**: Hard to tell if Python or Rust is culprit
+- **Schema mismatches**: Silent data corruption
+- **Shared memory bugs**: No stack traces, just corrupted data
+- **Multi-process**: Can't use single debugger
+- **Timing issues**: Race conditions across processes
+
+#### 4. **Operational Complexity**
+
+```mermaid
+graph TB
+    subgraph "Simple Monolith (NautilusTrader)"
+        M1[Single Process]
+        M2[One log file]
+        M3[One PID to monitor]
+        M4[systemctl restart service]
+    end
+
+    subgraph "Mycelium Distributed System"
+        D1[Process 1: Rust Core]
+        D2[Process 2: Python ML]
+        D3[Process 3: OCaml Risk]
+        D4[Process 4: Analytics]
+
+        L1[Log aggregation needed]
+        L2[Process orchestration]
+        L3[Shared memory cleanup]
+        L4[Health checks × 4]
+        L5[Graceful shutdown coordination]
+        L6[Restart ordering dependencies]
+
+        D1 --> L1
+        D2 --> L1
+        D3 --> L1
+        D4 --> L1
+
+        D1 --> L2
+        D2 --> L3
+        D3 --> L4
+        D4 --> L5
+    end
+
+    style M1 fill:#c8e6c9
+    style M2 fill:#c8e6c9
+    style M3 fill:#c8e6c9
+    style M4 fill:#c8e6c9
+    style D1 fill:#ffcdd2
+    style D2 fill:#ffcdd2
+    style D3 fill:#ffcdd2
+    style D4 fill:#ffcdd2
+```
+
+**Operational Nightmares:**
+- **Startup**: Which process starts first? Dependencies?
+- **Shutdown**: Graceful coordination required
+- **Monitoring**: Need to track N processes, N×M connections
+- **Logs**: Scattered across processes, need aggregation
+- **Deployment**: Complex ordering, potential race conditions
+- **Cleanup**: `/dev/shm` files left behind on crashes
+
+#### 5. **Development Time Cost**
+
+```mermaid
+graph LR
+    subgraph "Time to MVP"
+        N[NautilusTrader<br/>1-2 weeks]
+        M[Mycelium<br/>2-3 months]
+    end
+
+    N --> N1["✅ Exchange adapters built-in"]
+    N --> N2["✅ Backtesting ready"]
+    N --> N3["✅ Portfolio management"]
+    N --> N4["✅ Risk controls"]
+
+    M --> M1["❌ Build exchange adapters"]
+    M --> M2["❌ Build backtesting engine"]
+    M --> M3["❌ Build portfolio system"]
+    M --> M4["❌ Build risk system"]
+    M --> M5["❌ Write FFI bindings"]
+    M --> M6["❌ Design TLV schemas"]
+    M --> M7["❌ Setup topology configs"]
+
+    style N fill:#c8e6c9
+    style M fill:#ffcdd2
+```
+
+**Reality:**
+- NautilusTrader: **Batteries included**, start trading in days
+- Mycelium: **Infrastructure only**, build everything yourself
+- Time multiplier: **5-10x more development time**
+
+#### 6. **When NOT to Use Mycelium**
+
+```mermaid
+graph TD
+    Start{Your Situation}
+
+    Start --> Q1{Need to ship fast?}
+    Q1 -->|Yes| Bad1[❌ Don't use Mycelium<br/>Use NautilusTrader]
+    Q1 -->|No| Q2{Solo developer?}
+
+    Q2 -->|Yes| Bad2[❌ Don't use Mycelium<br/>Too complex for one person]
+    Q2 -->|No| Q3{Team knows Rust?}
+
+    Q3 -->|No| Bad3[❌ Don't use Mycelium<br/>Learn Rust first]
+    Q3 -->|Yes| Q4{Need proven stability?}
+
+    Q4 -->|Yes| Bad4[❌ Don't use Mycelium<br/>Use battle-tested framework]
+    Q4 -->|No| Q5{Building custom infra?}
+
+    Q5 -->|No| Bad5[❌ Don't use Mycelium<br/>Use pre-built platform]
+    Q5 -->|Yes| Good[✅ Mycelium might fit]
+
+    style Bad1 fill:#ffcdd2
+    style Bad2 fill:#ffcdd2
+    style Bad3 fill:#ffcdd2
+    style Bad4 fill:#ffcdd2
+    style Bad5 fill:#ffcdd2
+    style Good fill:#c8e6c9
+```
+
+### Honest Comparison: Mycelium vs Alternatives
+
+#### Use NautilusTrader If:
+- ✅ Want to trade **this month**, not next year
+- ✅ Solo developer or small team
+- ✅ Need pre-built exchange integrations
+- ✅ Python expertise, limited Rust knowledge
+- ✅ Proven stability more important than flexibility
+- ✅ Standard backtesting/portfolio management sufficient
+
+**Tradeoff:** Locked into monolithic Python architecture, ~10-50μs latency
+
+#### Use Pure C++ HFT Framework If:
+- ✅ Need absolute lowest latency (~200-500ns)
+- ✅ Pure speed, don't need ML flexibility
+- ✅ Large team with C++ expertise
+- ✅ Established codebase and practices
+- ✅ Regulatory/compliance requirements for proven tech
+
+**Tradeoff:** No ML/Python flexibility, high development cost, hard to hire
+
+#### Use Mycelium If:
+- ✅ Building **custom infrastructure** from scratch
+- ✅ Team with Rust + Python expertise
+- ✅ Need deployment flexibility (in-process → distributed)
+- ✅ Want ~500ns-1μs latency with ML integration
+- ✅ Willing to invest months in development
+- ✅ Multi-language architecture required
+- ✅ Okay with bleeding-edge, unproven technology
+
+**Tradeoff:** High complexity, long development time, no community support yet
+
+### The Hard Truth
+
+```mermaid
+pie title "Development Time Breakdown (Mycelium-based System)"
+    "Core Trading Logic" : 20
+    "Exchange Integrations" : 15
+    "Backtesting Engine" : 15
+    "Portfolio/Risk Management" : 15
+    "FFI Bindings" : 10
+    "Schema Management" : 10
+    "Debugging Cross-Language Issues" : 15
+```
+
+**What NautilusTrader gives you for free:**
+- Exchange adapters (FTX, Binance, etc.) - **2-3 months work**
+- Backtesting engine - **1-2 months work**
+- Portfolio management - **2-3 weeks work**
+- Risk controls - **2-3 weeks work**
+- **Total savings: ~4-6 months development time**
+
+**What Mycelium gives you:**
+- Ultimate flexibility
+- Sub-microsecond latency potential
+- Multi-language support
+- Deployment options
+- **Cost: Build everything yourself**
+
+### Known Issues and Gotchas
+
+1. **FFI Memory Leaks**: Python objects not properly released across FFI boundary
+2. **Shared Memory Orphans**: `/dev/shm` files not cleaned up on crash
+3. **Schema Version Hell**: No automatic migration when schemas change
+4. **GIL Starvation**: Python FFI can block Rust async runtime
+5. **Startup Race Conditions**: Processes starting before shared memory ready
+6. **Silent Corruption**: Schema mismatch can cause silent data corruption
+7. **Debugging Pain**: No unified debugger for multi-language, multi-process system
+
+### Bottom Line
+
+**Mycelium is NOT for everyone.**
+
+✅ **Use it if:**
+- You're building Jane Street / Two Sigma level custom infrastructure
+- You have a team of senior Rust/Python engineers
+- You need ultimate deployment flexibility
+- You're willing to invest 6-12 months in development
+- You need sub-microsecond latency WITH ML integration
+
+❌ **Don't use it if:**
+- You want to trade next month
+- You're a solo developer
+- You need proven, battle-tested technology
+- You want pre-built components
+- You don't have Rust expertise
+
+**Honest recommendation:** For 90% of use cases, **use NautilusTrader**. It's mature, proven, and you'll be trading in weeks, not months.
+
+Mycelium is for the 10% who need custom infrastructure and are willing to pay the complexity cost.
+
+---
+
 ## Summary
 
 ### Key Architectural Principles
