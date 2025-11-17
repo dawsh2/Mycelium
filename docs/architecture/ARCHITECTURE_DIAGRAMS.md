@@ -11,6 +11,7 @@ Visual guide to Mycelium's architecture, deployment modes, and performance chara
 5. [Parallel Backtesting](#parallel-backtesting)
 6. [Performance Spectrum](#performance-spectrum)
 7. [Cross-Language Integration](#cross-language-integration)
+8. [Real-World Multi-Language Trading System](#real-world-multi-language-trading-system)
 
 ---
 
@@ -699,6 +700,803 @@ graph TB
 let bus = MessageBus::from_topology("topology.toml", "my-service")?;
 let pub = bus.publisher::<Signal>();  // Auto-routes!
 ```
+
+---
+
+## Real-World Multi-Language Trading System
+
+### Complete Trading Platform Architecture
+
+This demonstrates a realistic high-performance trading system leveraging all three languages:
+- **Rust**: Core infrastructure, market data, execution
+- **Python**: ML models, analytics, backtesting
+- **OCaml**: Formal trading logic, risk management, compliance
+
+```mermaid
+graph TB
+    subgraph "Core Infrastructure (Rust)"
+        MB[MessageBus<br/>~100ns latency]
+
+        subgraph "Market Data Layer"
+            MD1[Exchange Feed A<br/>WebSocket]
+            MD2[Exchange Feed B<br/>WebSocket]
+            MD3[Market Data Aggregator]
+            Norm[Normalizer]
+        end
+
+        subgraph "Execution Layer"
+            ExecEngine[Execution Engine]
+            OrderRouter[Smart Order Router]
+            FillManager[Fill Manager]
+        end
+
+        MD1 --> MD3
+        MD2 --> MD3
+        MD3 --> Norm
+        Norm --> MB
+
+        MB --> ExecEngine
+        ExecEngine --> OrderRouter
+        OrderRouter --> FillManager
+    end
+
+    subgraph "ML & Analytics (Python via FFI)"
+        subgraph "Feature Engineering"
+            FE1[Technical Indicators]
+            FE2[Order Flow Features]
+            FE3[Microstructure Features]
+        end
+
+        subgraph "Signal Generation"
+            ML1[Deep Learning Model<br/>Price Prediction]
+            ML2[Gradient Boosting<br/>Regime Detection]
+            ML3[Ensemble Combiner]
+        end
+
+        subgraph "Portfolio Optimization"
+            PO1[Mean-Variance Optimizer]
+            PO2[Risk Budgeting]
+            PO3[Transaction Cost Model]
+        end
+
+        FE1 --> ML1
+        FE2 --> ML2
+        FE3 --> ML3
+
+        ML1 --> PO1
+        ML2 --> PO2
+        ML3 --> PO3
+    end
+
+    subgraph "Trading Framework (OCaml via Shm)"
+        subgraph "Order Management"
+            OMS[Order Management System]
+            OrderVal[Order Validation]
+            OrderBook[Internal Order Book]
+        end
+
+        subgraph "Risk Engine"
+            PreTrade[Pre-Trade Risk]
+            RealTime[Real-Time Risk Monitor]
+            PostTrade[Post-Trade Analysis]
+            VaR[VaR Calculator]
+        end
+
+        subgraph "Strategy Engine"
+            AlphaGen[Alpha Generator]
+            StratLogic[Strategy Logic<br/>Formal Verification]
+            PortMgr[Portfolio Manager]
+        end
+
+        subgraph "Compliance"
+            RegCheck[Regulatory Checks]
+            AuditLog[Audit Logger]
+            Reporting[Report Generator]
+        end
+
+        OMS --> OrderVal
+        OrderVal --> OrderBook
+
+        PreTrade --> RealTime
+        RealTime --> PostTrade
+        PostTrade --> VaR
+
+        AlphaGen --> StratLogic
+        StratLogic --> PortMgr
+
+        RegCheck --> AuditLog
+        AuditLog --> Reporting
+    end
+
+    %% Connections
+    MB <-->|FFI ~500ns| FE1
+    MB <-->|FFI ~500ns| FE2
+    MB <-->|FFI ~500ns| FE3
+
+    PO1 -->|FFI ~500ns| MB
+    PO2 -->|FFI ~500ns| MB
+    PO3 -->|FFI ~500ns| MB
+
+    MB <-->|Shm ~200ns| OMS
+    MB <-->|Shm ~200ns| PreTrade
+    MB <-->|Shm ~200ns| AlphaGen
+    MB <-->|Shm ~200ns| RegCheck
+
+    PortMgr -->|Shm ~200ns| MB
+    OrderBook -->|Shm ~200ns| MB
+
+    style MB fill:#4a9eff
+    style MD3 fill:#50c878
+    style ExecEngine fill:#50c878
+    style ML1 fill:#ffd93d
+    style ML2 fill:#ffd93d
+    style ML3 fill:#ffd93d
+    style OMS fill:#ff9f43
+    style PreTrade fill:#ff9f43
+    style StratLogic fill:#ff9f43
+```
+
+### Message Flow in Trading System
+
+```mermaid
+sequenceDiagram
+    participant Exchange as Exchange Feed
+    participant Rust as Market Data (Rust)
+    participant MB as MessageBus
+    participant Py as ML Signals (Python)
+    participant OCaml as Risk Engine (OCaml)
+    participant Exec as Execution (Rust)
+
+    Exchange->>Rust: Market tick (WebSocket)
+    Rust->>MB: MarketData msg (~100ns)
+
+    MB->>Py: Forward to Python (~500ns FFI)
+    Py->>Py: Feature extraction
+    Py->>Py: ML inference
+    Py->>MB: TradingSignal (~500ns FFI)
+
+    MB->>OCaml: Forward to OCaml (~200ns Shm)
+    OCaml->>OCaml: Pre-trade risk check
+    OCaml->>OCaml: Position size calculation
+    OCaml->>OCaml: Regulatory validation
+    OCaml->>MB: OrderRequest (~200ns Shm)
+
+    MB->>Exec: Forward to Execution (~100ns)
+    Exec->>Exchange: Place order (WebSocket)
+    Exchange->>Exec: Fill confirmation
+    Exec->>MB: Fill msg (~100ns)
+
+    MB->>OCaml: Update positions (~200ns Shm)
+    MB->>Py: Update models (~500ns FFI)
+
+    Note over Exchange,Py: Total latency: ~1.5μs<br/>(tick → decision → order)
+```
+
+### Deployment Topology
+
+```mermaid
+graph TB
+    subgraph "Main Trading Process"
+        subgraph "Rust Core (~100ns latency)"
+            Bus[MessageBus]
+            MD[Market Data]
+            Exec[Execution]
+            MD --> Bus
+            Exec --> Bus
+        end
+
+        subgraph "Python ML (FFI, ~500ns)"
+            PyRuntime[Runtime<br/>FFI Access to Arc&lt;MessageBus&gt;]
+            Features[Feature Engine]
+            Signals[Signal Generator]
+            Portfolio[Portfolio Optimizer]
+
+            Features --> PyRuntime
+            Signals --> PyRuntime
+            Portfolio --> PyRuntime
+        end
+    end
+
+    subgraph "OCaml Process (Isolated)"
+        OBus[MessageBus]
+
+        subgraph "Order Management"
+            OMS[OMS]
+            Book[Order Book]
+        end
+
+        subgraph "Risk"
+            Risk[Risk Engine]
+            VaR[VaR]
+        end
+
+        subgraph "Strategy"
+            Alpha[Alpha Generator]
+            Logic[Strategy Logic]
+        end
+
+        OMS --> OBus
+        Book --> OBus
+        Risk --> OBus
+        VaR --> OBus
+        Alpha --> OBus
+        Logic --> OBus
+    end
+
+    Bus <-->|Shared Memory<br/>~200ns| OBus
+    PyRuntime <-->|FFI<br/>~500ns| Bus
+
+    style Bus fill:#4a9eff
+    style OBus fill:#ff9f43
+    style PyRuntime fill:#ffd93d
+```
+
+**Rationale for Language Choices:**
+
+| Component | Language | Why |
+|-----------|----------|-----|
+| **Market Data** | Rust | Lowest latency, zero-copy processing |
+| **Execution** | Rust | Critical path, needs ~100ns performance |
+| **ML Models** | Python | Rich ecosystem (PyTorch, scikit-learn) |
+| **Feature Engineering** | Python | Fast iteration, data science libraries |
+| **Order Management** | OCaml | Type safety, formal verification possible |
+| **Risk Engine** | OCaml | Correctness over speed, strong typing |
+| **Strategy Logic** | OCaml | Mathematical precision, proof systems |
+| **Compliance** | OCaml | Audit trail, provable correctness |
+
+### Performance Analysis
+
+```mermaid
+graph LR
+    subgraph "Critical Path Analysis"
+        T1[Market Tick<br/>0ns]
+        T2[Rust Processing<br/>+100ns]
+        T3[Python ML<br/>+500ns]
+        T4[OCaml Risk<br/>+200ns]
+        T5[Rust Execution<br/>+100ns]
+        T6[Order Sent<br/>~900ns total]
+    end
+
+    T1 --> T2 --> T3 --> T4 --> T5 --> T6
+
+    style T1 fill:#50c878
+    style T2 fill:#50c878
+    style T3 fill:#ffd93d
+    style T4 fill:#ff9f43
+    style T5 fill:#50c878
+    style T6 fill:#50c878
+```
+
+**Total Latency Budget:**
+- Market data ingestion (Rust): ~100ns
+- ML signal generation (Python FFI): ~500ns
+- Risk validation (OCaml Shm): ~200ns
+- Order execution (Rust): ~100ns
+- **Total: ~900ns** from tick to order
+
+Compare to:
+- **NautilusTrader**: ~10-50μs (GIL + socket overhead)
+- **Traditional Java HFT**: ~1-5μs (GC pauses)
+- **Pure C++**: ~200-500ns (but no ML flexibility)
+
+### Alternative Deployment: All Isolated
+
+```mermaid
+graph TB
+    subgraph "Process 1: Market Data (Rust)"
+        MD[Market Data Service]
+        MDB[MessageBus]
+        MD --> MDB
+    end
+
+    subgraph "Process 2: Feature Engineering (Python)"
+        FE[Feature Engine]
+        FEB[MessageBus]
+        FE --> FEB
+    end
+
+    subgraph "Process 3: ML Signals (Python)"
+        ML[ML Models]
+        MLB[MessageBus]
+        ML --> MLB
+    end
+
+    subgraph "Process 4: OCaml OMS"
+        OMS[Order Manager]
+        OMSB[MessageBus]
+        OMS --> OMSB
+    end
+
+    subgraph "Process 5: OCaml Risk"
+        Risk[Risk Engine]
+        RiskB[MessageBus]
+        Risk --> RiskB
+    end
+
+    subgraph "Process 6: Execution (Rust)"
+        Exec[Execution Engine]
+        ExecB[MessageBus]
+        Exec --> ExecB
+    end
+
+    MDB <-->|Shm ~200ns| FEB
+    FEB <-->|Shm ~200ns| MLB
+    MLB <-->|Shm ~200ns| OMSB
+    OMSB <-->|Shm ~200ns| RiskB
+    RiskB <-->|Shm ~200ns| ExecB
+    ExecB <-->|Shm ~200ns| MDB
+
+    style MDB fill:#50c878
+    style FEB fill:#ffd93d
+    style MLB fill:#ffd93d
+    style OMSB fill:#ff9f43
+    style RiskB fill:#ff9f43
+    style ExecB fill:#50c878
+```
+
+**Benefits of Isolation:**
+- Python crash doesn't kill OCaml or Rust
+- Each service independently restartable
+- Clear security boundaries
+- Easier testing and debugging
+
+**Cost:**
+- ~200ns per hop (vs ~100-500ns in-process)
+- Total latency: ~1.2μs (still excellent!)
+
+### Hybrid Deployment Strategy
+
+```mermaid
+graph TB
+    subgraph "Ultra-Fast Process (Rust + Python FFI)"
+        direction TB
+        RBus[MessageBus]
+
+        subgraph "Critical Path (Rust)"
+            MD[Market Data<br/>~100ns]
+            Exec[Execution<br/>~100ns]
+        end
+
+        subgraph "Fast ML (Python FFI)"
+            FastML[Fast Signals<br/>~500ns<br/>Linear models, heuristics]
+        end
+
+        MD --> RBus
+        Exec --> RBus
+        FastML --> RBus
+    end
+
+    subgraph "Heavy ML Process (Python Isolated)"
+        PBus[MessageBus]
+
+        DeepML[Deep Learning<br/>~10-100ms<br/>CNNs, Transformers]
+        Backtest[Backtester<br/>Non-critical]
+        Analytics[Analytics<br/>Non-critical]
+
+        DeepML --> PBus
+        Backtest --> PBus
+        Analytics --> PBus
+    end
+
+    subgraph "OCaml Process (Correctness-Critical)"
+        OBus[MessageBus]
+
+        OMS[Order Manager<br/>Type-safe]
+        Risk[Risk Engine<br/>Formally verified]
+        Compliance[Compliance<br/>Audit logging]
+
+        OMS --> OBus
+        Risk --> OBus
+        Compliance --> OBus
+    end
+
+    RBus <-->|Shm ~200ns| OBus
+    RBus <-->|Shm ~200ns| PBus
+    OBus <-->|Shm ~200ns| PBus
+
+    style RBus fill:#50c878
+    style FastML fill:#ffd93d
+    style PBus fill:#ffd93d
+    style OBus fill:#ff9f43
+```
+
+**Smart Partitioning:**
+- **Critical path (Rust + Fast Python)**: ~500ns
+- **Heavy ML (Isolated Python)**: 10-100ms, doesn't block critical path
+- **OCaml (Isolated)**: ~200ns latency, crash-safe, verifiable
+
+**Result:** Sub-microsecond latency for critical decisions, unlimited complexity for non-critical analysis.
+
+### Transport Boundaries and FFI Details
+
+```mermaid
+graph TB
+    subgraph "Process 1: Main Trading Engine"
+        subgraph "Rust Native Code"
+            MB_Rust[Arc&lt;MessageBus&gt;<br/>Rust Native]
+            MD_Rust[Market Data Collector<br/>Rust]
+            Exec_Rust[Execution Engine<br/>Rust]
+
+            MD_Rust -->|Arc::clone<br/>~100ns<br/>Zero-copy| MB_Rust
+            Exec_Rust -->|Arc::clone<br/>~100ns<br/>Zero-copy| MB_Rust
+        end
+
+        subgraph "FFI Boundary (PyO3)"
+            FFI_Layer[PyO3 FFI Layer<br/>TLV Serialization<br/>~200-300ns overhead]
+        end
+
+        subgraph "Python Embedded (GIL)"
+            PyRuntime[Runtime<br/>Arc ref via FFI pointer]
+
+            subgraph "Python Services"
+                FE_Py[Feature Engine<br/>Python]
+                ML_Py[ML Signals<br/>PyTorch/scikit-learn]
+                PO_Py[Portfolio Optimizer<br/>NumPy/SciPy]
+            end
+
+            FE_Py -->|Python call| PyRuntime
+            ML_Py -->|Python call| PyRuntime
+            PO_Py -->|Python call| PyRuntime
+        end
+
+        MB_Rust <-->|PyO3 bindings<br/>~100-500ns total<br/>Shared memory space| FFI_Layer
+        FFI_Layer <-->|Native Python<br/>~10-50ns| PyRuntime
+    end
+
+    subgraph "Process 2: OCaml Trading Framework"
+        subgraph "OCaml Native Code"
+            MB_OCaml[MessageBus<br/>OCaml binding]
+
+            subgraph "Order Management"
+                OMS_OCaml[OMS<br/>OCaml]
+                Book_OCaml[Order Book<br/>OCaml]
+            end
+
+            subgraph "Risk System"
+                Risk_OCaml[Risk Engine<br/>OCaml]
+                VaR_OCaml[VaR Calculator<br/>OCaml]
+            end
+
+            subgraph "Strategy"
+                Alpha_OCaml[Alpha Generator<br/>OCaml]
+                Logic_OCaml[Strategy Logic<br/>OCaml + Formal Proofs]
+            end
+
+            OMS_OCaml --> MB_OCaml
+            Book_OCaml --> MB_OCaml
+            Risk_OCaml --> MB_OCaml
+            VaR_OCaml --> MB_OCaml
+            Alpha_OCaml --> MB_OCaml
+            Logic_OCaml --> MB_OCaml
+        end
+
+        subgraph "Shared Memory Bridge"
+            ShmWriter_OCaml[ShmWriter<br/>/dev/shm/ocaml.shm]
+            ShmReader_OCaml[ShmReader<br/>/dev/shm/rust.shm]
+        end
+
+        MB_OCaml -->|OCaml native<br/>~50ns| ShmWriter_OCaml
+        ShmReader_OCaml -->|OCaml native<br/>~50ns| MB_OCaml
+    end
+
+    subgraph "Shared Memory Regions (mmap)"
+        Shm1["/dev/shm/rust.shm"<br/>Ring Buffer<br/>1MB capacity]
+        Shm2["/dev/shm/ocaml.shm"<br/>Ring Buffer<br/>1MB capacity]
+    end
+
+    subgraph "Process 1: Shared Memory Endpoint"
+        ShmWriter_Rust[ShmWriter<br/>Rust]
+        ShmReader_Rust[ShmReader<br/>Rust]
+
+        MB_Rust --> ShmWriter_Rust
+        ShmReader_Rust --> MB_Rust
+    end
+
+    ShmWriter_Rust -->|Atomic write<br/>~100ns<br/>Lock-free| Shm1
+    Shm1 -->|Atomic read<br/>~100ns<br/>Lock-free| ShmReader_OCaml
+
+    ShmWriter_OCaml -->|Atomic write<br/>~100ns<br/>Lock-free| Shm2
+    Shm2 -->|Atomic read<br/>~100ns<br/>Lock-free| ShmReader_Rust
+
+    style MB_Rust fill:#4a9eff
+    style FFI_Layer fill:#ffd93d
+    style PyRuntime fill:#ffd93d
+    style MB_OCaml fill:#ff9f43
+    style Shm1 fill:#e6f3ff
+    style Shm2 fill:#e6f3ff
+    style ShmWriter_Rust fill:#c8e6c9
+    style ShmReader_Rust fill:#c8e6c9
+    style ShmWriter_OCaml fill:#ffccbc
+    style ShmReader_OCaml fill:#ffccbc
+```
+
+### Detailed Message Flow with Transport Breakdown
+
+```mermaid
+sequenceDiagram
+    participant MD as Market Data<br/>(Rust)
+    participant MB_R as MessageBus<br/>(Rust Arc)
+    participant FFI as FFI Layer<br/>(PyO3)
+    participant Py as ML Engine<br/>(Python)
+    participant ShmW as ShmWriter<br/>(Rust)
+    participant Ring as Ring Buffer<br/>(mmap)
+    participant ShmR as ShmReader<br/>(OCaml)
+    participant OCaml as Risk Engine<br/>(OCaml)
+    participant MB_O as MessageBus<br/>(OCaml)
+
+    Note over MD,MB_R: In-Process (Same Memory)
+    MD->>MB_R: publish(MarketData)<br/>Arc::clone<br/>~100ns
+
+    Note over MB_R,FFI: FFI Boundary (Same Process)
+    MB_R->>FFI: Bridge fanout<br/>TLV encoding<br/>~200ns
+    FFI->>Py: Deserialize<br/>Python object<br/>~100ns
+
+    Note over Py: Python Processing
+    Py->>Py: Feature extraction<br/>NumPy operations
+    Py->>Py: ML inference<br/>Model.predict()
+
+    Note over Py,FFI: FFI Boundary (Same Process)
+    Py->>FFI: publish(Signal)<br/>~100ns
+    FFI->>MB_R: TLV bytes<br/>Arc::new<br/>~200ns
+
+    Note over MB_R,ShmW: In-Process (Rust)
+    MB_R->>ShmW: Bridge fanout<br/>~50ns
+
+    Note over ShmW,Ring: Shared Memory (Cross-Process)
+    ShmW->>Ring: write_frame()<br/>Atomic update<br/>~100ns
+
+    Note over Ring,ShmR: Shared Memory (Cross-Process)
+    loop Poll
+        ShmR->>Ring: read_frame()<br/>Atomic read<br/>~50ns
+    end
+    Ring-->>ShmR: Frame ready<br/>~50ns
+
+    Note over ShmR,MB_O: In-Process (OCaml)
+    ShmR->>MB_O: Deserialize<br/>OCaml types<br/>~50ns
+    MB_O->>OCaml: Deliver message<br/>~50ns
+
+    Note over OCaml: OCaml Processing
+    OCaml->>OCaml: Risk validation<br/>Type-safe computation
+    OCaml->>OCaml: Position sizing
+
+    Note over OCaml,MB_O: Return Path
+    OCaml->>MB_O: publish(OrderRequest)
+    MB_O->>ShmR: Via shared memory<br/>(reverse flow)
+
+    Note over MD,OCaml: Total: ~900ns-1.5μs
+```
+
+### Transport Mode Comparison in Multi-Language System
+
+```mermaid
+graph TB
+    subgraph "Transport Performance Characteristics"
+        subgraph "In-Process Rust-to-Rust"
+            R2R[Arc&lt;T&gt; clone<br/>~100ns<br/>Zero-copy<br/>No serialization]
+        end
+
+        subgraph "In-Process Rust-to-Python (FFI)"
+            R2P[PyO3 FFI<br/>~100-500ns<br/>Shared Arc ref<br/>TLV serialization]
+        end
+
+        subgraph "Cross-Process via Shared Memory"
+            Shm[mmap Ring Buffer<br/>~200-500ns<br/>Lock-free atomics<br/>TLV serialization]
+        end
+
+        subgraph "Cross-Process via Unix Socket"
+            Unix[Unix Domain Socket<br/>~1-10μs<br/>Syscalls (write/read)<br/>TLV serialization]
+        end
+
+        subgraph "Cross-Machine via TCP"
+            TCP[TCP Socket<br/>~1-10ms<br/>Network stack<br/>TLV serialization]
+        end
+    end
+
+    R2R -->|5x slower| R2P
+    R2P -->|2-4x slower| Shm
+    Shm -->|5-20x slower| Unix
+    Unix -->|100-1000x slower| TCP
+
+    style R2R fill:#00e676
+    style R2P fill:#ffd93d
+    style Shm fill:#4a9eff
+    style Unix fill:#ff9f43
+    style TCP fill:#ff6b6b
+```
+
+### Memory Layout: FFI vs Shared Memory
+
+```mermaid
+graph TB
+    subgraph "FFI Approach (Same Process)"
+        ProcessMem["Process Memory Space"]
+
+        subgraph "Heap"
+            Arc["Arc&lt;MessageBus&gt;<br/>Reference Count: 3"]
+
+            RustRef1["Rust Service 1<br/>Arc clone"]
+            RustRef2["Rust Service 2<br/>Arc clone"]
+            PyRef["Python Runtime<br/>FFI pointer to Arc"]
+        end
+
+        RustRef1 -.->|Points to| Arc
+        RustRef2 -.->|Points to| Arc
+        PyRef -.->|Points to| Arc
+
+        subgraph "FFI Boundary"
+            PyO3["PyO3 Layer<br/>Type conversion<br/>GIL management"]
+        end
+
+        subgraph "Python Heap (GIL Protected)"
+            PyObjects["Python Objects<br/>Serialized from/to TLV"]
+        end
+
+        PyRef <-->|Crosses GIL<br/>~100-200ns| PyO3
+        PyO3 <--> PyObjects
+    end
+
+    subgraph "Shared Memory Approach (Separate Processes)"
+        subgraph "Process A Memory"
+            BusA["MessageBus A"]
+            WriterA["ShmWriter<br/>mmap pointer"]
+        end
+
+        subgraph "Kernel Memory (mmap region)"
+            ShmRegion["/dev/shm/channel.shm<br/>Header + Ring Buffer<br/>Shared R/W"]
+        end
+
+        subgraph "Process B Memory"
+            BusB["MessageBus B"]
+            ReaderB["ShmReader<br/>mmap pointer"]
+        end
+
+        BusA --> WriterA
+        WriterA -.->|Atomic write_index<br/>~100ns| ShmRegion
+        ShmRegion -.->|Atomic read_index<br/>~100ns| ReaderB
+        ReaderB --> BusB
+    end
+
+    style Arc fill:#4a9eff
+    style PyO3 fill:#ffd93d
+    style ShmRegion fill:#e6f3ff
+    style ProcessMem fill:#f0f0f0
+```
+
+### Language Integration Trade-offs
+
+```mermaid
+graph TD
+    Start[Integrate Non-Rust Language]
+
+    Start --> Choice{Integration Method}
+
+    Choice -->|Option A| FFI_Path[FFI In-Process]
+    Choice -->|Option B| Shm_Path[Shared Memory]
+    Choice -->|Option C| Socket_Path[Unix/TCP Socket]
+
+    FFI_Path --> FFI_Pros["✅ Fastest (~100-500ns)<br/>✅ Shared Arc&lt;MessageBus&gt;<br/>✅ Direct memory access"]
+    FFI_Path --> FFI_Cons["❌ Process-coupled (crash risk)<br/>❌ GIL affects Rust<br/>❌ Complex FFI bindings"]
+
+    Shm_Path --> Shm_Pros["✅ Very fast (~200-500ns)<br/>✅ Process isolated<br/>✅ Lock-free<br/>✅ No GIL interaction"]
+    Shm_Path --> Shm_Cons["❌ Same-machine only<br/>❌ Still requires TLV<br/>❌ mmap setup complexity"]
+
+    Socket_Path --> Socket_Pros["✅ Process isolated<br/>✅ Simple protocol<br/>✅ Well-understood<br/>✅ Works cross-machine"]
+    Socket_Path --> Socket_Cons["❌ Slower (~1-10μs or ms)<br/>❌ Syscall overhead<br/>❌ Kernel buffering"]
+
+    FFI_Pros --> FFI_Use["Use When:<br/>• Max performance needed<br/>• Trust code (won't crash)<br/>• GIL acceptable<br/>• Same machine"]
+    FFI_Cons --> FFI_Use
+
+    Shm_Pros --> Shm_Use["Use When:<br/>• Need speed + isolation<br/>• Same machine<br/>• Avoid GIL issues<br/>• Process safety important"]
+    Shm_Cons --> Shm_Use
+
+    Socket_Pros --> Socket_Use["Use When:<br/>• Simplicity preferred<br/>• Distributed deployment<br/>• Latency not critical<br/>• Traditional architecture"]
+    Socket_Cons --> Socket_Use
+
+    style FFI_Path fill:#ffd93d
+    style Shm_Path fill:#4a9eff
+    style Socket_Path fill:#ff9f43
+    style FFI_Pros fill:#c8e6c9
+    style FFI_Cons fill:#ffcdd2
+    style Shm_Pros fill:#c8e6c9
+    style Shm_Cons fill:#ffcdd2
+    style Socket_Pros fill:#c8e6c9
+    style Socket_Cons fill:#ffcdd2
+```
+
+### Complete System with All Transport Modes
+
+```mermaid
+graph TB
+    subgraph "Process 1: Core Trading (Rust + Python FFI)"
+        MB1[MessageBus]
+
+        subgraph "Rust Services"
+            MD[Market Data<br/>WebSocket]
+            Exec[Execution<br/>FIX Protocol]
+            Cache[Price Cache]
+        end
+
+        subgraph "Python FFI Services"
+            FFI1[FFI: Feature Engine]
+            FFI2[FFI: Fast Signals]
+            FFI3[FFI: Portfolio Mgr]
+        end
+
+        MD -->|Arc ~100ns| MB1
+        Exec -->|Arc ~100ns| MB1
+        Cache -->|Arc ~100ns| MB1
+
+        FFI1 <-->|PyO3 ~500ns| MB1
+        FFI2 <-->|PyO3 ~500ns| MB1
+        FFI3 <-->|PyO3 ~500ns| MB1
+    end
+
+    subgraph "Process 2: OCaml Risk (Isolated)"
+        MB2[MessageBus]
+
+        subgraph "OCaml Services"
+            OMS[Order Manager]
+            Risk[Risk Engine]
+            Compliance[Compliance]
+        end
+
+        OMS --> MB2
+        Risk --> MB2
+        Compliance --> MB2
+    end
+
+    subgraph "Process 3: Python Analytics (Isolated)"
+        MB3[MessageBus]
+
+        subgraph "Heavy Python"
+            DL[Deep Learning<br/>Transformers]
+            Backtest[Backtester]
+            Research[Research Tools]
+        end
+
+        DL --> MB3
+        Backtest --> MB3
+        Research --> MB3
+    end
+
+    subgraph "Machine 2: Remote Services"
+        MB4[MessageBus]
+
+        subgraph "Distributed Services"
+            Monitor[Monitoring]
+            Logging[Centralized Logs]
+            Dashboard[Web Dashboard]
+        end
+
+        Monitor --> MB4
+        Logging --> MB4
+        Dashboard --> MB4
+    end
+
+    MB1 <-->|Shared Memory<br/>~200ns<br/>/dev/shm/ocaml.shm| MB2
+    MB1 <-->|Shared Memory<br/>~200ns<br/>/dev/shm/analytics.shm| MB3
+    MB1 <-->|TCP Socket<br/>~1-10ms<br/>10.0.1.100:9001| MB4
+
+    MB2 <-->|Unix Socket<br/>~1-10μs<br/>/tmp/mycelium/risk.sock| MB3
+
+    style MB1 fill:#4a9eff
+    style MB2 fill:#ff9f43
+    style MB3 fill:#ffd93d
+    style MB4 fill:#ff6b6b
+    style MD fill:#50c878
+    style FFI1 fill:#ffe082
+    style FFI2 fill:#ffe082
+    style FFI3 fill:#ffe082
+    style OMS fill:#ffab91
+    style DL fill:#fff59d
+```
+
+**Transport Summary:**
+- **Arc<T>** (Rust ↔ Rust): ~100ns, zero-copy
+- **PyO3 FFI** (Rust ↔ Python): ~100-500ns, shared process, TLV overhead
+- **Shared Memory** (Process 1 ↔ Process 2/3): ~200-500ns, lock-free, isolated
+- **Unix Socket** (Process 2 ↔ Process 3): ~1-10μs, syscalls, isolated
+- **TCP Socket** (Same machine ↔ Remote): ~1-10ms, network stack
 
 ---
 
